@@ -163,40 +163,44 @@ class Neo4jGraph:
     def recall(self, query_intent: str, seed_entities: list = None, depth: int = 2, 
                time_range: dict = None, session_filter: str = None) -> dict:
         with self.driver.session() as session:
-            keywords = [w for w in query_intent.lower().split() if len(w) > 2]
+            keywords = [w for w in query_intent.lower().split() if len(w) > 1]
             
             # 如果没有查询条件，返回空结果
             if not keywords and not seed_entities:
                 return {"entities": [], "relations": [], "message": "无查询关键词"}
             
-            params = {"session_id": CURRENT_SESSION_ID, "keywords": keywords if keywords else []}
+            params = {"session_id": CURRENT_SESSION_ID}
             cond_parts = ["r.status = 'active'"]
             
             if session_filter:
                 cond_parts.append("r.session_id = $target_session")
                 params["target_session"] = session_filter
             
+            # 搜索多个相关关键词（不只是单个）
             if keywords:
-                # 简化查询：直接在 WHERE 中使用列表
-                keyword_conditions = " OR ".join([f"toLower(e.name) CONTAINS '{k}' OR toLower(coalesce(e.type, '')) CONTAINS '{k}'" for k in keywords])
-                cond_parts.append(f"({keyword_conditions})")
+                keyword_conditions = []
+                for k in keywords:
+                    # 搜索：实体名称、关系类型、目标实体
+                    keyword_conditions.append(f"toLower(e.name) CONTAINS '{k}'")
+                    keyword_conditions.append(f"toLower(t.name) CONTAINS '{k}'")
+                    keyword_conditions.append(f"toLower(r.type) CONTAINS '{k}'")
+                cond_parts.append(f"({' OR '.join(keyword_conditions)})")
             
             if seed_entities:
                 placeholders = ",".join([f"'{s}'" for s in seed_entities])
-                cond_parts.append(f"e.name IN [{placeholders}]")
+                cond_parts.append(f"(e.name IN [{placeholders}] OR t.name IN [{placeholders}])")
             
             if time_range and "days" in time_range:
                 cond_parts.append(f"r.created_at >= datetime() - duration('P{time_range['days']}D')")
             
             where_clause = " AND ".join(cond_parts)
             
-            # 简化查询：不用复杂路径匹配
             cypher = f"""
             MATCH (e:Entity)-[r:RELATES]->(t:Entity)
             WHERE {where_clause}
             RETURN e, r, t
             ORDER BY r.created_at DESC
-            LIMIT 20
+            LIMIT 30
             """
             
             result = session.run(cypher, params)
@@ -518,19 +522,17 @@ class OpenClawClient:
 2. **不要重复查询**：如果一次 memory_recall 返回"未找到相关记忆"，**不要再继续查询**，直接告诉用户。
 3. **提取关键词而非整句**：
    - ❌ 错误: "查找用户提到的鸿蒙工具链条和今天饮食相关的记忆"
-   - ✅ 正确: "鸿蒙" 或 ["鸿蒙", "量子力学", "用户"]
-   - 错误: query_intent 是自然语言句子
-   - 正确: query_intent 是**单个关键词**或**逗号分隔的词列表**
+    - ✅ 正确: "鸿蒙" 或 "鸿蒙,工具链,用户"
 
 ## memory_recall 正确用法
+query_intent 可以是**逗号分隔的多个关键词**：
 ```json
 {
-  "query_intent": "鸿蒙",           // 只能是单个关键词!
-  "seed_entities": ["量子力学"],     // 可选：具体实体列表
+  "query_intent": "鸿蒙,工具链,用户",  // 多个关键词用逗号分隔
   "depth": 1
 }
 ```
-**query_intent 必须是具体关键词，不是句子！**
+- 会同时搜索：实体名称、关系类型、目标实体
 
 ## 重要规则：必须写入记忆的情况
 当用户提到以下内容时，你**必须**调用 memory_commit 写入记忆：
@@ -541,7 +543,8 @@ class OpenClawClient:
 
 ## 可用工具
 1. **memory_recall** - 检索历史记忆
-   - query_intent: 必须是**单个关键词**，如 "量子力学"
+   - query_intent: 支持逗号分隔的多关键词，如 "鸿蒙,工具链"
+   - 会同时搜索：实体名、关系类型、目标实体
 2. **memory_commit** - 写入记忆（三元组格式）
 3. **memory_purge** - 修正/删除记忆
 4. **memory_introspect** - 查看会话状态
