@@ -69,30 +69,40 @@ else
     
     # 如果 Docker 可用，使用 Docker 启动 Neo4j
     if command -v docker &> /dev/null; then
-        # 检查是否有已存在的容器
-        EXISTING=$(docker ps -a --filter "name=neo4j" --format "{{.Names}}" | head -1)
-        if [ -n "$EXISTING" ]; then
-            echo "  找到已有 Neo4j 容器: $EXISTING"
-            docker start "$EXISTING" 2>/dev/null || true
-            # 尝试从环境变量获取密码
-            NEO4J_AUTH=$(docker inspect "$EXISTING" --format '{{.Config.Env}}' 2>/dev/null | grep -o 'NEO4J_AUTH=[^ ]*' | cut -d'=' -f2)
-            if [ -n "$NEO4J_AUTH" ]; then
-                NEO4J_PASSWORD=$(echo "$NEO4J_AUTH" | cut -d'/' -f2)
-            fi
+        # 优先查找正在运行的容器
+        RUNNING=$(docker ps --filter "name=neo4j" --format "{{.Names}}" 2>/dev/null | head -1)
+        STOPPED=$(docker ps -a --filter "name=neo4j" --format "{{.Names}}" 2>/dev/null | head -1)
+        
+        if [ -n "$RUNNING" ]; then
+            echo "  找到运行中的 Neo4j 容器: $RUNNING"
+            EXISTING="$RUNNING"
+        elif [ -n "$STOPPED" ]; then
+            echo "  找到已停止的 Neo4j 容器: $STOPPED"
+            docker start "$STOPPED" 2>/dev/null || true
+            sleep 3
+            EXISTING="$STOPPED"
         else
-            # 生成随机密码
+            # 没有已有容器，创建新的
             NEO4J_PASS=$(openssl rand -hex 8 2>/dev/null || echo "openclaw$(date +%s)")
             docker run -d --name openclaw-neo4j \
                 -p 7474:7474 -p 7687:7687 \
                 -e NEO4J_AUTH=neo4j/${NEO4J_PASS} \
                 -e NEO4J_PLUGINS='["apoc"]' \
                 neo4j:5 || true
+            sleep 15
             echo "  Neo4j Docker 容器已启动"
             echo "  密码: $NEO4J_PASS"
             NEO4J_PASSWORD="$NEO4J_PASS"
-            
-            # 保存密码到文件
             echo "$NEO4J_PASS" > "$PROJECT_DIR/.neo4j_pass"
+            EXISTING="openclaw-neo4j"
+        fi
+        
+        # 获取密码
+        if [ -z "$NEO4J_PASSWORD" ]; then
+            NEO4J_AUTH=$(docker inspect "$EXISTING" --format '{{.Config.Env}}' 2>/dev/null | tr ' ' '\n' | grep NEO4J_AUTH | cut -d'=' -f2)
+            if [ -n "$NEO4J_AUTH" ]; then
+                NEO4J_PASSWORD=$(echo "$NEO4J_AUTH" | cut -d'/' -f2)
+            fi
         fi
     else
         echo "  无法安装 Neo4j，请手动安装或使用 Docker"
