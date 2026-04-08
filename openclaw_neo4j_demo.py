@@ -169,7 +169,7 @@ class Neo4jGraph:
             if not keywords and not seed_entities:
                 return {"entities": [], "relations": [], "message": "无查询关键词"}
             
-            params = {"session_id": CURRENT_SESSION_ID}
+            params = {"session_id": CURRENT_SESSION_ID, "keywords": keywords if keywords else []}
             cond_parts = ["r.status = 'active'"]
             
             if session_filter:
@@ -177,37 +177,27 @@ class Neo4jGraph:
                 params["target_session"] = session_filter
             
             if keywords:
-                # 修复 Neo4j 5.x ANY() 语法
-                cond_parts.append("ANY(k IN $keywords WHERE toLower(e.name) CONTAINS k OR toLower(coalesce(e.type, '')) CONTAINS k)")
-                params["keywords"] = keywords
+                # 简化查询：直接在 WHERE 中使用列表
+                keyword_conditions = " OR ".join([f"toLower(e.name) CONTAINS '{k}' OR toLower(coalesce(e.type, '')) CONTAINS '{k}'" for k in keywords])
+                cond_parts.append(f"({keyword_conditions})")
             
             if seed_entities:
-                cond_parts.append("e.name IN $seed")
-                params["seed"] = seed_entities
+                placeholders = ",".join([f"'{s}'" for s in seed_entities])
+                cond_parts.append(f"e.name IN [{placeholders}]")
             
             if time_range and "days" in time_range:
                 cond_parts.append(f"r.created_at >= datetime() - duration('P{time_range['days']}D')")
             
             where_clause = " AND ".join(cond_parts)
             
-            if depth > 1:
-                cypher = f"""
-                MATCH path = (e:Entity)-[r:RELATES*1..{depth}]-(other:Entity)
-                WHERE {where_clause}
-                UNWIND relationships(path) AS rel
-                WITH DISTINCT rel, e, other
-                RETURN e, rel, other
-                ORDER BY rel.created_at DESC
-                LIMIT 30
-                """
-            else:
-                cypher = f"""
-                MATCH (e:Entity)-[r:RELATES]-(other:Entity)
-                WHERE {where_clause}
-                RETURN e, r, other
-                ORDER BY r.created_at DESC
-                LIMIT 20
-                """
+            # 简化查询：不用复杂路径匹配
+            cypher = f"""
+            MATCH (e:Entity)-[r:RELATES]->(t:Entity)
+            WHERE {where_clause}
+            RETURN e, r, t
+            ORDER BY r.created_at DESC
+            LIMIT 20
+            """
             
             result = session.run(cypher, params)
             entities, relations = {}, []
