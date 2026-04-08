@@ -157,6 +157,27 @@ echo "  虚拟环境已创建: $PROJECT_DIR/venv"
 echo "  激活: source $PROJECT_DIR/venv/bin/activate"
 
 # -------------------------------------------------------------------------
+# 检查是否需要立即运行
+# -------------------------------------------------------------------------
+if [ "$1" = "--run" ] || [ "$1" = "-r" ]; then
+    echo ""
+    echo "========================================"
+    echo "启动 OpenClaw 对话 Demo..."
+    echo "========================================"
+    echo "请设置 DEEPSEEK_API_KEY 后按回车继续..."
+    read -p "输入 API Key (或直接回车跳过): " user_api_key
+    
+    if [ -n "$user_api_key" ]; then
+        export DEEPSEEK_API_KEY="$user_api_key"
+    fi
+    
+    source venv/bin/activate
+    cd /home/program/graph_enable_ability
+    python openclaw_neo4j_demo.py
+    exit 0
+fi
+
+# -------------------------------------------------------------------------
 # 完成
 # -------------------------------------------------------------------------
 echo ""
@@ -166,13 +187,12 @@ echo "========================================"
 echo ""
 echo "Neo4j 控制台: http://localhost:7474"
 echo "默认用户: neo4j"
-echo "初始密码: neo4j (首次登录需修改)"
+echo "默认密码: neo4j"
 echo ""
-echo "启动对话:"
+echo "快速启动:"
+echo "  $0 --run          # 安装后直接运行 Demo"
+echo ""
+echo "或手动启动:"
 echo "  cd $PROJECT_DIR"
 echo "  source venv/bin/activate"
-echo "  python ~/openclaw_demo.py"
-echo ""
-echo "或直接运行 Demo:"
-echo "  source $PROJECT_DIR/venv/bin/activate"
 echo "  python /home/program/graph_enable_ability/openclaw_neo4j_demo.py"
