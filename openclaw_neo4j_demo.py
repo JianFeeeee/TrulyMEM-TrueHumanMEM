@@ -9,7 +9,7 @@ import os
 import uuid
 from datetime import datetime
 
-DEEPSEEK_API_KEY = os.environ.get("DEEPSEEK_API_KEY", "your-api-key-here")
+DEEPSEEK_API_KEY = "sk-ca05d81474f04d9e9905fb0696f07550"
 DEEPSEEK_BASE_URL = "https://api.deepseek.com"
 MODEL_NAME = "deepseek-chat"
 
@@ -541,9 +541,11 @@ class OpenClawClient:
         
         messages = [{"role": "system", "content": self.system_prompt}]
         
+        # 添加之前的工具结果（用于后续调用）
         if tool_results:
             messages.extend(tool_results)
         
+        # 添加当前用户输入
         messages.append({"role": "user", "content": user_input})
         
         response = self.client.chat.completions.create(
@@ -566,8 +568,6 @@ class OpenClawClient:
         print("输入 quit/exit 退出")
         print("=" * 60 + "\n")
         
-        tool_results = []
-        
         while True:
             try:
                 user_input = input("\n[你] ").strip()
@@ -580,12 +580,20 @@ class OpenClawClient:
                 CURRENT_TURN += 1
                 print(f"\n[轮次 {CURRENT_TURN}] 发送请求...")
                 
+                # 用于累积工具结果
+                tool_results = []
+                
+                # 首次请求
                 response = self.send_message(user_input, tool_results)
                 message = response.choices[0].message
                 
+                # 处理工具调用循环
                 while message.tool_calls:
-                    print(f"\n[模型] {message.content or '(thinking...)'}")
+                    # 打印模型响应（如果有）
+                    if message.content:
+                        print(f"\n[模型] {message.content}")
                     
+                    # 执行所有工具调用
                     for tool_call in message.tool_calls:
                         tool_name = tool_call.function.name
                         tool_args = json.loads(tool_call.function.arguments)
@@ -594,26 +602,25 @@ class OpenClawClient:
                         result = execute_tool(self.graph, tool_name, tool_args)
                         print(f"\n[工具结果] {result}")
                         
+                        # 添加工具结果 - 包含 tool_call_id
                         tool_results.append({
                             "role": "tool",
                             "tool_call_id": tool_id,
                             "content": result
                         })
                     
-                    message = self.client.chat.completions.create(
+                    # 继续调用 - 只包含 system + tool_results + user（不再重复添加）
+                    response = self.client.chat.completions.create(
                         model=MODEL_NAME,
                         messages=[{"role": "system", "content": self.system_prompt}] + tool_results +
                                 [{"role": "user", "content": user_input}],
                         tools=self.tools
-                    ).choices[0].message
+                    )
+                    message = response.choices[0].message
                 
+                # 最终回复
                 final_content = message.content or "(无回复)"
                 print(f"\n[模型] {final_content}")
-                
-                tool_results.append({"role": "assistant", "content": final_content})
-                
-                if len(tool_results) > 10:
-                    tool_results = [t for t in tool_results if t.get("role") in ["tool", "user"]]
                 
             except KeyboardInterrupt:
                 print("\n\n[系统] 中断退出")
