@@ -203,15 +203,15 @@ class Neo4jGraph:
             entities, relations = {}, []
             
             for record in result:
-                e, r, other = record["e"], record["r"], record["other"]
+                e, r, t = record["e"], record["r"], record["t"]
                 if e["name"] not in entities:
                     entities[e["name"]] = {"name": e["name"], "type": e.get("type", "unknown"), "mention_count": e.get("mention_count", 1)}
-                if other["name"] not in entities:
-                    entities[other["name"]] = {"name": other["name"], "type": other.get("type", "unknown"), "mention_count": other.get("mention_count", 1)}
+                if t["name"] not in entities:
+                    entities[t["name"]] = {"name": t["name"], "type": t.get("type", "unknown"), "mention_count": t.get("mention_count", 1)}
                 
                 relations.append({
                     "source": e["name"],
-                    "target": other["name"],
+                    "target": t["name"],
                     "type": r["type"],
                     "created_at": str(r.get("created_at", "")),
                     "session_id": r.get("session_id", ""),
