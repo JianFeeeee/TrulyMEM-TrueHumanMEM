@@ -69,12 +69,31 @@ else
     
     # 如果 Docker 可用，使用 Docker 启动 Neo4j
     if command -v docker &> /dev/null; then
-        docker run -d --name neo4j \
-            -p 7474:7474 -p 7687:7687 \
-            -e NEO4J_AUTH=neo4j/neo4j \
-            -e NEO4J_PLUGINS='["apoc"]' \
-            neo4j:5 || true
-        echo "  Neo4j Docker 容器已启动"
+        # 检查是否有已存在的容器
+        EXISTING=$(docker ps -a --filter "name=neo4j" --format "{{.Names}}" | head -1)
+        if [ -n "$EXISTING" ]; then
+            echo "  找到已有 Neo4j 容器: $EXISTING"
+            docker start "$EXISTING" 2>/dev/null || true
+            # 尝试从环境变量获取密码
+            NEO4J_AUTH=$(docker inspect "$EXISTING" --format '{{.Config.Env}}' 2>/dev/null | grep -o 'NEO4J_AUTH=[^ ]*' | cut -d'=' -f2)
+            if [ -n "$NEO4J_AUTH" ]; then
+                NEO4J_PASSWORD=$(echo "$NEO4J_AUTH" | cut -d'/' -f2)
+            fi
+        else
+            # 生成随机密码
+            NEO4J_PASS=$(openssl rand -hex 8 2>/dev/null || echo "openclaw$(date +%s)")
+            docker run -d --name openclaw-neo4j \
+                -p 7474:7474 -p 7687:7687 \
+                -e NEO4J_AUTH=neo4j/${NEO4J_PASS} \
+                -e NEO4J_PLUGINS='["apoc"]' \
+                neo4j:5 || true
+            echo "  Neo4j Docker 容器已启动"
+            echo "  密码: $NEO4J_PASS"
+            NEO4J_PASSWORD="$NEO4J_PASS"
+            
+            # 保存密码到文件
+            echo "$NEO4J_PASS" > "$PROJECT_DIR/.neo4j_pass"
+        fi
     else
         echo "  无法安装 Neo4j，请手动安装或使用 Docker"
         exit 1
@@ -145,15 +164,31 @@ source venv/bin/activate
 pip install --upgrade pip
 pip install neo4j openai
 
+# 获取 Neo4j 密码
+NEO4J_PASSWORD="neo4j"
+RUNNING_CONTAINER=$(docker ps --filter "name=neo4j" --format "{{.Names}}" 2>/dev/null | head -1)
+if [ -n "$RUNNING_CONTAINER" ]; then
+    # 运行中的容器，检查是否已有 auth 文件
+    if docker exec "$RUNNING_CONTAINER" test -f /var/lib/neo4j/data/neo4j.auth 2>/dev/null; then
+        echo "  检测到运行中的 Neo4j 容器: $RUNNING_CONTAINER"
+    fi
+fi
+
+# 检查之前是否保存过密码
+if [ -f "$PROJECT_DIR/.neo4j_pass" ]; then
+    NEO4J_PASSWORD=$(cat "$PROJECT_DIR/.neo4j_pass")
+fi
+
 # 创建环境变量文件
-cat > .env << 'EOF'
+cat > .env << EOF
 DEEPSEEK_API_KEY=your-api-key-here
 NEO4J_URI=bolt://localhost:7687
 NEO4J_USER=neo4j
-NEO4J_PASSWORD=neo4j
+NEO4J_PASSWORD=${NEO4J_PASSWORD}
 EOF
 
 echo "  虚拟环境已创建: $PROJECT_DIR/venv"
+echo "  Neo4j 密码: $NEO4J_PASSWORD"
 echo "  激活: source $PROJECT_DIR/venv/bin/activate"
 
 # -------------------------------------------------------------------------
@@ -170,6 +205,9 @@ if [ "$1" = "--run" ] || [ "$1" = "-r" ]; then
     if [ -n "$user_api_key" ]; then
         export DEEPSEEK_API_KEY="$user_api_key"
     fi
+    
+    # 导出 Neo4j 密码
+    export NEO4J_PASSWORD="$NEO4J_PASSWORD"
     
     source venv/bin/activate
     cd /home/program/graph_enable_ability
