@@ -9,7 +9,7 @@ import os
 import uuid
 from datetime import datetime
 
-DEEPSEEK_API_KEY = ""
+DEEPSEEK_API_KEY = os.environ.get("DEEPSEEK_API_KEY", "")
 DEEPSEEK_BASE_URL = "https://api.deepseek.com"
 MODEL_NAME = "deepseek-chat"
 
@@ -656,13 +656,15 @@ def main():
     print("OpenClaw Demo - Neo4j 纯图数据库调用的多轮对话")
     print("-" * 40)
     
-    if DEEPSEEK_API_KEY == "your-api-key-here":
-        print("请设置 DEEPSEEK_API_KEY 环境变量")
+    if not DEEPSEEK_API_KEY:
+        print("错误: 请设置 DEEPSEEK_API_KEY 环境变量")
         print("  export DEEPSEEK_API_KEY='your-actual-key'")
-        print()
+        return
     
     print(f"Neo4j 配置: {NEO4J_URI}")
-    print("如需修改，请设置环境变量: NEO4J_URI, NEO4J_USER, NEO4J_PASSWORD")
+    print(f"Neo4j 用户: {NEO4J_USER}")
+    print(f"Neo4j 密码: {NEO4J_PASSWORD[:4] if NEO4J_PASSWORD else 'None'}***")
+    print(f"DeepSeek API: {DEEPSEEK_API_KEY[:8]}...")
     print()
     
     try:
