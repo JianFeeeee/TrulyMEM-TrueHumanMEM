@@ -525,14 +525,18 @@ class OpenClawClient:
     - ✅ 正确: "鸿蒙" 或 "鸿蒙,工具链,用户"
 
 ## memory_recall 正确用法
-query_intent 可以是**逗号分隔的多个关键词**：
+query_intent 应该是**逗号分隔的多个关键词**，并包含**同义词/近义词**：
 ```json
 {
-  "query_intent": "鸿蒙,工具链,用户",  // 多个关键词用逗号分隔
+  "query_intent": "鸿蒙,harmony,工具链,toolchain,开发环境,IDE",  // 包含同义词
   "depth": 1
 }
 ```
-- 会同时搜索：实体名称、关系类型、目标实体
+- 搜索：实体名、关系类型、目标实体
+- **必须包含同义词**：如 "鸿蒙" 的同义词 "harmony"、"openharmony"
+- **必须包含近义词**：如 "工具链" 的 "sdk"、"toolchain"
+
+调用 recall 前，思考：用户问的词有哪些同义词？全部列出来用逗号分隔。
 
 ## 重要规则：必须写入记忆的情况
 当用户提到以下内容时，你**必须**调用 memory_commit 写入记忆：
