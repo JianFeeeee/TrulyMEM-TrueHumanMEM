@@ -176,18 +176,24 @@ pip install --upgrade pip
 pip install neo4j openai
 
 # 获取 Neo4j 密码
-NEO4J_PASSWORD="neo4j"
+NEO4J_PASSWORD=""
 RUNNING_CONTAINER=$(docker ps --filter "name=neo4j" --format "{{.Names}}" 2>/dev/null | head -1)
 if [ -n "$RUNNING_CONTAINER" ]; then
-    # 运行中的容器，检查是否已有 auth 文件
-    if docker exec "$RUNNING_CONTAINER" test -f /var/lib/neo4j/data/neo4j.auth 2>/dev/null; then
-        echo "  检测到运行中的 Neo4j 容器: $RUNNING_CONTAINER"
+    echo "  检测到运行中的 Neo4j 容器: $RUNNING_CONTAINER"
+    NEO4J_AUTH=$(docker inspect "$RUNNING_CONTAINER" --format '{{.Config.Env}}' 2>/dev/null | tr ' ' '\n' | grep NEO4J_AUTH | cut -d'=' -f2)
+    if [ -n "$NEO4J_AUTH" ]; then
+        NEO4J_PASSWORD=$(echo "$NEO4J_AUTH" | cut -d'/' -f2)
     fi
 fi
 
-# 检查之前是否保存过密码
-if [ -f "$PROJECT_DIR/.neo4j_pass" ]; then
+# 如果还是没有获取到，检查保存的文件
+if [ -z "$NEO4J_PASSWORD" ] && [ -f "$PROJECT_DIR/.neo4j_pass" ]; then
     NEO4J_PASSWORD=$(cat "$PROJECT_DIR/.neo4j_pass")
+fi
+
+# 最后保底
+if [ -z "$NEO4J_PASSWORD" ]; then
+    NEO4J_PASSWORD="neo4j"
 fi
 
 # 创建环境变量文件
