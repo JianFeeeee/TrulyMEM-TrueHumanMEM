@@ -9,7 +9,7 @@ import os
 import uuid
 from datetime import datetime
 
-DEEPSEEK_API_KEY = "sk-ca05d81474f04d9e9905fb0696f07550"
+DEEPSEEK_API_KEY = ""
 DEEPSEEK_BASE_URL = "https://api.deepseek.com"
 MODEL_NAME = "deepseek-chat"
 
