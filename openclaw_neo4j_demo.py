@@ -593,16 +593,16 @@ class OpenClawClient:
                 last_assistant_msg = None
                 
                 # 首次请求
-                response = self.send_message(user_input, tool_results)
+                response = self.send_message(user_input, [])
                 message = response.choices[0].message
                 
-                # 处理工具调用循环
+                # 处理工具调用循环 - 持续处理直到没有新的 tool_calls
                 while message.tool_calls:
                     # 打印模型响应（如果有）
                     if message.content:
                         print(f"\n[模型] {message.content}")
                     
-                    # 保存包含 tool_calls 的 assistant 消息
+                    # 保存包含 tool_calls 的 assistant 消息（只保留最后一个）
                     last_assistant_msg = {
                         "role": "assistant",
                         "content": message.content,
@@ -610,7 +610,8 @@ class OpenClawClient:
                         "tool_calls": [{"id": tc.id, "type": "function", "function": {"name": tc.function.name, "arguments": tc.function.arguments}} for tc in message.tool_calls]
                     }
                     
-                    # 执行所有工具调用
+                    # 执行当前轮的所有工具调用
+                    current_tool_results = []
                     for tool_call in message.tool_calls:
                         tool_name = tool_call.function.name
                         tool_args = json.loads(tool_call.function.arguments)
@@ -619,18 +620,18 @@ class OpenClawClient:
                         result = execute_tool(self.graph, tool_name, tool_args)
                         print(f"\n[工具结果] {result}")
                         
-                        # 添加工具结果 - 包含 tool_call_id
-                        tool_results.append({
+                        current_tool_results.append({
                             "role": "tool",
                             "tool_call_id": tool_id,
                             "content": result
                         })
                     
-                    # 继续调用 - 包含 system + assistant消息(with tool_calls) + tool_results + user
-                    messages = [{"role": "system", "content": self.system_prompt}]
-                    if last_assistant_msg:
-                        messages.append(last_assistant_msg)
-                    messages.extend(tool_results)
+                    # 继续调用 - 只发送当前轮的 assistant 消息和工具结果
+                    messages = [
+                        {"role": "system", "content": self.system_prompt},
+                        last_assistant_msg,
+                    ]
+                    messages.extend(current_tool_results)
                     messages.append({"role": "user", "content": user_input})
                     
                     response = self.client.chat.completions.create(
