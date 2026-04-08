@@ -548,9 +548,7 @@ class OpenClawClient:
 - ❌ 在"未找到相关记忆"后继续尝试其他查询
 - ❌ 超过2次 tool calls 后还继续
 
-现在开始对话！"""
-
-现在开始对话！"""
+现在开始对话!"""
 
     def send_message(self, user_input: str, tool_results: list = None, assistant_msg: dict = None) -> dict:
         global CURRENT_TURN
