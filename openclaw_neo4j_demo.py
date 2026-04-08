@@ -582,6 +582,7 @@ class OpenClawClient:
                 
                 # 用于累积工具结果
                 tool_results = []
+                last_assistant_msg = None
                 
                 # 首次请求
                 response = self.send_message(user_input, tool_results)
@@ -592,6 +593,13 @@ class OpenClawClient:
                     # 打印模型响应（如果有）
                     if message.content:
                         print(f"\n[模型] {message.content}")
+                    
+                    # 保存包含 tool_calls 的 assistant 消息
+                    last_assistant_msg = {
+                        "role": "assistant",
+                        "content": message.content,
+                        "tool_calls": [{"id": tc.id, "function": {"name": tc.function.name, "arguments": tc.function.arguments}} for tc in message.tool_calls]
+                    }
                     
                     # 执行所有工具调用
                     for tool_call in message.tool_calls:
@@ -609,11 +617,16 @@ class OpenClawClient:
                             "content": result
                         })
                     
-                    # 继续调用 - 只包含 system + tool_results + user（不再重复添加）
+                    # 继续调用 - 包含 system + assistant消息(with tool_calls) + tool_results + user
+                    messages = [{"role": "system", "content": self.system_prompt}]
+                    if last_assistant_msg:
+                        messages.append(last_assistant_msg)
+                    messages.extend(tool_results)
+                    messages.append({"role": "user", "content": user_input})
+                    
                     response = self.client.chat.completions.create(
                         model=MODEL_NAME,
-                        messages=[{"role": "system", "content": self.system_prompt}] + tool_results +
-                                [{"role": "user", "content": user_input}],
+                        messages=messages,
                         tools=self.tools
                     )
                     message = response.choices[0].message
