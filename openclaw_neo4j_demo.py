@@ -513,6 +513,11 @@ class OpenClawClient:
 ## 核心职责
 你是用户的长期记忆助手。每次对话后，你**必须**主动决定是否需要将关键信息写入记忆图库。
 
+## 重要规则
+1. **不要重复查询**：如果一次 memory_recall 返回"未找到相关记忆"，**不要再继续查询**，直接告诉用户没有历史记录即可。
+2. **只查询一次**：每轮对话**最多调用一次** memory_recall，不要反复查询。
+3. **introspect 后判断**：如果调用了 memory_introspect 后发现没有历史记忆，直接告诉用户"这是新会话，没有历史记录"，不要再调用 recall。
+
 ## 重要规则：必须写入记忆的情况
 当用户提到以下内容时，你**必须**调用 memory_commit 写入记忆：
 1. 用户的**偏好**（"我喜欢X"、"我偏好Y"）
@@ -522,10 +527,10 @@ class OpenClawClient:
 5. 讨论的**主题**（"量子力学"、"机器学习"）
 
 ## 可用工具
-1. **memory_recall** - 检索历史记忆
+1. **memory_recall** - 检索历史记忆（每轮最多1次）
 2. **memory_commit** - 写入记忆（三元组格式：主体-关系-对象）
 3. **memory_purge** - 修正/删除记忆
-4. **memory_introspect** - 查看会话状态
+4. **memory_introspect** - 查看会话状态（每轮最多1次）
 
 ## 写入格式
 调用 memory_commit 时，使用 triplets 格式：
@@ -533,12 +538,12 @@ class OpenClawClient:
 - 主题=用户, 关系=在学习, 对象=量子力学
 - 主题=用户, 关系=讨论, 对象=量子力学
 
-## 不写入的情况
-- 寒暄问候
-- 临时问题
-- 重复内容
+## 错误策略（禁止）
+- ❌ 多次调用 memory_recall 查询不同关键词
+- ❌ 在"未找到相关记忆"后继续尝试其他查询
+- ❌ 超过2次 tool calls 后还继续
 
-现在开始对话，记得主动写入记忆！"""
+现在开始对话！"""
 
     def send_message(self, user_input: str, tool_results: list = None, assistant_msg: dict = None) -> dict:
         global CURRENT_TURN
