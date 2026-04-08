@@ -216,15 +216,21 @@ if [ "$1" = "--run" ] || [ "$1" = "-r" ]; then
     echo "========================================"
     echo "启动 OpenClaw 对话 Demo..."
     echo "========================================"
-    echo "请设置 DEEPSEEK_API_KEY 后按回车继续..."
-    read -p "输入 API Key (或直接回车跳过): " user_api_key
+    read -p "输入 API Key: " user_api_key
     
+    # 导出环境变量供 Python 使用
     if [ -n "$user_api_key" ]; then
         export DEEPSEEK_API_KEY="$user_api_key"
     fi
-    
-    # 导出 Neo4j 密码
     export NEO4J_PASSWORD="$NEO4J_PASSWORD"
+    
+    # 写入 .env 文件保存
+    cat > "$PROJECT_DIR/.env" << ENVEOF
+DEEPSEEK_API_KEY=${user_api_key}
+NEO4J_URI=bolt://localhost:7687
+NEO4J_USER=neo4j
+NEO4J_PASSWORD=${NEO4J_PASSWORD}
+ENVEOF
     
     source venv/bin/activate
     cd /home/program/graph_enable_ability
