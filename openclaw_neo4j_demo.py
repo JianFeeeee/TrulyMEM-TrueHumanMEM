@@ -165,6 +165,10 @@ class Neo4jGraph:
         with self.driver.session() as session:
             keywords = [w for w in query_intent.lower().split() if len(w) > 2]
             
+            # 如果没有查询条件，返回空结果
+            if not keywords and not seed_entities:
+                return {"entities": [], "relations": [], "message": "无查询关键词"}
+            
             params = {"session_id": CURRENT_SESSION_ID}
             cond_parts = ["r.status = 'active'"]
             
@@ -173,7 +177,8 @@ class Neo4jGraph:
                 params["target_session"] = session_filter
             
             if keywords:
-                cond_parts.append("ANY(k IN $keywords WHERE toLower(e.name) CONTAINS k OR toLower(e.type) CONTAINS k)")
+                # 修复 Neo4j 5.x ANY() 语法
+                cond_parts.append("ANY(k IN $keywords WHERE toLower(e.name) CONTAINS k OR toLower(coalesce(e.type, '')) CONTAINS k)")
                 params["keywords"] = keywords
             
             if seed_entities:
@@ -513,40 +518,37 @@ class OpenClawClient:
         self.system_prompt = self._build_system_prompt()
     
     def _build_system_prompt(self) -> str:
-        return """你是 OpenClaw 的自主记忆控制器。
+        return """你是 OpenClaw 的自主记忆助手。
 
 ## 核心职责
-你是用户的长期记忆助手。每次对话后，你必须主动决定是否需要将本次对话的关键信息写入记忆图库。
+你是用户的长期记忆助手。每次对话后，你**必须**主动决定是否需要将关键信息写入记忆图库。
+
+## 重要规则：必须写入记忆的情况
+当用户提到以下内容时，你**必须**调用 memory_commit 写入记忆：
+1. 用户的**偏好**（"我喜欢X"、"我偏好Y"）
+2. 用户的**项目**（"我在做X项目"、"项目Y的进展"）
+3. 用户的**学习内容**（"我在学Python"、"在学量子力学"）
+4. 重要的**事实**（"我住在X"、"我在Y公司工作"）
+5. 讨论的**主题**（"量子力学"、"机器学习"）
 
 ## 可用工具
-1. **memory_recall**: 检索历史记忆
-   - 当用户提到"之前"、"上次"、"那个"等指代时
-   - 当你不确定用户偏好或事实时
-   - 当需要验证历史信息时
+1. **memory_recall** - 检索历史记忆
+2. **memory_commit** - 写入记忆（三元组格式：主体-关系-对象）
+3. **memory_purge** - 修正/删除记忆
+4. **memory_introspect** - 查看会话状态
 
-2. **memory_commit**: 写入记忆（三元组）
-   - 当用户明确表达偏好（"我喜欢X"、"我偏好Y"）
-   - 当讨论重要的实体或项目（"我在做项目Z"）
-   - 当产生关键结论或决定时
-   - **不要**写入：寒暄、临时例子、重复信息
+## 写入格式
+调用 memory_commit 时，使用 triplets 格式：
+- 主题=用户, 关系=喜欢, 对象=Python
+- 主题=用户, 关系=在学习, 对象=量子力学
+- 主题=用户, 关系=讨论, 对象=量子力学
 
-3. **memory_purge**: 修正记忆
-   - 当用户说"不是"、"其实"、"更正"时
-   - 当发现与记忆矛盾时
+## 不写入的情况
+- 寒暄问候
+- 临时问题
+- 重复内容
 
-4. **memory_introspect**: 自省
-   - 当需要了解当前会话状态时
-   - 当需要检查信息缺口时
-
-## 强制规则
-1. 每轮对话结束前，根据对话内容决定是否调用 memory_commit
-2. 如果对话涉及重要信息（如项目、偏好、决定），必须调用 memory_commit
-3. 如果用户提到之前的话题但你不确定内容，必须先调用 memory_recall
-4. 调用工具时，提供具体的参数，不要空调用
-
-## 示例
-用户: "我喜欢Python" -> 写入: memory_commit(主题=用户, 关系=喜欢, 对象=Python)
-用户: "上次我们说的项目怎样了" -> 查询: memory_recall(query_intent="项目")"""
+现在开始对话，记得主动写入记忆！"""
 
     def send_message(self, user_input: str, tool_results: list = None, assistant_msg: dict = None) -> dict:
         global CURRENT_TURN
