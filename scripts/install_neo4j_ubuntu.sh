@@ -79,7 +79,7 @@ else
         elif [ -n "$STOPPED" ]; then
             echo "  找到已停止的 Neo4j 容器: $STOPPED"
             docker start "$STOPPED" 2>/dev/null || true
-            sleep 3
+            sleep 5
             EXISTING="$STOPPED"
         else
             # 没有已有容器，创建新的
@@ -89,7 +89,7 @@ else
                 -e NEO4J_AUTH=neo4j/${NEO4J_PASS} \
                 -e NEO4J_PLUGINS='["apoc"]' \
                 neo4j:5 || true
-            sleep 15
+            sleep 20
             echo "  Neo4j Docker 容器已启动"
             echo "  密码: $NEO4J_PASS"
             NEO4J_PASSWORD="$NEO4J_PASS"
@@ -97,11 +97,12 @@ else
             EXISTING="openclaw-neo4j"
         fi
         
-        # 获取密码
-        if [ -z "$NEO4J_PASSWORD" ]; then
+        # 无论如何都从容器获取密码
+        if [ -n "$EXISTING" ]; then
             NEO4J_AUTH=$(docker inspect "$EXISTING" --format '{{.Config.Env}}' 2>/dev/null | tr ' ' '\n' | grep NEO4J_AUTH | cut -d'=' -f2)
             if [ -n "$NEO4J_AUTH" ]; then
                 NEO4J_PASSWORD=$(echo "$NEO4J_AUTH" | cut -d'/' -f2)
+                echo "  获取到密码: $NEO4J_PASSWORD"
             fi
         fi
     else
