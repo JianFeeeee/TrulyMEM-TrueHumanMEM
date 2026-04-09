@@ -1,6 +1,6 @@
-# OpenClaw Docker 部署
+# Graph Memory Demo Docker 部署
 
-一键启动 OpenClaw 纯图数据库对话 Demo。
+一键启动纯图数据库记忆存储 Demo。
 
 ## 快速开始
 
@@ -21,7 +21,7 @@ docker compose up -d
 ## 启动后
 
 - Neo4j Browser: http://localhost:7474
-- 登录用户: neo4j / openclaw123
+- 登录用户: neo4j / graph123
 - 应用运行在终端交互模式
 
 ## 停止

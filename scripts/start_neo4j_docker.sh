@@ -14,16 +14,16 @@ if ! command -v docker &> /dev/null; then
 fi
 
 # 检查并停止现有容器
-if docker ps -a | grep -q openclaw-neo4j; then
+if docker ps -a | grep -q graph-memory-neo4j; then
     echo "[Info] 停止现有容器..."
-    docker stop openclaw-neo4j 2>/dev/null || true
-    docker rm openclaw-neo4j 2>/dev/null || true
+    docker stop graph-memory-neo4j 2>/dev/null || true
+    docker rm graph-memory-neo4j 2>/dev/null || true
 fi
 
 # 启动 Neo4j
 echo "[Info] 启动 Neo4j 容器..."
 docker run -d \
-    --name openclaw-neo4j \
+    --name graph-memory-neo4j \
     -p 7474:7474 \
     -p 7687:7687 \
     -e NEO4J_AUTH=neo4j/neo4j \
@@ -78,8 +78,8 @@ echo ""
 echo "远程 Neo4j 配置示例:"
 echo "  NEO4J_URI=bolt://192.168.1.100:7687 \\"
 echo "  NEO4J_PASSWORD=your_password \\"
-echo "  python /home/program/graph_enable_ability/openclaw_neo4j_demo.py"
+echo "  python /home/program/graph_enable_ability/graph_memory_demo.py"
 echo ""
 echo "启动对话:"
 echo "  cd $PROJECT_DIR && source venv/bin/activate"
-echo "  python /home/program/graph_enable_ability/openclaw_neo4j_demo.py"
+echo "  python /home/program/graph_enable_ability/graph_memory_demo.py"

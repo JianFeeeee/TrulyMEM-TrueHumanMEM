@@ -1,10 +1,10 @@
 #!/bin/bash
-# OpenClaw Docker 一键启动脚本
+# Graph Memory Demo Docker 一键启动脚本
 
 set -e
 
 echo "========================================"
-echo "OpenClaw Docker 一键启动"
+echo "Graph Memory Demo Docker 一键启动"
 echo "========================================"
 
 # 检查 Docker 和 Docker Compose
@@ -42,7 +42,7 @@ fi
 
 # 启动服务
 echo ""
-echo "启动 Neo4j 和 OpenClaw 应用..."
+echo "启动 Neo4j 和 Graph Memory Demo 应用..."
 $DOCKER_COMPOSE up -d
 
 # 等待 Neo4j 就绪
@@ -60,7 +60,7 @@ $DOCKER_COMPOSE ps
 echo ""
 echo "访问地址:"
 echo "  Neo4j Browser: http://localhost:7474"
-echo "  Neo4j 用户: neo4j / openclaw123"
+echo "  Neo4j 用户: neo4j / graph123"
 echo ""
 echo "停止服务: docker compose down"
 echo "查看日志: docker compose logs -f"

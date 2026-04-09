@@ -1,7 +1,8 @@
 #!/usr/bin/env python3
 """
-OpenClaw 纯图数据库调用 Demo - Neo4j 真实数据库版本
+Graph Memory Demo - 纯图数据库调用 Demo
 基于 DeepSeek API Tool Calls 实现摒弃传统上下文的自主记忆多轮对话
+验证目的：无上下文纯图数据库记忆存储
 """
 
 import json
@@ -507,7 +508,7 @@ def format_recall_result(result: dict) -> str:
     return "\n".join(lines)
 
 
-class OpenClawClient:
+class GraphMemoryClient:
     def __init__(self, api_key: str, base_url: str, graph: Neo4jGraph):
         from openai import OpenAI
         self.client = OpenAI(api_key=api_key, base_url=base_url)
@@ -516,7 +517,7 @@ class OpenClawClient:
         self.system_prompt = self._build_system_prompt()
     
     def _build_system_prompt(self) -> str:
-        return """你是 OpenClaw 的自主记忆助手。
+        return """你是图数据库记忆助手。
 
 ## 核心职责
 你是用户的长期记忆助手。每次对话后，你**必须**主动决定是否需要将关键信息写入记忆图库。
@@ -597,7 +598,7 @@ query_intent 应该是**逗号分隔的多个关键词**，并包含**同义词/
         global CURRENT_TURN
         
         print("\n" + "=" * 60)
-        print("OpenClaw 纯图数据库对话 Demo (Neo4j)")
+        print("Graph Memory Demo - 纯图数据库对话 (Neo4j)")
         print("=" * 60)
         print(f"会话ID: {CURRENT_SESSION_ID}")
         print(f"Neo4j: {NEO4J_URI}")
@@ -681,7 +682,7 @@ query_intent 应该是**逗号分隔的多个关键词**，并包含**同义词/
 
 
 def main():
-    print("OpenClaw Demo - Neo4j 纯图数据库调用的多轮对话")
+    print("Graph Memory Demo - 纯图数据库调用的多轮对话")
     print("-" * 40)
     
     if not DEEPSEEK_API_KEY:
@@ -704,7 +705,7 @@ def main():
         print("请确保 Neo4j 已启动，或运行 scripts/ 下的安装脚本")
         return
     
-    client = OpenClawClient(DEEPSEEK_API_KEY, DEEPSEEK_BASE_URL, graph)
+    client = GraphMemoryClient(DEEPSEEK_API_KEY, DEEPSEEK_BASE_URL, graph)
     client.chat_loop()
     graph.close()
 
