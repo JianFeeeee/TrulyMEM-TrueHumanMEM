@@ -163,27 +163,31 @@ class Neo4jGraph:
     def recall(self, query_intent: str, seed_entities: list = None, depth: int = 2, 
                time_range: dict = None, session_filter: str = None) -> dict:
         with self.driver.session() as session:
-            keywords = [w for w in query_intent.lower().split() if len(w) > 1]
+            # 支持逗号分隔的多个关键词
+            keywords = [w.strip() for w in query_intent.replace(',', ' ').split() if len(w.strip()) > 0]
             
             # 如果没有查询条件，返回空结果
             if not keywords and not seed_entities:
                 return {"entities": [], "relations": [], "message": "无查询关键词"}
             
-            params = {"session_id": CURRENT_SESSION_ID}
+            # 默认查询所有会话的历史（不只是当前会话）
+            # 只有明确指定 session_filter 才限制查询范围
+            params = {}
             cond_parts = ["r.status = 'active'"]
             
             if session_filter:
-                cond_parts.append("r.session_id = $target_session")
-                params["target_session"] = session_filter
+                cond_parts.append("r.session_id = $session_id")
+                params["session_id"] = session_filter
             
-            # 搜索多个相关关键词（不只是单个）
+            # 搜索多个相关关键词
             if keywords:
                 keyword_conditions = []
                 for k in keywords:
+                    k_lower = k.lower()
                     # 搜索：实体名称、关系类型、目标实体
-                    keyword_conditions.append(f"toLower(e.name) CONTAINS '{k}'")
-                    keyword_conditions.append(f"toLower(t.name) CONTAINS '{k}'")
-                    keyword_conditions.append(f"toLower(r.type) CONTAINS '{k}'")
+                    keyword_conditions.append(f"toLower(e.name) CONTAINS '{k_lower}'")
+                    keyword_conditions.append(f"toLower(t.name) CONTAINS '{k_lower}'")
+                    keyword_conditions.append(f"toLower(r.type) CONTAINS '{k_lower}'")
                 cond_parts.append(f"({' OR '.join(keyword_conditions)})")
             
             if seed_entities:
