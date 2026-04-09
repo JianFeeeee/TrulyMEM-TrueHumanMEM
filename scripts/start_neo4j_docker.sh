@@ -43,11 +43,28 @@ source venv/bin/activate
 pip install --upgrade pip
 pip install neo4j openai
 
-cat > .env << 'EOF'
+# Neo4j 连接配置
+NEO4J_URI="${NEO4J_URI:-bolt://localhost:7687}"
+NEO4J_USER="${NEO4J_USER:-neo4j}"
+NEO4J_PASSWORD="${NEO4J_PASSWORD:-neo4j}"
+
+if [ -n "$NEO4J_URI" ] && [ "$NEO4J_URI" != "bolt://localhost:7687" ]; then
+    echo "  使用远程 Neo4j: $NEO4J_URI"
+else
+    # 本地 Docker
+    RUNNING=$(docker ps --filter "name=neo4j" --format "{{.Names}}" 2>/dev/null | head -1)
+    if [ -n "$RUNNING" ]; then
+        NEO4J_AUTH=$(docker inspect "$RUNNING" --format '{{.Config.Env}}' 2>/dev/null | tr ' ' '\n' | grep NEO4J_AUTH | cut -d'=' -f2)
+        NEO4J_PASSWORD=$(echo "$NEO4J_AUTH" | cut -d'/' -f2)
+    fi
+    NEO4J_URI="bolt://localhost:7687"
+fi
+
+cat > .env << EOF
 DEEPSEEK_API_KEY=your-api-key-here
-NEO4J_URI=bolt://localhost:7687
-NEO4J_USER=neo4j
-NEO4J_PASSWORD=neo4j
+NEO4J_URI=${NEO4J_URI}
+NEO4J_USER=${NEO4J_USER}
+NEO4J_PASSWORD=${NEO4J_PASSWORD}
 EOF
 
 echo ""
@@ -56,7 +73,12 @@ echo "启动完成!"
 echo "========================================"
 echo "HTTP: http://localhost:7474"
 echo "Bolt: bolt://localhost:7687"
-echo "用户: neo4j / neo4j"
+echo "用户: neo4j / ${NEO4J_PASSWORD}"
+echo ""
+echo "远程 Neo4j 配置示例:"
+echo "  NEO4J_URI=bolt://192.168.1.100:7687 \\"
+echo "  NEO4J_PASSWORD=your_password \\"
+echo "  python /home/program/graph_enable_ability/openclaw_neo4j_demo.py"
 echo ""
 echo "启动对话:"
 echo "  cd $PROJECT_DIR && source venv/bin/activate"
