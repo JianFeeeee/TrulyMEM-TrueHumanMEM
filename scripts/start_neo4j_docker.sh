@@ -35,7 +35,7 @@ sleep 15
 
 # 配置 Python 虚拟环境
 echo "[Info] 配置 Python 虚拟环境..."
-PROJECT_DIR="$HOME/openclaw"
+PROJECT_DIR="$HOME/graph-memory"
 mkdir -p "$PROJECT_DIR"
 cd "$PROJECT_DIR"
 python3 -m venv venv 2>/dev/null || python3 -m virtualenv venv

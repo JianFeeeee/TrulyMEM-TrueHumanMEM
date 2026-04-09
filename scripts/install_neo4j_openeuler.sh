@@ -38,7 +38,7 @@ $SUDO systemctl start neo4j
 sleep 5
 
 echo "[5/5] 配置 Python 虚拟环境..."
-PROJECT_DIR="$HOME/openclaw"
+PROJECT_DIR="$HOME/graph-memory"
 mkdir -p "$PROJECT_DIR"
 cd "$PROJECT_DIR"
 python3 -m venv venv
@@ -78,14 +78,14 @@ echo ""
 echo "远程 Neo4j 配置示例:"
 echo "  NEO4J_URI=bolt://192.168.1.100:7687 \\"
 echo "  NEO4J_PASSWORD=your_password \\"
-echo "  python /home/program/graph_enable_ability/openclaw_neo4j_demo.py"
+echo "  python /home/program/graph_enable_ability/graph_memory_demo.py"
 echo ""
 echo "带参数运行: $0 --run"
 
 if [ "$1" = "--run" ] || [ "$1" = "-r" ]; then
     echo ""
     echo "========================================"
-    echo "启动 OpenClaw 对话 Demo..."
+    echo "启动 Graph Memory Demo..."
     echo "========================================"
     read -p "输入 API Key: " user_api_key
     read -p "Neo4j URI (直接回车使用本地): " input_neo4j_uri
@@ -104,6 +104,6 @@ ENVEOF
     
     source venv/bin/activate
     cd /home/program/graph_enable_ability
-    python openclaw_neo4j_demo.py
+    python graph_memory_demo.py
     exit 0
 fi

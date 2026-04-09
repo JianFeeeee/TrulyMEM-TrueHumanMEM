@@ -49,7 +49,7 @@ sleep 3
 
 # 6. 配置 Python 虚拟环境
 echo "[6/6] 配置 Python 虚拟环境..."
-PROJECT_DIR="$HOME/openclaw"
+PROJECT_DIR="$HOME/graph-memory"
 mkdir -p "$PROJECT_DIR"
 cd "$PROJECT_DIR"
 python3 -m venv venv
@@ -89,8 +89,8 @@ echo ""
 echo "远程 Neo4j 配置示例:"
 echo "  NEO4J_URI=bolt://192.168.1.100:7687 \\"
 echo "  NEO4J_PASSWORD=your_password \\"
-echo "  python /home/program/graph_enable_ability/openclaw_neo4j_demo.py"
+echo "  python /home/program/graph_enable_ability/graph_memory_demo.py"
 echo ""
 echo "启动对话:"
 echo "  cd $PROJECT_DIR && source venv/bin/activate"
-echo "  python /home/program/graph_enable_ability/openclaw_neo4j_demo.py"
+echo "  python /home/program/graph_enable_ability/graph_memory_demo.py"
