@@ -196,11 +196,30 @@ if [ -z "$NEO4J_PASSWORD" ]; then
     NEO4J_PASSWORD="neo4j"
 fi
 
+# Neo4j 连接配置
+NEO4J_URI="${NEO4J_URI:-bolt://localhost:7687}"
+NEO4J_USER="${NEO4J_USER:-neo4j}"
+NEO4J_PASSWORD="${NEO4J_PASSWORD:-neo4j}"
+
+# 检查是否有远程 Neo4j 配置
+if [ -n "$NEO4J_URI" ] && [ "$NEO4J_URI" != "bolt://localhost:7687" ]; then
+    echo "  使用远程 Neo4j: $NEO4J_URI"
+else
+    # 本地 Docker Neo4j
+    RUNNING=$(docker ps --filter "name=neo4j" --format "{{.Names}}" 2>/dev/null | head -1)
+    if [ -n "$RUNNING" ]; then
+        echo "  检测到运行中的 Neo4j 容器: $RUNNING"
+        NEO4J_AUTH=$(docker inspect "$RUNNING" --format '{{.Config.Env}}' 2>/dev/null | tr ' ' '\n' | grep NEO4J_AUTH | cut -d'=' -f2)
+        NEO4J_PASSWORD=$(echo "$NEO4J_AUTH" | cut -d'/' -f2)
+    fi
+    NEO4J_URI="bolt://localhost:7687"
+fi
+
 # 创建环境变量文件
 cat > .env << EOF
 DEEPSEEK_API_KEY=your-api-key-here
-NEO4J_URI=bolt://localhost:7687
-NEO4J_USER=neo4j
+NEO4J_URI=${NEO4J_URI}
+NEO4J_USER=${NEO4J_USER}
 NEO4J_PASSWORD=${NEO4J_PASSWORD}
 EOF
 
@@ -217,17 +236,20 @@ if [ "$1" = "--run" ] || [ "$1" = "-r" ]; then
     echo "启动 OpenClaw 对话 Demo..."
     echo "========================================"
     read -p "输入 API Key: " user_api_key
+    read -p "Neo4j URI (直接回车使用本地): " input_neo4j_uri
+    [ -z "$input_neo4j_uri" ] && input_neo4j_uri="bolt://localhost:7687"
     
     # 导出环境变量供 Python 使用
     if [ -n "$user_api_key" ]; then
         export DEEPSEEK_API_KEY="$user_api_key"
     fi
+    export NEO4J_URI="$input_neo4j_uri"
     export NEO4J_PASSWORD="$NEO4J_PASSWORD"
     
     # 写入 .env 文件保存
     cat > "$PROJECT_DIR/.env" << ENVEOF
 DEEPSEEK_API_KEY=${user_api_key}
-NEO4J_URI=bolt://localhost:7687
+NEO4J_URI=${input_neo4j_uri}
 NEO4J_USER=neo4j
 NEO4J_PASSWORD=${NEO4J_PASSWORD}
 ENVEOF
@@ -252,6 +274,11 @@ echo "默认密码: neo4j"
 echo ""
 echo "快速启动:"
 echo "  $0 --run          # 安装后直接运行 Demo"
+echo ""
+echo "远程 Neo4j 配置示例:"
+echo "  NEO4J_URI=bolt://192.168.1.100:7687 \\"
+echo "  NEO4J_PASSWORD=your_password \\"
+echo "  python /home/program/graph_enable_ability/openclaw_neo4j_demo.py"
 echo ""
 echo "或手动启动:"
 echo "  cd $PROJECT_DIR"
