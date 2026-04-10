@@ -7,22 +7,11 @@ GraphMemoryApp {
 
 LeftPanel {
     width: 1fr;
-    height: 100%;
     dock: left;
-}
-
-LeftPanel MessageHistory {
-    height: 1fr;
-}
-
-LeftPanel InputBox {
-    height: 3;
-    dock: bottom;
 }
 
 RightPanel {
     width: 40;
-    height: 100%;
     dock: right;
     background: $panel;
 }
