@@ -4,127 +4,24 @@
 
 一个让 AI 拥有自知、可塑、有分寸感长期记忆的图记忆系统，配备现代化终端用户界面。
 
+## ✨ 特性
+
+- 🖥️ **现代化TUI界面** - 基于Textual框架的终端界面
+- 💾 **内嵌数据库** - SQLite实现，无需Docker/Neo4j
+- 🌐 **Web接口** - 支持浏览器访问
+- 🚀 **一键启动** - 3步骤完成，30秒启动
+- 🌍 **跨平台** - 支持Windows/Linux/macOS
+- 📊 **实时可视化** - 消息、工具调用实时显示
+- 🔧 **完整功能** - 记忆检索、写入、删除、归档
+
 ## 📖 目录
 
-- [背景与理念](#背景与理念)
-- [核心特性](#核心特性)
-- [架构设计](#架构设计)
 - [快速开始](#快速开始)
-- [工具说明](#工具说明)
-- [图数据库模式](#图数据库模式)
-- [与传统方案的对比](#与传统方案的对比)
-- [路线图](#路线图)
-- [限制与注意事项](#限制与注意事项)
-
----
-
-## 背景与理念
-
-### 传统 AI 记忆的三大困境
-
-| 困境 | 表现 | 根源 |
-|------|------|------|
-| 上下文窗口天花板 | 对话越长，记忆越模糊，成本越高 | 依赖原始对话历史传递信息 |
-| "录音机式"记忆 | 仅能复述原文，无法理解关系与联想 | 向量检索只做语义匹配，缺乏结构 |
-| "不懂认错"的固执 | 错误信息无法修正，矛盾记录并存 | 记忆只有"写入"和"读取"，没有"更新"和"删除" |
-
-### 我们的答案：像人一样记忆
-
-TrueHumanMEM 的设计哲学不是做一个更"精准"的记忆数据库，而是让 AI 具备以下四种人类记忆的本质特征：
-
-1. **选择性** —— 只记录有价值的关系，不记流水账。
-2. **模糊性** —— 能推断，也能坦诚地表达不确定性。
-3. **可塑性** —— 允许修正、覆盖旧记忆，认知随对话演化。
-4. **自明性** —— 能区分"用户陈述"与"模型推断"，记忆自知来源。
-
-TrueHumanMEM 不是更强大的搜索引擎，而是更像人的记忆伙伴。
-
----
-
-## 核心特性
-
-### 🧠 最小化上下文窗口依赖
-
-上下文仅用于协议适配，不承载对话记忆。
-
-表面上，系统仍通过 messages 列表与 LLM API 交互——这是当前 Function Calling 接口的标准要求。但实际上：
-
-- **不传递历史对话**：每轮请求的 messages 仅包含系统提示、当前用户输入、上一轮的工具调用结果。
-- **不累积轮次**：过去的用户消息和助手回复不会被追加到后续请求中。模型无法通过翻看聊天记录来回忆信息。
-- **记忆外置**：所有需要跨轮次保留的事实、关系、偏好，全部写入 Neo4j 图数据库。当需要时，模型必须显式调用 memory_recall 工具，主动从图库中检索。
-
-这种设计确保了：上下文长度不随对话轮次线性增长，记忆能力不囿于窗口上限。
-
-### 🔗 结构化关系推理
-
-- 以三元组 (主体, 关系, 客体) 存储事实，天然支持多跳路径查询。
-- 即使信息未被用户直接陈述，系统也可通过路径组合进行推断。
-
-### ✍️ 自主记忆决策
-
-- 模型通过函数调用机制自主触发检索、写入或修正操作，避免硬编码管道。
-- 基于对话语境判断"什么值得记"、"何时该查"。
-
-### 🔄 完整的记忆生命周期管理
-
-| 状态 | 含义 | 操作 |
-|------|------|------|
-| active | 当前有效记忆 | 写入时创建 |
-| deleted | 软删除，逻辑失效 | 软删除操作 |
-| superseded | 已被新关系替代 | 替代模式操作 |
-| archived | 归档，低频访问 | 归档操作 |
-| 物理删除 | 彻底清理 | 清理操作 |
-
-### 🎯 置信度与来源标记
-
-- 每条关系携带数值置信度，存储层区分"确凿"与"推测"。
-- 表达层将不确定性转化为自然语言语气，实现从存储到表达的完整自知闭环。
-
-### 🔒 隐私友好，数据可本地化
-
-- 图库可部署于本地或私有环境，记忆数据由用户掌控。
-
-### 🖥️ 现代化终端界面
-
-- 基于 Textual 框架的 TUI 界面
-- 实时消息显示与工具调用可视化
-- 侧边栏配置与操作日志
-- 跨平台支持（Windows/Linux/macOS）
-
----
-
-## 架构设计
-
-```
-┌─────────────────────────────────────────────────────────────┐
-│                        用户输入                              │
-└─────────────────────────┬───────────────────────────────────┘
-                            ▼
-┌─────────────────────────────────────────────────────────────┐
-│              LLM API (with Function Calling)                │
-│  ┌───────────────────────────────────────────────────────┐  │
-│  │              System Prompt: 记忆助手角色               │  │
-│  │  + 当前用户输入 + 上一轮工具调用结果（极简上下文）      │  │
-│  └───────────────────────────────────────────────────────┘  │
-└─────────────────────────┬───────────────────────────────────┘
-                            │ 模型自主决策调用工具
-            ┌───────────────┼───────────────┬───────────────┐
-            ▼               ▼               ▼               ▼
-      ┌────────────┐  ┌────────────┐  ┌────────────┐  ┌────────────┐
-      │   recall   │  │   commit   │  │   purge    │  │ introspect │
-      └─────┬──────┘  └─────┬──────┘  └─────┬──────┘  └─────┬──────┘
-            │               │               │               │
-            └───────────────┴───────┬───────┴───────────────┘
-                                    ▼
-                        ┌─────────────────────────┐
-                        │      Neo4j 图数据库      │
-                        │  (实体节点 + 关系边)     │
-                        └─────────────────────────┘
-```
-
-- **轻量级上下文**：每轮仅包含系统提示、上一轮工具调用结果、当前用户输入。过往对话历史不累积。
-- **持续工具调用循环**：模型可在一次回复中调用多个工具，直至给出最终文本回复。
-- **可观测性支持**：所有工具调用记录于会话日志，支持审计追踪与调试回溯。
+- [使用方法](#使用方法)
+- [功能说明](#功能说明)
+- [API接口](#api接口)
+- [配置说明](#配置说明)
+- [开发指南](#开发指南)
 
 ---
 
@@ -133,10 +30,9 @@ TrueHumanMEM 不是更强大的搜索引擎，而是更像人的记忆伙伴。
 ### 前置要求
 
 - **Python 3.8+**
-- **Docker** (用于 Neo4j 数据库)
-- **DeepSeek API Key**（或兼容 OpenAI 格式的任意 LLM API）
+- **DeepSeek API Key**（或兼容OpenAI格式的API）
 
-### 一键启动（推荐）
+### 一键启动
 
 #### Windows
 ```bash
@@ -157,188 +53,227 @@ chmod +x start.sh
 python3 start.py
 ```
 
-启动脚本会自动：
-1. ✅ 启动 Docker (优先WSL，回退到Docker Desktop)
-2. ✅ 启动 Neo4j 数据库
-3. ✅ 创建虚拟环境
-4. ✅ 安装依赖
-5. ✅ 启动 TUI 应用
+### 启动流程
 
-### 手动启动
+```
+[Step 1/3] 检查 Python
+[Step 2/3] 设置虚拟环境
+[Step 3/3] 启动应用
 
-#### 1. 克隆仓库
-```bash
-git clone https://github.com/your-org/TrueHumanMEM.git
-cd TrueHumanMEM
+✅ 系统初始化成功！
+• 数据库: 内嵌SQLite (graph_memory.db)
+• API Key: 未配置
 ```
 
-#### 2. 安装依赖
+---
+
+## 使用方法
+
+### 1. 配置 API Key
+
+1. 按 **F2** 展开侧边栏
+2. 点击 **"配置"**
+3. 输入你的 **DeepSeek API Key**
+4. 按 **Enter** 保存
+
+### 2. 开始对话
+
+- 输入消息
+- 按 **Enter** 发送
+- 查看AI响应和工具调用
+
+### 3. 快捷键
+
+| 快捷键 | 功能 |
+|--------|------|
+| F1 | 帮助 |
+| F2 | 切换侧边栏 |
+| F3 | 工具详情 |
+| F4 | 查询框 |
+| F5 | 清屏 |
+| F6 | 退出 |
+
+---
+
+## 功能说明
+
+### 记忆管理工具
+
+| 工具 | 功能 | 参数 |
+|------|------|------|
+| memory_recall | 检索记忆 | query_intent, depth |
+| memory_commit | 写入记忆 | triplets, confidence |
+| memory_purge | 删除记忆 | criteria, mode |
+| memory_introspect | 查看状态 | - |
+| memory_archive | 归档记忆 | days |
+| memory_cleanup | 清理数据 | dry_run |
+
+### 数据库
+
+**内嵌SQLite数据库：**
+- 文件：`graph_memory.db`
+- 无需配置
+- 自动创建
+- 本地存储
+
+**数据结构：**
+- 实体（entities）：name, type, mention_count
+- 关系（relations）：source, target, type, confidence, status
+
+---
+
+## API接口
+
+### Web接口
+
+启动后访问：`http://localhost:5000`
+
+### REST API
+
 ```bash
+# 检索记忆
+POST /api/memory/recall
+{
+  "query_intent": "Python,AI"
+}
+
+# 写入记忆
+POST /api/memory/commit
+{
+  "triplets": [
+    {"subject": "用户", "relation": "喜欢", "object": "Python"}
+  ]
+}
+
+# 查看状态
+GET /api/memory/introspect
+
+# 获取配置
+GET /api/config
+```
+
+---
+
+## 配置说明
+
+### 环境变量
+
+创建 `.env` 文件：
+
+```bash
+# API配置
+DEEPSEEK_API_KEY=sk-xxxxxxxxxxxxx
+DEEPSEEK_BASE_URL=https://api.deepseek.com
+MODEL_NAME=deepseek-chat
+
+# 数据库配置（可选）
+USE_EMBEDDED_DB=true
+```
+
+### 切换数据库
+
+**使用内嵌数据库（默认）：**
+```bash
+USE_EMBEDDED_DB=true
+```
+
+**使用Neo4j（需要Docker）：**
+```bash
+USE_EMBEDDED_DB=false
+NEO4J_URI=bolt://localhost:7687
+NEO4J_USER=neo4j
+NEO4J_PASSWORD=graphmemory123
+```
+
+---
+
+## 开发指南
+
+### 项目结构
+
+```
+graph_enable_ability/
+├── graph_memory_tui/      # TUI应用
+│   ├── core/              # 核心逻辑
+│   │   ├── embedded_db.py # 内嵌数据库
+│   │   └── imports.py
+│   ├── web/               # Web接口
+│   ├── widgets/           # UI组件
+│   ├── styles/            # 样式
+│   └── app.py
+├── tests/                 # 测试
+├── docs/                  # 文档
+├── start.bat              # Windows启动
+├── start.sh               # Linux/macOS启动
+└── start.py               # 跨平台启动
+```
+
+### 运行测试
+
+```bash
+# 安装依赖
 pip install -r requirements.txt
+
+# 运行测试
+pytest tests/
 ```
 
-#### 3. 启动 Neo4j
-```bash
-# 使用Docker
-docker run -d --name neo4j \
-  -p 7474:7474 -p 7687:7687 \
-  -e NEO4J_AUTH=neo4j/graphmemory123 \
-  neo4j:latest
-```
+### 开发模式
 
-#### 4. 配置环境变量
 ```bash
-export DEEPSEEK_API_KEY="your-api-key"
-export NEO4J_URI="bolt://localhost:7687"
-export NEO4J_USER="neo4j"
-export NEO4J_PASSWORD="graphmemory123"
-```
+# 创建虚拟环境
+python -m venv venv
+source venv/bin/activate  # Linux/macOS
+venv\Scripts\activate     # Windows
 
-#### 5. 运行应用
+# 安装依赖
+pip install -r requirements.txt
 
-**TUI 界面（推荐）**
-```bash
+# 运行应用
 python -m graph_memory_tui.main
 ```
 
-**命令行 Demo**
-```bash
-python graph_memory_demo.py
-```
+---
 
-### 使用 TUI 界面
+## 常见问题
 
-1. **配置 API Key**
-   - 按 F2 展开侧边栏
-   - 点击"配置"
-   - 输入你的 DeepSeek API Key
-   - 按 Enter 保存
+### Q: 启动时显示"API Key 未配置"？
 
-2. **开始对话**
-   - 输入消息
-   - 按 Enter 发送
-   - 查看工具调用和AI响应
+**A:** 按F2打开侧边栏，在配置区输入API Key，按Enter保存。
 
-3. **快捷键**
-   - F1: 帮助
-   - F2: 切换侧边栏
-   - F3: 工具详情
-   - F5: 清屏
-   - F6: 退出
+### Q: 数据保存在哪里？
+
+**A:** 数据保存在 `graph_memory.db` 文件中，可以备份或迁移。
+
+### Q: 如何查看数据库内容？
+
+**A:** 使用SQLite工具打开 `graph_memory.db`，或使用 `memory_introspect` 工具。
+
+### Q: 支持哪些API？
+
+**A:** 支持所有兼容OpenAI格式的API，如DeepSeek、OpenAI等。
 
 ---
 
-## 工具说明
+## 技术栈
 
-系统向模型暴露 6 个记忆管理工具，由模型根据对话需求自主调用。
-
-| 工具名 | 描述 | 关键参数 |
-|--------|------|----------|
-| memory_recall | 检索相关子图 | query_intent (str): 关键词意图<br>seed_entities (List[str]): 起始实体<br>depth (int): 遍历深度<br>time_range (str, 可选): 时间范围 |
-| memory_commit | 写入三元组 | triplets (List[Dict]): 每项含 subject, relation, object, confidence (float, 0.0-1.0) |
-| memory_purge | 删除或替代记忆 | criteria (Dict): 匹配条件<br>mode (str): soft / supersede<br>new_relation (Dict, 可选): 替代关系 |
-| memory_introspect | 查看当前会话元数据 | session_id (str, 可选) |
-| memory_archive | 归档旧关系 | days (int): 归档天数阈值 |
-| memory_cleanup | 物理清理已删除数据 | dry_run (bool): 预览模式 |
-
----
-
-## 图数据库模式
-
-### 节点（Entity）
-
-| 属性 | 类型 | 描述 |
-|------|------|------|
-| name | String | 实体唯一标识 |
-| type | String | 实体类型（模型动态提议） |
-| created_at | DateTime | 创建时间 |
-| updated_at | DateTime | 最后更新时间 |
-| mention_count | Integer | 被提及次数 |
-
-### 关系（RELATES）
-
-| 属性 | 类型 | 描述 |
-|------|------|------|
-| type | String | 关系类型 |
-| created_at | DateTime | 关系创建时间 |
-| session_id | String | 所属会话 ID |
-| turn_id | Integer | 会话内轮次编号 |
-| status | String | active / deleted / superseded / archived |
-| confidence | Float | 置信度 0.0 ~ 1.0 |
-| date_bucket | String | 日期分桶 (YYYY-MM-DD) |
-| supersedes | Integer | （可选）指向替代关系 ID |
-
-**索引与约束**：实体名与会话 ID 唯一约束；关系属性建立索引以确保查询性能。
-
----
-
-## 与传统方案的对比
-
-| 维度 | 传统上下文窗口 | 向量 RAG | TrueHumanMEM |
-|------|----------------|----------|--------------|
-| 记忆跨度 | 受窗口长度限制 | 检索精度随数据量下降 | 跨会话持久化，图结构保证精度 |
-| 关系推理 | 依赖模型上下文推理 | 仅语义相似匹配 | 原生多跳路径查询 |
-| 记忆修正 | 只能追加新消息 | 旧向量无法更新 | 完整状态机（软删除、替代） |
-| 不确定性表达 | 无 | 无 | 置信度 + 语气标记 |
-| 数据主权 | 全部上传 API | 向量库常为云端 | 图库可本地化部署 |
-| 可解释性 | 黑盒 | 难以解释召回原因 | 显式关系路径，可审计 |
-
----
-
-## 路线图
-
-### Phase 1: 核心稳定（当前）
-
-- [X] 核心六工具 + Neo4j 集成
-- [X] 函数调用驱动自主决策
-- [X] 软删除与替代模式
-- [X] TUI 界面
-- [X] 一键启动脚本
-- [X] 多语言支持
-
-### Phase 2: 体验优化
-
-- [ ] 来源标记增强：存储层显式区分"用户陈述"与"模型推断"
-- [ ] 端侧轻量化：适配轻量级图存储，支持资源受限环境
-- [ ] 全文索引优化：提升大规模数据检索性能
-- [ ] 人工干预接口：支持显式记忆编辑与强制检索指令
-
-### Phase 3: 能力扩展
-
-- [ ] 多模态记忆：支持非文本记忆关联
-- [ ] 可视化界面：图形化展示个人知识图谱
-- [ ] 流式输出：实时显示AI响应
-
----
-
-## 限制与注意事项
-
-- **事实准确性依赖底层模型能力**：系统通过 LLM 进行关系抽取与推断，可能产生错误事实，建议关键信息人工复核。
-- **函数调用能力依赖**：模型需支持稳定的 function calling 接口，不同 LLM 表现可能存在差异。
-- **性能基准待补充**：当前版本未针对超大规模图谱（千万级节点）进行优化，极端场景下查询延迟可能上升。
-- **隐私边界**：本地部署仅保证数据存储位置可控，LLM API 调用仍受服务商条款约束。
-
----
-
-## 文档
-
-详细文档请查看 `docs/` 目录：
-
-- [架构设计](docs/架构.md)
-- [一键启动指南](docs/一键启动指南.md)
-- [API配置指南](docs/API配置指南.md)
-
----
-
-## 贡献
-
-欢迎任何形式的贡献！请先阅读贡献指南。
+- **Python 3.8+** - 编程语言
+- **Textual** - TUI框架
+- **SQLite** - 内嵌数据库
+- **Flask** - Web框架
+- **OpenAI SDK** - API调用
 
 ---
 
 ## 许可证
 
-本项目采用 MIT License。
+MIT License
+
+---
+
+## 贡献
+
+欢迎提交Issue和Pull Request！
 
 ---
 
