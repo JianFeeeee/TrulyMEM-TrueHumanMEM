@@ -1,5 +1,42 @@
 /* Component Styles for Graph Memory TUI */
 
+/* Config Section */
+ConfigSection {
+    background: $surface;
+    padding: 1;
+    margin: 1;
+}
+
+ConfigSection .config-title {
+    color: $primary;
+    text-style: bold;
+    margin: 1;
+}
+
+ConfigSection .config-label {
+    color: $text;
+    margin: 1 0 0 0;
+}
+
+ConfigSection .config-hint {
+    color: $text-muted;
+    text-style: italic;
+    margin: 1 0 0 0;
+}
+
+ConfigSection Input {
+    width: 1fr;
+    margin: 0 0 1 0;
+    background: $surface-lighten-1;
+    border: solid $primary;
+}
+
+ConfigSection Input:focus {
+    border: double $primary;
+    background: $surface-lighten-2;
+}
+
+/* Input Box */
 InputBox {
     border: solid orange;
     height: 3;
@@ -24,6 +61,7 @@ InputBox Input:focus {
     background: $surface-lighten-1;
 }
 
+/* Other Components */
 ConfigSection {
     background: $panel;
     margin: 1;

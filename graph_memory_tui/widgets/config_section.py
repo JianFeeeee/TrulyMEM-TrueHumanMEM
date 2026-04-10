@@ -22,26 +22,28 @@ class ConfigSection(Vertical):
 
     def compose(self) -> ComposeResult:
         """构建配置区"""
-        with Collapsible(title="配置", collapsed=True):
-            yield Static("API Key (sk-开头):", classes="config-label")
-            yield Input(
-                value=self._config.api_key,
-                placeholder="sk-xxxxxxxxxxxxx",
-                id="api-key-input",
-                password=False  # 改为明文显示，方便编辑
-            )
-            yield Static("模型:", classes="config-label")
-            yield Input(
-                value=self._config.model,
-                placeholder="deepseek-chat",
-                id="model-input"
-            )
-            yield Static("Base URL:", classes="config-label")
-            yield Input(
-                value=self._config.base_url,
-                placeholder="https://api.deepseek.com",
-                id="base-url-input"
-            )
+        # 直接显示配置，不使用Collapsible
+        yield Static("━━ 配置 ━━", classes="config-title")
+        yield Static("API Key:", classes="config-label")
+        yield Input(
+            value=self._config.api_key,
+            placeholder="sk-xxxxxxxxxxxxx",
+            id="api-key-input",
+            password=False
+        )
+        yield Static("模型:", classes="config-label")
+        yield Input(
+            value=self._config.model,
+            placeholder="deepseek-chat",
+            id="model-input"
+        )
+        yield Static("Base URL:", classes="config-label")
+        yield Input(
+            value=self._config.base_url,
+            placeholder="https://api.deepseek.com",
+            id="base-url-input"
+        )
+        yield Static("按Enter保存配置", classes="config-hint")
 
     def on_input_changed(self, event: Input.Changed) -> None:
         """处理输入变更事件"""
