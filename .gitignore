@@ -1,4 +1,4 @@
-# Python
+ei'r# Python
 __pycache__/
 *.py[cod]
 *$py.class
@@ -19,6 +19,11 @@ ENV/
 *.swp
 *.swo
 
+# CodeArts
+.arts/
+.codeartsdoer/
+.codearts/
+
 # OS
 .DS_Store
 Thumbs.db
@@ -33,8 +38,6 @@ build/
 
 # Environment
 .env
-.arts/
-.codeartsdoer/
 .pytest_cache/
 
 # Test
