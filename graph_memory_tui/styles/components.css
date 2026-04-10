@@ -1,0 +1,46 @@
+/* Component Styles for Graph Memory TUI */
+
+InputBox {
+    border: solid orange;
+    height: 3;
+    margin: 1;
+    padding: 1;
+}
+
+InputBox:focus {
+    border: double orange;
+    text-style: bold;
+}
+
+InputBox Input {
+    width: 1fr;
+    height: 1;
+    background: $surface;
+    color: $text;
+    border: none;
+}
+
+InputBox Input:focus {
+    background: $surface-lighten-1;
+}
+
+ConfigSection {
+    background: $panel;
+    margin: 1;
+}
+
+OperationLog {
+    background: $surface-darken-1;
+    height: 1fr;
+    margin: 1;
+}
+
+CypherQueryBox {
+    border: solid green;
+    margin: 1;
+}
+
+MessageHistory {
+    height: 1fr;
+    margin: 1;
+}

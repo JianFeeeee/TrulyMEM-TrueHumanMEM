@@ -1,0 +1,35 @@
+/* Global Styles for Graph Memory TUI */
+
+GraphMemoryApp {
+    background: $surface;
+    color: $text;
+}
+
+LeftPanel {
+    width: 1fr;
+    height: 100%;
+    dock: left;
+}
+
+LeftPanel MessageHistory {
+    height: 1fr;
+}
+
+LeftPanel InputBox {
+    height: 3;
+    dock: bottom;
+}
+
+RightPanel {
+    width: 40;
+    height: 100%;
+    dock: right;
+    background: $panel;
+}
+
+StatusBar {
+    dock: bottom;
+    height: 1;
+    background: $primary;
+    color: $text-primary;
+}
