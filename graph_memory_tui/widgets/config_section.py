@@ -23,27 +23,58 @@ class ConfigSection(Vertical):
     def compose(self) -> ComposeResult:
         """构建配置区"""
         # 直接显示配置，不使用Collapsible
-        yield Static("━━ 配置 ━━", classes="config-title")
-        yield Static("API Key:", classes="config-label")
+        title = Static("━━ 配置 ━━", classes="config-title")
+        title.can_focus = False
+        yield title
+        
+        label1 = Static("API Key:", classes="config-label")
+        label1.can_focus = False
+        yield label1
+        
         yield Input(
             value=self._config.api_key,
             placeholder="sk-xxxxxxxxxxxxx",
             id="api-key-input",
-            password=True  # 使用密码模式
+            password=True
         )
-        yield Static("模型:", classes="config-label")
+        
+        label2 = Static("模型:", classes="config-label")
+        label2.can_focus = False
+        yield label2
+        
         yield Input(
             value=self._config.model,
             placeholder="deepseek-chat",
             id="model-input"
         )
-        yield Static("Base URL:", classes="config-label")
+        
+        label3 = Static("Base URL:", classes="config-label")
+        label3.can_focus = False
+        yield label3
+        
         yield Input(
             value=self._config.base_url,
             placeholder="https://api.deepseek.com",
             id="base-url-input"
         )
-        yield Static("按Enter保存配置", classes="config-hint")
+        
+        hint = Static("按Enter保存配置", classes="config-hint")
+        hint.can_focus = False
+        yield hint
+
+    def on_mount(self) -> None:
+        """组件挂载时设置Tab顺序"""
+        try:
+            api_key = self.query_one("#api-key-input", Input)
+            model = self.query_one("#model-input", Input)
+            base_url = self.query_one("#base-url-input", Input)
+            
+            # 设置Tab索引
+            api_key.tab_index = 0
+            model.tab_index = 1
+            base_url.tab_index = 2
+        except Exception:
+            pass
 
     def on_input_changed(self, event: Input.Changed) -> None:
         """处理输入变更事件"""
