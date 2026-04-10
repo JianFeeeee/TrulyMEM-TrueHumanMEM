@@ -65,33 +65,9 @@ class GraphMemoryApp(App[None]):
         history = self.query_one(MessageHistory)
         
         try:
-            # 初始化图数据库连接（添加重试）
-            max_retries = 3
-            retry_delay = 2
+            # 初始化内嵌图数据库
+            self._graph = Neo4jGraph(db_path="graph_memory.db")
             
-            for attempt in range(max_retries):
-                try:
-                    self._graph = Neo4jGraph(
-                        uri=NEO4J_URI,
-                        user=NEO4J_USER,
-                        password=NEO4J_PASSWORD
-                    )
-                    # 测试连接
-                    self._graph.ensure_constraints()
-                    break
-                except Exception as e:
-                    if attempt < max_retries - 1:
-                        msg = Message(
-                            role="assistant",
-                            content=f"⚠️ Neo4j连接失败，正在重试... ({attempt + 1}/{max_retries})",
-                            timestamp=datetime.now()
-                        )
-                        history.add_message(msg)
-                        import asyncio
-                        asyncio.sleep(retry_delay)
-                    else:
-                        raise e
-
             # 初始化 API 客户端
             self._init_client()
 
@@ -99,7 +75,7 @@ class GraphMemoryApp(App[None]):
             welcome = Message(
                 role="assistant",
                 content="✅ 系统初始化成功！\n\n"
-                       f"• Neo4j 已连接: {NEO4J_URI}\n"
+                       f"• 数据库: 内嵌SQLite (graph_memory.db)\n"
                        f"• API Key: {'已配置' if self._config.api_key else '未配置'}\n\n"
                        "现在可以开始对话了！",
                 timestamp=datetime.now()
