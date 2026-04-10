@@ -4,7 +4,7 @@
 
 import json
 from pathlib import Path
-from .config import AppConfig
+from ..models.config import AppConfig
 
 
 class ConfigManager:
