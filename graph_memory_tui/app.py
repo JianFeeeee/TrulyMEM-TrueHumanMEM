@@ -17,6 +17,7 @@ from .widgets.message_history import MessageHistory
 from .models.message import Message, ToolCall, ToolResult
 from .models.config import AppConfig
 from .models.log_entry import LogEntry
+from .services.config_manager import ConfigManager
 from .core.imports import (
     Neo4jGraph,
     GraphMemoryClient,
@@ -48,7 +49,15 @@ class GraphMemoryApp(App[None]):
 
     def __init__(self, config: AppConfig | None = None, **kwargs):
         super().__init__(**kwargs)
-        self._config = config or AppConfig.from_env()
+        # 配置管理器
+        self._config_manager = ConfigManager()
+        # 优先使用传入的配置，其次加载持久化配置，最后使用环境变量
+        if config:
+            self._config = config
+        elif self._config_manager.exists():
+            self._config = self._config_manager.load()
+        else:
+            self._config = AppConfig.from_env()
         
         # 核心组件
         self._graph: Neo4jGraph | None = None
@@ -350,10 +359,13 @@ API Key 未配置！
         # 更新配置
         self._config = event.config
         
+        # 持久化保存配置
+        self._config_manager.save(self._config)
+        
         # 重新初始化客户端
         self._init_client()
         
         if self._client:
-            self.notify("✅ 配置已更新并应用", title="配置")
+            self.notify("✅ 配置已保存并应用", title="配置")
         else:
             self.notify("⚠️ 配置已保存，但API Key无效", title="警告")
