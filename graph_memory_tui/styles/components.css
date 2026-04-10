@@ -29,6 +29,7 @@ ConfigSection Input {
     margin: 0 0 1 0;
     background: $surface-lighten-1;
     border: solid $primary;
+    color: $text;
 }
 
 ConfigSection Input:focus {
@@ -38,35 +39,25 @@ ConfigSection Input:focus {
 
 /* Input Box */
 InputBox {
-    border: solid orange;
-    height: 3;
-    margin: 1;
+    background: $surface;
     padding: 1;
-}
-
-InputBox:focus {
-    border: double orange;
-    text-style: bold;
+    height: auto;
 }
 
 InputBox Input {
     width: 1fr;
-    height: 1;
     background: $surface;
     color: $text;
-    border: none;
+    border: solid $primary;
+    padding: 1;
 }
 
 InputBox Input:focus {
+    border: double $accent;
     background: $surface-lighten-1;
 }
 
 /* Other Components */
-ConfigSection {
-    background: $panel;
-    margin: 1;
-}
-
 OperationLog {
     background: $surface-darken-1;
     height: 1fr;

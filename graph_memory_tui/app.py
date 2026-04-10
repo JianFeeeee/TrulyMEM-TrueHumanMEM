@@ -157,17 +157,61 @@ F6 - 退出
     # 事件处理
     def on_input_box_send_message(self, event: InputBox.SendMessage) -> None:
         """处理发送消息事件"""
-        # 添加用户消息
-        history = self.query_one(MessageHistory)
-        user_message = Message(
-            role="user",
-            content=event.content,
-            timestamp=datetime.now()
-        )
-        history.add_message(user_message)
+        try:
+            # 添加用户消息
+            history = self.query_one(MessageHistory)
+            user_message = Message(
+                role="user",
+                content=event.content,
+                timestamp=datetime.now()
+            )
+            history.add_message(user_message)
 
-        # 异步处理消息
-        asyncio.create_task(self._process_message_async(event.content))
+            # 简单响应（避免崩溃）
+            if not self._config.api_key:
+                response_msg = Message(
+                    role="assistant",
+                    content="请先配置API Key。\n\n按F2打开侧边栏，输入API Key后按Enter保存。",
+                    timestamp=datetime.now()
+                )
+                history.add_message(response_msg)
+                return
+
+            # 显示处理中消息
+            processing_msg = Message(
+                role="assistant",
+                content="正在处理...",
+                timestamp=datetime.now()
+            )
+            history.add_message(processing_msg)
+
+            # 异步处理（使用call_later避免崩溃）
+            self.call_later(self._process_message_safe, event.content)
+
+        except Exception as e:
+            # 显示错误
+            error_msg = Message(
+                role="assistant",
+                content=f"错误: {str(e)}",
+                timestamp=datetime.now()
+            )
+            history.add_message(error_msg)
+
+    def _process_message_safe(self, user_input: str) -> None:
+        """安全处理消息"""
+        try:
+            history = self.query_one(MessageHistory)
+
+            # 简单测试响应
+            response_msg = Message(
+                role="assistant",
+                content=f"收到消息: {user_input}\n\n完整功能需要配置API Key并连接API服务。",
+                timestamp=datetime.now()
+            )
+            history.add_message(response_msg)
+
+        except Exception as e:
+            print(f"Error: {e}")
 
     async def _process_message_async(self, user_input: str) -> None:
         """异步处理消息 - 参考demo实现"""

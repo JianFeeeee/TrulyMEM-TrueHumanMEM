@@ -29,7 +29,7 @@ class ConfigSection(Vertical):
             value=self._config.api_key,
             placeholder="sk-xxxxxxxxxxxxx",
             id="api-key-input",
-            password=False
+            password=True  # 使用密码模式
         )
         yield Static("模型:", classes="config-label")
         yield Input(
