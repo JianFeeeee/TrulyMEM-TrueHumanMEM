@@ -1,5 +1,20 @@
 /* Component Styles for Graph Memory TUI */
 
+/* Input Box - 最重要 */
+InputBox {
+    background: $surface;
+    padding: 1 2;
+    height: auto;
+    border: solid $primary;
+}
+
+InputBox Input {
+    width: 100%;
+    background: $surface-lighten-1;
+    color: $text;
+    border: none;
+}
+
 /* Config Section */
 ConfigSection {
     background: $surface;
@@ -30,31 +45,6 @@ ConfigSection Input {
     background: $surface-lighten-1;
     border: solid $primary;
     color: $text;
-}
-
-ConfigSection Input:focus {
-    border: double $primary;
-    background: $surface-lighten-2;
-}
-
-/* Input Box */
-InputBox {
-    background: $surface;
-    padding: 1;
-    height: auto;
-}
-
-InputBox Input {
-    width: 1fr;
-    background: $surface;
-    color: $text;
-    border: solid $primary;
-    padding: 1;
-}
-
-InputBox Input:focus {
-    border: double $accent;
-    background: $surface-lighten-1;
 }
 
 /* Other Components */

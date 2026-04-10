@@ -5,6 +5,17 @@ GraphMemoryApp {
     color: $text;
 }
 
+/* 全局Input样式 - 确保可见 */
+Input {
+    background: $surface-lighten-1;
+    color: $text;
+    border: solid $primary;
+}
+
+Input:focus {
+    border: double $accent;
+}
+
 LeftPanel {
     width: 1fr;
     dock: left;
