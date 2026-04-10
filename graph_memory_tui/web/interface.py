@@ -4,7 +4,6 @@ Web接口 - 提供浏览器访问
 
 from flask import Flask, render_template, jsonify, request
 from flask_cors import CORS
-import asyncio
 import json
 from datetime import datetime
 from typing import Optional
@@ -20,7 +19,9 @@ class WebInterface:
         self.config = config
         self.db = db
         self.port = port
-        self.app = Flask(__name__)
+        self.app = Flask(__name__, 
+                        template_folder='templates',
+                        static_folder='static')
         CORS(self.app)
         self._setup_routes()
     
@@ -35,9 +36,9 @@ class WebInterface:
         def chat():
             data = request.json
             message = data.get('message', '')
-            # 这里需要实现聊天逻辑
+            # 简单响应，实际应集成完整的聊天逻辑
             return jsonify({
-                'response': 'Web interface is ready. Please use TUI for full functionality.',
+                'response': f'收到消息: {message}\n\n请使用TUI界面获得完整功能。',
                 'timestamp': datetime.now().isoformat()
             })
         
@@ -74,10 +75,19 @@ class WebInterface:
                 'model': self.config.model,
                 'base_url': self.config.base_url
             })
+        
+        @self.app.route('/api/config', methods=['POST'])
+        def save_config():
+            data = request.json
+            self.config.api_key = data.get('api_key', '')
+            self.config.model = data.get('model', 'deepseek-chat')
+            self.config.base_url = data.get('base_url', 'https://api.deepseek.com')
+            return jsonify({'status': 'ok', 'message': 'Configuration saved'})
     
     def run(self):
         """启动Web服务"""
-        self.app.run(host='0.0.0.0', port=self.port, debug=False)
+        print(f"Web interface running at http://localhost:{self.port}")
+        self.app.run(host='0.0.0.0', port=self.port, debug=False, threaded=True)
     
     def run_async(self):
         """异步启动Web服务"""

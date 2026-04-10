@@ -1,80 +1,408 @@
 <!DOCTYPE html>
-<html>
+<html lang="zh-CN">
 <head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Graph Memory TUI - Web Interface</title>
-    <meta charset="utf-8">
     <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
         body {
-            font-family: Arial, sans-serif;
-            max-width: 800px;
-            margin: 0 auto;
+            font-family: 'Courier New', monospace;
+            background: #1a1a1a;
+            color: #e0e0e0;
+            height: 100vh;
+            display: flex;
+            flex-direction: column;
+        }
+
+        /* Header */
+        .header {
+            background: #2d2d2d;
+            padding: 10px 20px;
+            border-bottom: 2px solid #4a9eff;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .header h1 {
+            color: #4a9eff;
+            font-size: 18px;
+        }
+
+        .header .status {
+            color: #888;
+            font-size: 12px;
+        }
+
+        /* Main Container */
+        .container {
+            display: flex;
+            flex: 1;
+            overflow: hidden;
+        }
+
+        /* Left Panel - Chat */
+        .left-panel {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            border-right: 1px solid #333;
+        }
+
+        /* Message History */
+        .message-history {
+            flex: 1;
+            overflow-y: auto;
             padding: 20px;
-            background: #f5f5f5;
+            background: #0d0d0d;
         }
-        h1 {
-            color: #333;
-        }
-        .info {
-            background: #fff;
-            padding: 20px;
-            border-radius: 8px;
-            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
-        }
-        .api-docs {
-            margin-top: 20px;
-        }
-        .endpoint {
-            background: #e8f4f8;
+
+        .message {
+            margin-bottom: 15px;
             padding: 10px;
-            margin: 10px 0;
-            border-radius: 4px;
+            border-radius: 5px;
         }
-        code {
-            background: #f0f0f0;
-            padding: 2px 6px;
-            border-radius: 3px;
+
+        .message.user {
+            background: #1e3a5f;
+            border-left: 3px solid #4a9eff;
+        }
+
+        .message.assistant {
+            background: #2d2d2d;
+            border-left: 3px solid #50c878;
+        }
+
+        .message .role {
+            font-weight: bold;
+            margin-bottom: 5px;
+            font-size: 12px;
+            color: #888;
+        }
+
+        .message .content {
+            white-space: pre-wrap;
+            line-height: 1.5;
+        }
+
+        .message .timestamp {
+            font-size: 10px;
+            color: #666;
+            margin-top: 5px;
+        }
+
+        /* Input Box */
+        .input-box {
+            padding: 15px;
+            background: #1a1a1a;
+            border-top: 1px solid #333;
+        }
+
+        .input-box textarea {
+            width: 100%;
+            background: #0d0d0d;
+            color: #e0e0e0;
+            border: 1px solid #4a9eff;
+            padding: 10px;
+            font-family: 'Courier New', monospace;
+            font-size: 14px;
+            resize: none;
+            height: 60px;
+        }
+
+        .input-box textarea:focus {
+            outline: none;
+            border-color: #50c878;
+        }
+
+        .input-box .hint {
+            font-size: 11px;
+            color: #666;
+            margin-top: 5px;
+        }
+
+        /* Right Panel - Config & Logs */
+        .right-panel {
+            width: 350px;
+            background: #1a1a1a;
+            display: flex;
+            flex-direction: column;
+            overflow-y: auto;
+        }
+
+        .panel-section {
+            padding: 15px;
+            border-bottom: 1px solid #333;
+        }
+
+        .panel-section h3 {
+            color: #4a9eff;
+            font-size: 14px;
+            margin-bottom: 10px;
+            padding-bottom: 5px;
+            border-bottom: 1px solid #333;
+        }
+
+        /* Config */
+        .config-item {
+            margin-bottom: 15px;
+        }
+
+        .config-item label {
+            display: block;
+            font-size: 12px;
+            color: #888;
+            margin-bottom: 5px;
+        }
+
+        .config-item input {
+            width: 100%;
+            background: #0d0d0d;
+            color: #e0e0e0;
+            border: 1px solid #333;
+            padding: 8px;
+            font-family: 'Courier New', monospace;
+            font-size: 12px;
+        }
+
+        .config-item input:focus {
+            outline: none;
+            border-color: #4a9eff;
+        }
+
+        .config-hint {
+            font-size: 11px;
+            color: #666;
+            font-style: italic;
+        }
+
+        /* Operation Log */
+        .operation-log {
+            flex: 1;
+            overflow-y: auto;
+        }
+
+        .log-entry {
+            padding: 8px;
+            margin-bottom: 8px;
+            background: #0d0d0d;
+            border-left: 2px solid #50c878;
+            font-size: 11px;
+        }
+
+        .log-entry .time {
+            color: #666;
+        }
+
+        .log-entry .tool {
+            color: #4a9eff;
+            font-weight: bold;
+        }
+
+        /* Buttons */
+        .btn {
+            background: #4a9eff;
+            color: #fff;
+            border: none;
+            padding: 8px 15px;
+            cursor: pointer;
+            font-family: 'Courier New', monospace;
+            font-size: 12px;
+            margin-top: 10px;
+        }
+
+        .btn:hover {
+            background: #50c878;
+        }
+
+        /* Scrollbar */
+        ::-webkit-scrollbar {
+            width: 8px;
+        }
+
+        ::-webkit-scrollbar-track {
+            background: #1a1a1a;
+        }
+
+        ::-webkit-scrollbar-thumb {
+            background: #333;
+        }
+
+        ::-webkit-scrollbar-thumb:hover {
+            background: #4a9eff;
         }
     </style>
 </head>
 <body>
-    <h1>Graph Memory TUI - Web Interface</h1>
-    
-    <div class="info">
-        <h2>Welcome!</h2>
-        <p>This is the web interface for Graph Memory TUI.</p>
-        <p>For full functionality, please use the TUI application.</p>
-        
-        <div class="api-docs">
-            <h3>API Endpoints</h3>
-            
-            <div class="endpoint">
-                <h4>POST /api/chat</h4>
-                <p>Send a chat message</p>
-                <code>{"message": "your message"}</code>
+    <div class="header">
+        <h1>Graph Memory TUI - Web Interface</h1>
+        <div class="status">Connected | Database: SQLite</div>
+    </div>
+
+    <div class="container">
+        <!-- Left Panel -->
+        <div class="left-panel">
+            <div class="message-history" id="messageHistory">
+                <div class="message assistant">
+                    <div class="role">Assistant</div>
+                    <div class="content">欢迎使用 Graph Memory TUI Web界面！
+
+这是一个让AI拥有长期记忆的图记忆系统。
+
+功能：
+• 记忆检索 - 查找历史信息
+• 记忆写入 - 保存重要信息
+• 记忆管理 - 删除、归档记忆
+
+请先在右侧配置API Key，然后开始对话。</div>
+                    <div class="timestamp">System</div>
+                </div>
             </div>
-            
-            <div class="endpoint">
-                <h4>POST /api/memory/recall</h4>
-                <p>Recall memories</p>
-                <code>{"query_intent": "keywords"}</code>
+
+            <div class="input-box">
+                <textarea id="userInput" placeholder="输入消息... (Ctrl+Enter发送)"></textarea>
+                <div class="hint">按 Ctrl+Enter 发送消息</div>
             </div>
-            
-            <div class="endpoint">
-                <h4>POST /api/memory/commit</h4>
-                <p>Commit memories</p>
-                <code>{"triplets": [...]}</code>
+        </div>
+
+        <!-- Right Panel -->
+        <div class="right-panel">
+            <div class="panel-section">
+                <h3>━━ 配置 ━━</h3>
+                <div class="config-item">
+                    <label>API Key:</label>
+                    <input type="text" id="apiKey" placeholder="sk-xxxxxxxxxxxxx">
+                </div>
+                <div class="config-item">
+                    <label>模型:</label>
+                    <input type="text" id="model" value="deepseek-chat">
+                </div>
+                <div class="config-item">
+                    <label>Base URL:</label>
+                    <input type="text" id="baseUrl" value="https://api.deepseek.com">
+                </div>
+                <button class="btn" onclick="saveConfig()">保存配置</button>
+                <div class="config-hint">配置会自动保存到本地</div>
             </div>
-            
-            <div class="endpoint">
-                <h4>GET /api/memory/introspect</h4>
-                <p>Get database statistics</p>
+
+            <div class="panel-section">
+                <h3>━━ 数据库状态 ━━</h3>
+                <div id="dbStatus">加载中...</div>
+                <button class="btn" onclick="refreshStatus()">刷新状态</button>
             </div>
-            
-            <div class="endpoint">
-                <h4>GET /api/config</h4>
-                <p>Get current configuration</p>
+
+            <div class="panel-section operation-log">
+                <h3>━━ 操作日志 ━━</h3>
+                <div id="operationLog"></div>
             </div>
         </div>
     </div>
+
+    <script>
+        // Message handling
+        const messageHistory = document.getElementById('messageHistory');
+        const userInput = document.getElementById('userInput');
+
+        function addMessage(role, content) {
+            const msg = document.createElement('div');
+            msg.className = `message ${role}`;
+            msg.innerHTML = `
+                <div class="role">${role === 'user' ? 'You' : 'Assistant'}</div>
+                <div class="content">${content}</div>
+                <div class="timestamp">${new Date().toLocaleTimeString()}</div>
+            `;
+            messageHistory.appendChild(msg);
+            messageHistory.scrollTop = messageHistory.scrollHeight;
+        }
+
+        function addLog(tool, result) {
+            const log = document.getElementById('operationLog');
+            const entry = document.createElement('div');
+            entry.className = 'log-entry';
+            entry.innerHTML = `
+                <div class="time">${new Date().toLocaleTimeString()}</div>
+                <div class="tool">${tool}</div>
+                <div>${result}</div>
+            `;
+            log.insertBefore(entry, log.firstChild);
+        }
+
+        // Send message
+        async function sendMessage() {
+            const message = userInput.value.trim();
+            if (!message) return;
+
+            addMessage('user', message);
+            userInput.value = '';
+
+            try {
+                const response = await fetch('/api/chat', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({message})
+                });
+
+                const data = await response.json();
+                addMessage('assistant', data.response);
+                addLog('chat', 'Message sent');
+            } catch (error) {
+                addMessage('assistant', `Error: ${error.message}`);
+            }
+        }
+
+        // Config
+        async function saveConfig() {
+            const config = {
+                api_key: document.getElementById('apiKey').value,
+                model: document.getElementById('model').value,
+                base_url: document.getElementById('baseUrl').value
+            };
+
+            try {
+                const response = await fetch('/api/config', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify(config)
+                });
+
+                const data = await response.json();
+                addLog('config', 'Configuration saved');
+                alert('配置已保存！');
+            } catch (error) {
+                alert('保存失败：' + error.message);
+            }
+        }
+
+        // Status
+        async function refreshStatus() {
+            try {
+                const response = await fetch('/api/memory/introspect');
+                const data = await response.json();
+                document.getElementById('dbStatus').innerHTML = `
+                    <div>实体数量: ${data.entity_count}</div>
+                    <div>关系数量: ${data.relation_count}</div>
+                `;
+                addLog('introspect', 'Status refreshed');
+            } catch (error) {
+                document.getElementById('dbStatus').innerHTML = 'Error: ' + error.message;
+            }
+        }
+
+        // Keyboard shortcuts
+        userInput.addEventListener('keydown', (e) => {
+            if (e.ctrlKey && e.key === 'Enter') {
+                sendMessage();
+            }
+        });
+
+        // Initialize
+        refreshStatus();
+    </script>
 </body>
 </html>
