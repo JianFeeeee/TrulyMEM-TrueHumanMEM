@@ -13,6 +13,7 @@ class MessageWidget(Container):
         super().__init__(**kwargs)
         self._message = message
         self._show_tool_details = False
+        self._content_widget = None  # 保存内容组件的引用
 
     def compose(self):
         """构建消息组件"""
@@ -20,12 +21,16 @@ class MessageWidget(Container):
         role_emoji = "🟠" if self._message.role == "user" else "🔵"
         timestamp_str = self._message.timestamp.strftime("%H:%M:%S")
         yield Static(
-            f"{role_emoji} [{self._message.role}] {timestamp_str}",
+            f"{role_emoji}  {timestamp_str}",
             classes="message-header"
         )
 
-        # 消息内容
-        yield Static(self._message.content, classes="message-content")
+        # 消息内容 - 保存引用以便后续更新
+        self._content_widget = Static(
+            self._message.content,
+            classes="message-content"
+        )
+        yield self._content_widget
 
         # 工具调用指示器
         if self._message.tool_calls:
@@ -52,10 +57,21 @@ class MessageWidget(Container):
                         if self._message.tool_results:
                             for result in self._message.tool_results:
                                 if result.tool_call_id == tool_call.id:
+                                    # 显示完整结果，不截断
+                                    result_text = result.result
+                                    # 如果结果太长，只显示前1000字符，但提供完整信息
+                                    if len(result_text) > 1000:
+                                        result_text = result_text[:1000] + f"\n... (共{len(result.result)}字符，按F3查看完整内容)"
                                     yield Static(
-                                        f"结果: {result.result[:200]}...",
+                                        f"结果: {result_text}",
                                         classes="tool-result"
                                     )
+
+    def update_content(self, new_content: str) -> None:
+        """更新消息内容"""
+        self._message.content = new_content
+        if self._content_widget:
+            self._content_widget.update(new_content)
 
     def toggle_tool_details(self) -> None:
         """切换工具详情显示状态"""

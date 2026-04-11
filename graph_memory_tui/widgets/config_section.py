@@ -63,7 +63,7 @@ class ConfigSection(Vertical):
         yield hint
 
     def on_mount(self) -> None:
-        """组件挂载时设置Tab顺序"""
+        """组件挂载时设置Tab顺序并加载配置"""
         try:
             api_key = self.query_one("#api-key-input", Input)
             model = self.query_one("#model-input", Input)
@@ -73,6 +73,14 @@ class ConfigSection(Vertical):
             api_key.tab_index = 0
             model.tab_index = 1
             base_url.tab_index = 2
+            
+            # 如果配置有值，更新输入框
+            if self._config.api_key:
+                api_key.value = self._config.api_key
+            if self._config.model:
+                model.value = self._config.model
+            if self._config.base_url:
+                base_url.value = self._config.base_url
         except Exception:
             pass
 

@@ -40,21 +40,44 @@ class MessageHandler:
 
     async def _process_response(self, user_input: str) -> None:
         """处理响应"""
+        streaming_message = None
+        
         async for event in self._chat_service.send_message(user_input):
             if event["type"] == "user_message":
                 # 用户消息已处理
                 pass
 
+            elif event["type"] == "content_delta":
+                # 流式内容更新
+                if streaming_message is None:
+                    # 创建流式消息
+                    streaming_message = Message(
+                        role="assistant",
+                        content="",
+                        timestamp=datetime.now()
+                    )
+                    self._message_history.add_message(streaming_message)
+                
+                # 更新消息内容
+                self._message_history.update_latest_message(event["content"])
+
             elif event["type"] == "assistant_message":
-                # 模型消息
-                message = Message(
-                    role="assistant",
-                    content=event["content"],
-                    timestamp=datetime.now(),
-                    tool_calls=event.get("tool_calls"),
-                    tool_results=event.get("tool_results")
-                )
-                self._message_history.add_message(message)
+                # 模型消息完成
+                if streaming_message:
+                    # 更新最终消息（包含工具调用信息）
+                    streaming_message.content = event["content"]
+                    streaming_message.tool_calls = event.get("tool_calls")
+                    streaming_message.tool_results = event.get("tool_results")
+                else:
+                    # 如果没有流式消息，直接添加
+                    message = Message(
+                        role="assistant",
+                        content=event["content"],
+                        timestamp=datetime.now(),
+                        tool_calls=event.get("tool_calls"),
+                        tool_results=event.get("tool_results")
+                    )
+                    self._message_history.add_message(message)
 
             elif event["type"] == "tool_call":
                 # 工具调用开始

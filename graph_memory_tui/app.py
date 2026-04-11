@@ -72,11 +72,11 @@ class GraphMemoryApp(App[None]):
     def on_mount(self) -> None:
         """应用启动初始化"""
         history = self.query_one(MessageHistory)
-        
+
         try:
             # 初始化内嵌图数据库
             self._graph = Neo4jGraph(db_path="graph_memory.db")
-            
+
             # 初始化 API 客户端
             self._init_client()
 
@@ -194,8 +194,8 @@ F6 - 退出
             )
             history.add_message(processing_msg)
 
-            # 异步处理（使用call_later避免崩溃）
-            self.call_later(self._process_message_safe, event.content)
+            # 异步处理
+            asyncio.create_task(self._process_message_async(event.content))
 
         except Exception as e:
             # 显示错误
@@ -205,22 +205,6 @@ F6 - 退出
                 timestamp=datetime.now()
             )
             history.add_message(error_msg)
-
-    def _process_message_safe(self, user_input: str) -> None:
-        """安全处理消息"""
-        try:
-            history = self.query_one(MessageHistory)
-
-            # 简单测试响应
-            response_msg = Message(
-                role="assistant",
-                content=f"收到消息: {user_input}\n\n完整功能需要配置API Key并连接API服务。",
-                timestamp=datetime.now()
-            )
-            history.add_message(response_msg)
-
-        except Exception as e:
-            print(f"Error: {e}")
 
     async def _process_message_async(self, user_input: str) -> None:
         """异步处理消息 - 参考demo实现"""
@@ -246,7 +230,9 @@ F6 - 退出
             # 处理工具调用循环
             tool_calls = []
             tool_results = []
-            
+            last_assistant_msg = None
+            accumulated_content = ""  # 累积所有中间内容
+
             # 显示工具调用摘要
             if message.tool_calls:
                 tool_summary = f"🔧 正在调用 {len(message.tool_calls)} 个工具..."
@@ -256,9 +242,30 @@ F6 - 退出
                     timestamp=datetime.now()
                 )
                 history.add_message(summary_msg)
-            
+
             while message.tool_calls:
-                # 保存工具调用信息
+                # 累积中间内容（如果有）
+                if message.content:
+                    accumulated_content += message.content + "\n\n"
+
+                # 保存包含 tool_calls 的 assistant 消息
+                last_assistant_msg = {
+                    "role": "assistant",
+                    "content": message.content,
+                    "tool_calls": [
+                        {
+                            "id": tc.id,
+                            "type": "function",
+                            "function": {
+                                "name": tc.function.name,
+                                "arguments": tc.function.arguments
+                            }
+                        } for tc in message.tool_calls
+                    ]
+                }
+
+                # 执行当前轮的所有工具调用
+                current_tool_results = []
                 for tool_call in message.tool_calls:
                     tc = ToolCall(
                         id=tool_call.id,
@@ -266,7 +273,7 @@ F6 - 退出
                         arguments=json.loads(tool_call.function.arguments)
                     )
                     tool_calls.append(tc)
-                    
+
                     # 执行工具
                     start_time = datetime.now()
                     result = await asyncio.get_event_loop().run_in_executor(
@@ -274,7 +281,7 @@ F6 - 退出
                         lambda: execute_tool(self._graph, tc.name, tc.arguments)
                     )
                     duration = (datetime.now() - start_time).total_seconds()
-                    
+
                     # 保存工具结果
                     tr = ToolResult(
                         tool_call_id=tc.id,
@@ -284,7 +291,14 @@ F6 - 退出
                         success=not result.startswith("工具执行错误")
                     )
                     tool_results.append(tr)
-                    
+
+                    # 添加到当前轮结果
+                    current_tool_results.append({
+                        "role": "tool",
+                        "tool_call_id": tc.id,
+                        "content": result
+                    })
+
                     # 添加日志
                     log_entry = LogEntry(
                         timestamp=datetime.now(),
@@ -294,14 +308,26 @@ F6 - 退出
                         duration=duration
                     )
                     log.add_log(log_entry)
-                
+
                 # 继续调用API（参考demo的实现）
-                # 这里简化处理，实际应该像demo一样继续循环
-                break
+                response = await asyncio.get_event_loop().run_in_executor(
+                    None,
+                    lambda: self._client.send_message(
+                        user_input,
+                        current_tool_results,
+                        last_assistant_msg
+                    )
+                )
+                message = response.choices[0].message
             
             # 添加助手消息（完整内容）
-            content = message.content or "(无回复)"
-            
+            # 使用累积的内容 + 最终内容
+            final_content = message.content or ""
+            content = accumulated_content + final_content if accumulated_content else final_content
+
+            if not content:
+                content = "(无回复)"
+
             # 如果有工具调用，添加工具调用摘要
             if tool_calls:
                 tool_names = [tc.name for tc in tool_calls]
@@ -314,7 +340,11 @@ F6 - 退出
                 tool_calls=tool_calls if tool_calls else None,
                 tool_results=tool_results if tool_results else None
             )
+
             history.add_message(assistant_message)
+
+            # 强制刷新界面
+            self.refresh()
 
         except Exception as e:
             # 显示详细错误
@@ -361,6 +391,13 @@ API Key 未配置！
         
         # 持久化保存配置
         self._config_manager.save(self._config)
+        
+        # 同步更新 RightPanel 的配置
+        try:
+            right_panel = self.query_one(RightPanel)
+            right_panel._config = self._config
+        except Exception:
+            pass
         
         # 重新初始化客户端
         self._init_client()

@@ -15,11 +15,8 @@ from .models.config import AppConfig
 def main():
     """主函数"""
     try:
-        # 加载配置
-        config = AppConfig.from_env()
-
-        # 创建并运行应用
-        app = GraphMemoryApp(config=config)
+        # 不传入配置，让应用自己从配置文件或环境变量加载
+        app = GraphMemoryApp()
         app.run()
 
     except KeyboardInterrupt:

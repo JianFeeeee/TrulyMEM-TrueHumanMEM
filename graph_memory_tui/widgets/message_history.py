@@ -27,6 +27,15 @@ class MessageHistory(ScrollableContainer):
         # 滚动到最新消息
         self.scroll_to_widget(message_widget, animate=False)
 
+    def update_latest_message(self, content: str) -> None:
+        """更新最新消息的内容"""
+        if self.children:
+            latest_widget = self.children[-1]
+            if isinstance(latest_widget, MessageWidget):
+                latest_widget.update_content(content)
+                # 确保滚动到最新消息
+                self.scroll_to_widget(latest_widget, animate=False)
+
     def clear_messages(self) -> None:
         """清空消息历史"""
         self._messages.clear()

@@ -34,18 +34,33 @@ class ChatService:
         }
 
         try:
-            # 2. 异步调用 API
-            response = await self._call_api_async(user_input)
-
+            # 2. 使用流式API调用
+            accumulated_content = ""
+            tool_calls_data = []
+            
+            # 流式处理响应
+            async for chunk in self._call_api_stream_async(user_input):
+                # 处理内容增量
+                if chunk.get("content_delta"):
+                    accumulated_content += chunk["content_delta"]
+                    yield {
+                        "type": "content_delta",
+                        "content": accumulated_content
+                    }
+                
+                # 处理工具调用
+                if chunk.get("tool_calls"):
+                    tool_calls_data = chunk["tool_calls"]
+            
             # 3. 处理工具调用
             tool_calls = None
             tool_results = None
 
-            if response.tool_calls:
+            if tool_calls_data:
                 tool_calls = []
                 tool_results = []
 
-                for tool_call_data in response.tool_calls:
+                for tool_call_data in tool_calls_data:
                     # 创建工具调用对象
                     tool_call = ToolCall(
                         id=tool_call_data.id,
@@ -75,7 +90,7 @@ class ChatService:
             # 4. 返回最终回复
             yield {
                 "type": "assistant_message",
-                "content": response.content,
+                "content": accumulated_content,
                 "tool_calls": tool_calls,
                 "tool_results": tool_results
             }
@@ -87,13 +102,49 @@ class ChatService:
                 "error": str(e)
             }
 
-    async def _call_api_async(self, message: str):
-        """异步调用 API"""
+    async def _call_api_stream_async(self, message: str) -> AsyncIterator[dict]:
+        """异步流式调用 API"""
         loop = asyncio.get_event_loop()
-        return await loop.run_in_executor(
-            None,
-            lambda: self._client.send_message(message)
-        )
+        
+        # 在executor中运行同步流式API
+        def process_stream():
+            stream = self._client.send_message_stream(message)
+            tool_calls_accumulated = []
+            
+            for chunk in stream:
+                delta = chunk.choices[0].delta
+                
+                # 处理内容增量
+                if delta.content:
+                    yield {"content_delta": delta.content}
+                
+                # 处理工具调用
+                if delta.tool_calls:
+                    for tc in delta.tool_calls:
+                        # 累积工具调用数据
+                        if tc.index >= len(tool_calls_accumulated):
+                            tool_calls_accumulated.append({
+                                "id": tc.id,
+                                "type": "function",
+                                "function": {
+                                    "name": "",
+                                    "arguments": ""
+                                }
+                            })
+                        
+                        if tc.function:
+                            if tc.function.name:
+                                tool_calls_accumulated[tc.index]["function"]["name"] = tc.function.name
+                            if tc.function.arguments:
+                                tool_calls_accumulated[tc.index]["function"]["arguments"] += tc.function.arguments
+            
+            # 返回完整的工具调用
+            if tool_calls_accumulated:
+                yield {"tool_calls": tool_calls_accumulated}
+        
+        # 使用run_in_executor处理生成器
+        for result in await loop.run_in_executor(None, lambda: list(process_stream())):
+            yield result
 
     def clear_history(self) -> None:
         """清空消息历史"""

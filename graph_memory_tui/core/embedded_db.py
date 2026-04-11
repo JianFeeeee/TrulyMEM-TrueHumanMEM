@@ -94,31 +94,46 @@ class EmbeddedGraphDB:
             检索结果
         """
         keywords = [w.strip().lower() for w in query_intent.replace(',', ' ').split() if w.strip()]
-        
-        if not keywords and not seed_entities:
-            return {"entities": [], "relations": [], "message": "无查询关键词"}
-        
+
         cursor = self.conn.cursor()
-        
+
         # 搜索实体
         entities = []
         entity_ids = set()
-        
-        for keyword in keywords:
+
+        # 如果没有关键词，返回所有实体（用于"我们都聊过什么"这类问题）
+        if not keywords and not seed_entities:
             cursor.execute("""
                 SELECT id, name, type, mention_count
                 FROM entities
-                WHERE LOWER(name) LIKE ?
-            """, (f"%{keyword}%",))
-            
+                ORDER BY mention_count DESC
+                LIMIT 50
+            """)
+
             for row in cursor.fetchall():
-                if row['id'] not in entity_ids:
-                    entity_ids.add(row['id'])
-                    entities.append({
-                        'name': row['name'],
-                        'type': row['type'] or 'unknown',
-                        'mention_count': row['mention_count']
-                    })
+                entity_ids.add(row['id'])
+                entities.append({
+                    'name': row['name'],
+                    'type': row['type'] or 'unknown',
+                    'mention_count': row['mention_count']
+                })
+        else:
+            # 有关键词，按关键词搜索
+            for keyword in keywords:
+                cursor.execute("""
+                    SELECT id, name, type, mention_count
+                    FROM entities
+                    WHERE LOWER(name) LIKE ?
+                """, (f"%{keyword}%",))
+
+                for row in cursor.fetchall():
+                    if row['id'] not in entity_ids:
+                        entity_ids.add(row['id'])
+                        entities.append({
+                            'name': row['name'],
+                            'type': row['type'] or 'unknown',
+                            'mention_count': row['mention_count']
+                        })
         
         # 搜索关系
         relations = []
