@@ -188,6 +188,7 @@ class ChatService:
         def process_stream():
             # 构建完整的消息列表
             messages = [
+                {"role": "system", "content": self._client.system_prompt},
                 {"role": "user", "content": user_input},
                 assistant_message
             ]
@@ -195,8 +196,10 @@ class ChatService:
             
             # 调用API
             response = self._client.client.chat.completions.create(
-                model=self._client.tools[0]["function"]["name"] if self._client.tools else "deepseek-chat",
+                model="deepseek-chat",
                 messages=messages,
+                tools=self._client.tools,
+                tool_choice="auto",
                 stream=True
             )
             
@@ -204,6 +207,12 @@ class ChatService:
                 delta = chunk.choices[0].delta
                 if delta.content:
                     yield {"content_delta": delta.content}
+                
+                # 处理可能的工具调用
+                if delta.tool_calls:
+                    # 如果还有工具调用，说明AI想继续调用工具
+                    # 但我们限制只调用一次，所以忽略
+                    pass
         
         for result in await loop.run_in_executor(None, lambda: list(process_stream())):
             yield result
