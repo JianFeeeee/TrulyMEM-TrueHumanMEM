@@ -29,6 +29,8 @@ env/
 # IDE
 .vscode/
 .idea/
+.arts/
+.codeartsdoer/
 *.swp
 *.swo
 *~
@@ -60,3 +62,6 @@ dist/
 # Temporary
 *.tmp
 *.bak
+
+# AI Generated
+jimeng*.png

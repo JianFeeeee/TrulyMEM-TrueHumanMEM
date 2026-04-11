@@ -31,14 +31,14 @@ if USE_EMBEDDED_DB:
 else:
     # 使用Neo4j数据库
     try:
-        from graph_memory_demo import Neo4jGraph
+        from .graph_client import Neo4jGraph
         print("[INFO] Using Neo4j database")
     except ImportError:
         from .embedded_db import EmbeddedGraphDB as Neo4jGraph
         print("[INFO] Fallback to embedded SQLite database")
 
 # 导入其他组件
-from graph_memory_demo import (
+from .graph_client import (
     GraphMemoryClient,
     TOOLS,
     execute_tool,
