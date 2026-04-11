@@ -1,8 +1,9 @@
 """聊天服务"""
 
 import asyncio
+import json
 from datetime import datetime
-from typing import AsyncIterator, TYPE_CHECKING
+from typing import AsyncIterator, TYPE_CHECKING, List, Dict, Any
 from ..core.imports import GraphMemoryClient
 from ..models.message import ToolCall, ToolResult
 from .tool_service import ToolService
@@ -23,7 +24,7 @@ class ChatService:
         self._graph = graph
         self._client = client
         self._tool_service = tool_service
-        self._messages: list[dict] = []
+        self._messages: List[Dict[str, Any]] = []
 
     async def send_message(self, user_input: str) -> AsyncIterator[dict]:
         """发送消息并流式返回事件"""
@@ -34,13 +35,12 @@ class ChatService:
         }
 
         try:
-            # 2. 使用流式API调用
+            # 2. 第一次API调用
             accumulated_content = ""
             tool_calls_data = []
             
             # 流式处理响应
             async for chunk in self._call_api_stream_async(user_input):
-                # 处理内容增量
                 if chunk.get("content_delta"):
                     accumulated_content += chunk["content_delta"]
                     yield {
@@ -48,11 +48,10 @@ class ChatService:
                         "content": accumulated_content
                     }
                 
-                # 处理工具调用
                 if chunk.get("tool_calls"):
                     tool_calls_data = chunk["tool_calls"]
             
-            # 3. 处理工具调用
+            # 3. 如果有工具调用，执行并继续调用API
             tool_calls = None
             tool_results = None
 
@@ -60,32 +59,70 @@ class ChatService:
                 tool_calls = []
                 tool_results = []
 
+                # 执行所有工具
                 for tool_call_data in tool_calls_data:
-                    # 创建工具调用对象
                     tool_call = ToolCall(
-                        id=tool_call_data.id,
-                        name=tool_call_data.function.name,
-                        arguments=tool_call_data.function.arguments
+                        id=tool_call_data["id"],
+                        name=tool_call_data["function"]["name"],
+                        arguments=tool_call_data["function"]["arguments"]
                     )
                     tool_calls.append(tool_call)
 
-                    # 发送工具调用事件
                     yield {
                         "type": "tool_call",
                         "tool_call": tool_call
                     }
 
-                    # 执行工具
                     result = await self._tool_service.execute(tool_call)
                     tool_results.append(result)
 
-                    # 发送工具结果事件
                     log_entry = ToolService._create_log_entry(tool_call, result)
                     yield {
                         "type": "tool_result",
                         "tool_result": result,
                         "log_entry": log_entry
                     }
+
+                # 构建工具结果消息
+                tool_messages = []
+                for tc, tr in zip(tool_calls, tool_results):
+                    tool_messages.append({
+                        "role": "tool",
+                        "tool_call_id": tc.id,
+                        "content": tr.content
+                    })
+
+                # 构建assistant消息（包含tool_calls）
+                assistant_message = {
+                    "role": "assistant",
+                    "content": accumulated_content,
+                    "tool_calls": [
+                        {
+                            "id": tc.id,
+                            "type": "function",
+                            "function": {
+                                "name": tc.name,
+                                "arguments": tc.arguments
+                            }
+                        } for tc in tool_calls
+                    ]
+                }
+
+                # 第二次API调用，传入工具结果
+                final_content = ""
+                async for chunk in self._call_api_stream_with_tools(
+                    user_input, 
+                    assistant_message, 
+                    tool_messages
+                ):
+                    if chunk.get("content_delta"):
+                        final_content += chunk["content_delta"]
+                        yield {
+                            "type": "content_delta",
+                            "content": final_content
+                        }
+                
+                accumulated_content = final_content
 
             # 4. 返回最终回复
             yield {
@@ -96,7 +133,6 @@ class ChatService:
             }
 
         except Exception as e:
-            # 错误处理
             yield {
                 "type": "error",
                 "error": str(e)
@@ -106,7 +142,6 @@ class ChatService:
         """异步流式调用 API"""
         loop = asyncio.get_event_loop()
         
-        # 在executor中运行同步流式API
         def process_stream():
             stream = self._client.send_message_stream(message)
             tool_calls_accumulated = []
@@ -114,14 +149,11 @@ class ChatService:
             for chunk in stream:
                 delta = chunk.choices[0].delta
                 
-                # 处理内容增量
                 if delta.content:
                     yield {"content_delta": delta.content}
                 
-                # 处理工具调用
                 if delta.tool_calls:
                     for tc in delta.tool_calls:
-                        # 累积工具调用数据
                         if tc.index >= len(tool_calls_accumulated):
                             tool_calls_accumulated.append({
                                 "id": tc.id,
@@ -138,11 +170,41 @@ class ChatService:
                             if tc.function.arguments:
                                 tool_calls_accumulated[tc.index]["function"]["arguments"] += tc.function.arguments
             
-            # 返回完整的工具调用
             if tool_calls_accumulated:
                 yield {"tool_calls": tool_calls_accumulated}
         
-        # 使用run_in_executor处理生成器
+        for result in await loop.run_in_executor(None, lambda: list(process_stream())):
+            yield result
+
+    async def _call_api_stream_with_tools(
+        self, 
+        user_input: str,
+        assistant_message: dict,
+        tool_messages: list
+    ) -> AsyncIterator[dict]:
+        """带工具结果的流式调用"""
+        loop = asyncio.get_event_loop()
+        
+        def process_stream():
+            # 构建完整的消息列表
+            messages = [
+                {"role": "user", "content": user_input},
+                assistant_message
+            ]
+            messages.extend(tool_messages)
+            
+            # 调用API
+            response = self._client.client.chat.completions.create(
+                model=self._client.tools[0]["function"]["name"] if self._client.tools else "deepseek-chat",
+                messages=messages,
+                stream=True
+            )
+            
+            for chunk in response:
+                delta = chunk.choices[0].delta
+                if delta.content:
+                    yield {"content_delta": delta.content}
+        
         for result in await loop.run_in_executor(None, lambda: list(process_stream())):
             yield result
 
