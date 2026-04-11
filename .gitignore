@@ -55,7 +55,6 @@ Thumbs.db
 config.json
 
 # Build
-*.spec
 build/
 dist/
 
