@@ -1,88 +1,97 @@
-# TrueHumanMEM - Graph Memory TUI
+# TrulyMEM - TrueHumanMEM
 
-> The More Human Choice.
+**让 AI 拥有自知、可塑、有分寸感的长期记忆**
 
-一个让 AI 拥有自知、可塑、有分寸感长期记忆的图记忆系统，配备现代化终端用户界面。
+*The More Human Choice.*
 
-## ✨ 特性
+[![License: GPL v3](https://img.shields.io/badge/License-GPLv3-blue.svg)](https://www.gnu.org/licenses/gpl-3.0)
+[![Python 3.8+](https://img.shields.io/badge/python-3.8+-blue.svg)](https://www.python.org/downloads/)
+[![Platform](https://img.shields.io/badge/platform-Windows%20%7C%20Linux%20%7C%20macOS-lightgrey.svg)](https://github.com/yourusername/trulymem)
 
-- 🖥️ **现代化TUI界面** - 基于Textual框架的终端界面
+---
+
+## 简介
+
+TrulyMEM（TrueHumanMEM）是一个让 AI 拥有长期记忆能力的图记忆系统。通过图数据库存储实体关系，让AI能够像人类一样记忆、回忆和管理信息。
+
+### 核心特性
+
+- 🧠 **长期记忆** - 基于图数据库的持久化记忆存储
+- 🎭 **人设图机制** - AI角色保持和角色扮演支持
+- 🖥️ **现代化TUI** - 基于Textual框架的终端用户界面
 - 💾 **内嵌数据库** - SQLite实现，无需Docker/Neo4j
 - 🌐 **Web接口** - 支持浏览器访问
-- 🚀 **一键启动** - 3步骤完成，30秒启动
+- 🚀 **流式显示** - 实时显示AI响应，减少等待
+- 📦 **独立部署** - 支持打包为独立可执行文件
 - 🌍 **跨平台** - 支持Windows/Linux/macOS
-- 📊 **实时可视化** - 消息、工具调用实时显示
-- 🔧 **完整功能** - 记忆检索、写入、删除、归档
-
-## 📖 目录
-
-- [快速开始](#快速开始)
-- [使用方法](#使用方法)
-- [功能说明](#功能说明)
-- [API接口](#api接口)
-- [配置说明](#配置说明)
-- [开发指南](#开发指南)
 
 ---
 
 ## 快速开始
 
-### 前置要求
+### 方式一：使用可执行文件（推荐）
 
-- **Python 3.8+**
-- **DeepSeek API Key**（或兼容OpenAI格式的API）
-
-### 一键启动
-
-#### Windows
+**Windows:**
 ```bash
-# 双击运行
-start.bat
-
-# 或命令行
-python start.py
+# 下载 TrulyMEM.exe
+# 双击运行或命令行执行
+./TrulyMEM.exe
 ```
 
-#### Linux / macOS
+**Linux:**
 ```bash
-# Shell脚本
-chmod +x start.sh
-./start.sh
-
-# 或Python
-python3 start.py
+# 下载 TrulyMEM
+chmod +x TrulyMEM
+./TrulyMEM
 ```
 
-### 启动流程
+### 方式二：从源码运行
 
-```
-[Step 1/3] 检查 Python
-[Step 2/3] 设置虚拟环境
-[Step 3/3] 启动应用
+```bash
+# 克隆仓库
+git clone https://github.com/yourusername/trulymem.git
+cd trulymem
 
-✅ 系统初始化成功！
-• 数据库: 内嵌SQLite (graph_memory.db)
-• API Key: 未配置
+# 安装依赖
+pip install -r requirements.txt
+
+# 运行应用
+python -m graph_memory_tui.main
 ```
+
+### 配置
+
+1. 按 **F2** 展开侧边栏
+2. 输入 **API Key**（支持DeepSeek、OpenAI等）
+3. 按 **Enter** 保存配置
+4. 开始对话！
 
 ---
 
-## 使用方法
+## 功能说明
 
-### 1. 配置 API Key
+### 记忆管理工具
 
-1. 按 **F2** 展开侧边栏
-2. 点击 **"配置"**
-3. 输入你的 **DeepSeek API Key**
-4. 按 **Enter** 保存
+| 工具 | 功能 | 说明 |
+|------|------|------|
+| `memory_recall` | 检索记忆 | 根据意图查询相关记忆 |
+| `memory_commit` | 写入记忆 | 将信息存储为图结构 |
+| `memory_purge` | 删除记忆 | 删除过期或错误信息 |
+| `memory_introspect` | 查看状态 | 查看记忆系统状态 |
+| `memory_archive` | 归档记忆 | 归档旧记忆 |
+| `memory_cleanup` | 清理数据 | 清理无效数据 |
 
-### 2. 开始对话
+### 人设图机制
 
-- 输入消息
-- 按 **Enter** 发送
-- 查看AI响应和工具调用
+AI会在每轮对话前查询人设图，严格按照人设回复，确保角色一致性。
 
-### 3. 快捷键
+**使用示例：**
+```
+用户：以猫娘的语气跟我说话
+AI：喵~好的主人！我会用可爱的猫娘语气跟你说话的喵！(≧ω≦)
+```
+
+### 快捷键
 
 | 快捷键 | 功能 |
 |--------|------|
@@ -95,175 +104,23 @@ python3 start.py
 
 ---
 
-## 功能说明
-
-### 记忆管理工具
-
-| 工具 | 功能 | 参数 |
-|------|------|------|
-| memory_recall | 检索记忆 | query_intent, depth |
-| memory_commit | 写入记忆 | triplets, confidence |
-| memory_purge | 删除记忆 | criteria, mode |
-| memory_introspect | 查看状态 | - |
-| memory_archive | 归档记忆 | days |
-| memory_cleanup | 清理数据 | dry_run |
-
-### 数据库
-
-**内嵌SQLite数据库：**
-- 文件：`graph_memory.db`
-- 无需配置
-- 自动创建
-- 本地存储
-
-**数据结构：**
-- 实体（entities）：name, type, mention_count
-- 关系（relations）：source, target, type, confidence, status
-
----
-
-## API接口
-
-### Web界面
-
-启动后访问：`http://localhost:5000`
-
-**界面特点：**
-- 🖥️ 与TUI相似的界面设计
-- 📊 左侧消息历史，右侧配置和日志
-- 🎨 深色主题，终端风格
-- ⌨️ 支持键盘快捷键
-
-**使用方法：**
-1. 在右侧配置区输入API Key
-2. 点击"保存配置"
-3. 在左侧输入框输入消息
-4. 按 Ctrl+Enter 发送
-
-### REST API
-
-```bash
-# 检索记忆
-POST /api/memory/recall
-{
-  "query_intent": "Python,AI"
-}
-
-# 写入记忆
-POST /api/memory/commit
-{
-  "triplets": [
-    {"subject": "用户", "relation": "喜欢", "object": "Python"}
-  ]
-}
-
-# 查看状态
-GET /api/memory/introspect
-
-# 获取配置
-GET /api/config
-```
-
----
-
-## 配置说明
-
-### 环境变量
-
-创建 `.env` 文件：
-
-```bash
-# API配置
-DEEPSEEK_API_KEY=sk-xxxxxxxxxxxxx
-DEEPSEEK_BASE_URL=https://api.deepseek.com
-MODEL_NAME=deepseek-chat
-
-# 数据库配置（可选）
-USE_EMBEDDED_DB=true
-```
-
-### 切换数据库
-
-**使用内嵌数据库（默认）：**
-```bash
-USE_EMBEDDED_DB=true
-```
-
-**使用Neo4j（需要Docker）：**
-```bash
-USE_EMBEDDED_DB=false
-NEO4J_URI=bolt://localhost:7687
-NEO4J_USER=neo4j
-NEO4J_PASSWORD=graphmemory123
-```
-
----
-
-## 开发指南
-
-### 项目结构
+## 项目结构
 
 ```
-graph_enable_ability/
+trulymem/
 ├── graph_memory_tui/      # TUI应用
 │   ├── core/              # 核心逻辑
-│   │   ├── embedded_db.py # 内嵌数据库
-│   │   └── imports.py
-│   ├── web/               # Web接口
+│   ├── handlers/          # 事件处理
+│   ├── models/            # 数据模型
+│   ├── services/          # 服务层
 │   ├── widgets/           # UI组件
-│   ├── styles/            # 样式
-│   └── app.py
-├── tests/                 # 测试
+│   └── styles/            # 样式文件
 ├── docs/                  # 文档
-├── start.bat              # Windows启动
-├── start.sh               # Linux/macOS启动
-└── start.py               # 跨平台启动
+├── tests/                 # 测试
+├── requirements.txt       # 依赖清单
+├── LICENSE               # 许可证
+└── README.md             # 说明文档
 ```
-
-### 运行测试
-
-```bash
-# 安装依赖
-pip install -r requirements.txt
-
-# 运行测试
-pytest tests/
-```
-
-### 开发模式
-
-```bash
-# 创建虚拟环境
-python -m venv venv
-source venv/bin/activate  # Linux/macOS
-venv\Scripts\activate     # Windows
-
-# 安装依赖
-pip install -r requirements.txt
-
-# 运行应用
-python -m graph_memory_tui.main
-```
-
----
-
-## 常见问题
-
-### Q: 启动时显示"API Key 未配置"？
-
-**A:** 按F2打开侧边栏，在配置区输入API Key，按Enter保存。
-
-### Q: 数据保存在哪里？
-
-**A:** 数据保存在 `graph_memory.db` 文件中，可以备份或迁移。
-
-### Q: 如何查看数据库内容？
-
-**A:** 使用SQLite工具打开 `graph_memory.db`，或使用 `memory_introspect` 工具。
-
-### Q: 支持哪些API？
-
-**A:** 支持所有兼容OpenAI格式的API，如DeepSeek、OpenAI等。
 
 ---
 
@@ -277,16 +134,83 @@ python -m graph_memory_tui.main
 
 ---
 
+## 开发指南
+
+### 环境设置
+
+```bash
+# 创建虚拟环境
+python -m venv venv
+source venv/bin/activate  # Linux/macOS
+venv\Scripts\activate     # Windows
+
+# 安装依赖
+pip install -r requirements.txt
+```
+
+### 运行测试
+
+```bash
+pytest tests/
+```
+
+### 打包应用
+
+```bash
+# Windows
+python build_windows.bat
+
+# Linux
+bash build_linux.sh
+```
+
+---
+
 ## 许可证
 
-MIT License
+本项目采用 **GNU General Public License v3.0 (GPLv3)** 许可证开源。
+
+详见 [LICENSE](LICENSE) 文件。
+
+### 许可证要点：
+
+- ✅ 可以自由使用、修改和分发
+- ✅ 必须保留版权声明和许可证
+- ✅ 修改后的作品必须以相同许可证发布
+- ✅ 必须提供源代码
 
 ---
 
 ## 贡献
 
-欢迎提交Issue和Pull Request！
+欢迎提交 Issue 和 Pull Request！
+
+### 贡献指南
+
+1. Fork 本仓库
+2. 创建特性分支 (`git checkout -b feature/AmazingFeature`)
+3. 提交更改 (`git commit -m 'Add some AmazingFeature'`)
+4. 推送到分支 (`git push origin feature/AmazingFeature`)
+5. 创建 Pull Request
 
 ---
 
-**TrueHumanMEM —— 让 AI 的记忆方式，更像人。**
+## 作者
+
+**jianf** - 项目设计与开发
+
+---
+
+## 致谢
+
+感谢所有为这个项目做出贡献的开发者和用户。
+
+---
+
+<div align="center">
+
+**TrulyMEM —— 让 AI 的记忆方式，更像人。**
+
+*Made with ❤️ by jianf*
+
+</div>
