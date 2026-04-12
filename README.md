@@ -167,10 +167,10 @@ pytest tests/
 
 ```bash
 # Windows
-bash build/build_windows.bat
+python build_windows.bat
 
 # Linux
-bash build/build_linux.sh
+bash build_linux.sh
 ```
 
 ---
