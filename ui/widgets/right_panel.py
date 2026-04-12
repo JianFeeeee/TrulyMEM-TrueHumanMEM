@@ -35,7 +35,7 @@ class RightPanel(Container):
             self.styles.width = 0
             self.styles.display = "none"
         else:
-            self.styles.width = 70
+            self.styles.width = 35
             self.styles.display = "block"
 
     def is_collapsed(self) -> bool:

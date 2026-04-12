@@ -26,6 +26,7 @@ class GraphMemoryApp(App):
         super().__init__(**kwargs)
         self._backend_server = backend_server
         self._backend_client = BackendClient(backend_server) if backend_server else None
+        self._api_configured = False
 
     def compose(self) -> ComposeResult:
         from .widgets.left_panel import LeftPanel
@@ -36,21 +37,26 @@ class GraphMemoryApp(App):
         yield StatusBar()
 
     def on_mount(self) -> None:
+        from .widgets.status_bar import StatusBar
+        status_bar = self.query_one(StatusBar)
+        
         if not self._backend_server:
             from .widgets.message_history import MessageHistory
             history = self.query_one(MessageHistory)
             error = Message(role="assistant", content="后端未初始化")
             history.add_message(error)
+            status_bar.set_api_status(False)
             return
         
         status = self._backend_client.get_status()
-        api_configured = status.get("config", {}).get("api_key", "") != ""
+        self._api_configured = status.get("config", {}).get("api_key", "") != ""
+        status_bar.set_api_status(self._api_configured)
         
         from .widgets.message_history import MessageHistory
         history = self.query_one(MessageHistory)
         welcome = Message(
             role="assistant",
-            content=f"系统就绪\nAPI Key: {'已配置' if api_configured else '未配置'}\n\n输入消息开始对话"
+            content=f"系统就绪\nAPI Key: {'已配置' if self._api_configured else '未配置'}\n\n输入消息开始对话"
         )
         history.add_message(welcome)
 
@@ -78,48 +84,82 @@ class GraphMemoryApp(App):
 
     def on_input_box_send_message(self, event) -> None:
         if not self._backend_client:
+            self.notify("后端未初始化", title="错误", severity="error")
+            return
+        
+        if not self._api_configured:
+            self.notify("请先配置 API Key (按 F2 打开侧边栏)", title="提示", severity="warning")
             return
         
         user_input = event.content
         from .widgets.message_history import MessageHistory
+        from .widgets.status_bar import StatusBar
+        
         history = self.query_one(MessageHistory)
+        status_bar = self.query_one(StatusBar)
         
         history.add_message(Message(role="user", content=user_input))
-        history.add_message(Message(role="assistant", content="处理中..."))
+        history.add_message(Message(role="assistant", content="⏳ 正在处理..."))
+        status_bar.set_processing(True)
         
         asyncio.create_task(self._process(user_input))
 
     async def _process(self, user_input: str) -> None:
+        from .widgets.message_history import MessageHistory
+        from .widgets.status_bar import StatusBar
+        
+        history = self.query_one(MessageHistory)
+        status_bar = self.query_one(StatusBar)
+        
         try:
             result = await asyncio.get_event_loop().run_in_executor(
                 None,
                 lambda: self._backend_client.send_message(user_input)
             )
             
-            from .widgets.message_history import MessageHistory
-            history = self.query_one(MessageHistory)
-            history.clear_messages()
-            
-            history.add_message(Message(role="user", content=user_input))
-            
+            # 更新"处理中"消息为实际回复
             if result.get("success"):
                 content = result.get("content", "(无回复)")
-                history.add_message(Message(role="assistant", content=content))
+                history.update_latest_message(content)
             else:
                 error = result.get("error", "未知错误")
-                history.add_message(Message(role="assistant", content=f"错误: {error}"))
+                history.update_latest_message(f"❌ 错误: {error}")
                 
         except Exception as e:
-            from .widgets.message_history import MessageHistory
-            history = self.query_one(MessageHistory)
-            history.add_message(Message(role="assistant", content=f"错误: {str(e)}"))
+            history.update_latest_message(f"❌ 异常: {str(e)}")
+        finally:
+            status_bar.set_processing(False)
 
-    def on_config_changed(self, event) -> None:
+    def on_config_section_config_changed(self, event) -> None:
+        """处理配置变更事件"""
         if not self._backend_client:
+            self.notify("后端未初始化，无法保存配置", title="错误", severity="error")
             return
         
-        api_key = event.api_key
-        base_url = event.base_url
+        config = event.config
+        api_key = config.api_key
+        base_url = config.base_url
         
-        result = self._backend_client.update_config(api_key=api_key, base_url=base_url)
-        self.notify("配置已保存" if result.get("success") else "配置失败", title="配置")
+        # 异步更新配置，避免阻塞UI
+        asyncio.create_task(self._update_config_async(api_key, base_url))
+    
+    async def _update_config_async(self, api_key: str, base_url: str) -> None:
+        """异步更新配置"""
+        from .widgets.status_bar import StatusBar
+        status_bar = self.query_one(StatusBar)
+        
+        try:
+            result = await asyncio.get_event_loop().run_in_executor(
+                None,
+                lambda: self._backend_client.update_config(api_key=api_key, base_url=base_url)
+            )
+            
+            if result.get("success"):
+                self._api_configured = bool(api_key)
+                status_bar.set_api_status(self._api_configured)
+                self.notify("✅ 配置已保存并生效", title="配置成功", severity="information")
+            else:
+                error = result.get("error", "未知错误")
+                self.notify(f"❌ 配置失败: {error}", title="配置失败", severity="error")
+        except Exception as e:
+            self.notify(f"❌ 配置异常: {str(e)}", title="配置失败", severity="error")

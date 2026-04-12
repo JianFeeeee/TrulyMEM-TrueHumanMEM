@@ -7,17 +7,33 @@ from pathlib import Path
 class PromptManager:
     """提示词管理器"""
     
+    _instance = None
+    _cached_prompt = None
+    
+    def __new__(cls):
+        """单例模式，避免重复加载"""
+        if cls._instance is None:
+            cls._instance = super().__new__(cls)
+        return cls._instance
+    
     def __init__(self):
-        self.prompts_dir = Path(__file__).parent / "templates"
+        if not hasattr(self, '_initialized'):
+            self.prompts_dir = Path(__file__).parent / "templates"
+            self._initialized = True
     
     def get_system_prompt(self) -> str:
-        """获取系统提示词"""
+        """获取系统提示词（带缓存）"""
+        if PromptManager._cached_prompt is not None:
+            return PromptManager._cached_prompt
+        
         prompt_file = self.prompts_dir / "system_prompt.md"
         if prompt_file.exists():
             with open(prompt_file, "r", encoding="utf-8") as f:
-                return f.read()
+                PromptManager._cached_prompt = f.read()
         else:
-            return self._build_default_prompt()
+            PromptManager._cached_prompt = self._build_default_prompt()
+        
+        return PromptManager._cached_prompt
     
     def _build_default_prompt(self) -> str:
         """构建默认提示词（精简版）"""
