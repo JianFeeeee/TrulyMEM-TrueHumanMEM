@@ -1,12 +1,18 @@
 # -*- mode: python ; coding: utf-8 -*-
-
-
 a = Analysis(
     ['trulymem_entry.py'],
     pathex=[],
     binaries=[],
-    datas=[('graph_memory_tui/styles/*.css', 'graph_memory_tui/styles')],
-    hiddenimports=['textual', 'openai', 'flask', 'neo4j'],
+    datas=[
+        ('ui/styles', 'ui/styles'),
+        ('core/prompts/templates', 'core/prompts/templates'),
+    ],
+    hiddenimports=[
+        'textual',
+        'openai',
+        'neo4j',
+        'sqlite3',
+    ],
     hookspath=[],
     hooksconfig={},
     runtime_hooks=[],
@@ -15,7 +21,6 @@ a = Analysis(
     optimize=0,
 )
 pyz = PYZ(a.pure)
-
 exe = EXE(
     pyz,
     a.scripts,

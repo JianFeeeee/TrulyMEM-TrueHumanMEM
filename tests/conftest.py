@@ -1,15 +1,12 @@
-"""测试配置"""
-
 import pytest
 from datetime import datetime
-from graph_memory_tui.models.message import Message, ToolCall, ToolResult
-from graph_memory_tui.models.config import AppConfig
-from graph_memory_tui.models.log_entry import LogEntry
+from ui.models.message import Message, ToolCall, ToolResult
+from ui.models.config import AppConfig
+from ui.models.log_entry import LogEntry
 
 
 @pytest.fixture
 def sample_config():
-    """示例配置"""
     return AppConfig(
         api_key="test-api-key",
         model="test-model",
@@ -19,7 +16,6 @@ def sample_config():
 
 @pytest.fixture
 def sample_message():
-    """示例消息"""
     return Message(
         role="user",
         content="测试消息",
@@ -29,7 +25,6 @@ def sample_message():
 
 @pytest.fixture
 def sample_tool_call():
-    """示例工具调用"""
     return ToolCall(
         id="test-call-id",
         name="memory_recall",
@@ -39,7 +34,6 @@ def sample_tool_call():
 
 @pytest.fixture
 def sample_tool_result():
-    """示例工具结果"""
     return ToolResult(
         tool_call_id="test-call-id",
         name="memory_recall",
@@ -51,7 +45,6 @@ def sample_tool_result():
 
 @pytest.fixture
 def sample_log_entry():
-    """示例日志条目"""
     return LogEntry(
         timestamp=datetime.now(),
         tool_name="memory_recall",

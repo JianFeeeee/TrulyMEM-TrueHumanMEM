@@ -2,9 +2,9 @@
 
 import pytest
 from datetime import datetime
-from graph_memory_tui.models.message import Message, ToolCall, ToolResult
-from graph_memory_tui.models.config import AppConfig
-from graph_memory_tui.models.log_entry import LogEntry
+from ui.models.message import Message, ToolCall, ToolResult
+from ui.models.config import AppConfig
+from ui.models.log_entry import LogEntry
 
 
 def test_message_creation(sample_message):

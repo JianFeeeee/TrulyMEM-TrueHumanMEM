@@ -1,7 +1,7 @@
 #!/bin/bash
 set -e
 
-echo "Building Linux binary..."
+echo "Building macOS binary..."
 
 if ! command -v python3 &> /dev/null; then
     echo "Error: python3 not found"

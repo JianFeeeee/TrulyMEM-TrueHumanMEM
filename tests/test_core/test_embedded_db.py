@@ -3,7 +3,7 @@
 import pytest
 import tempfile
 import os
-from graph_memory_tui.core.embedded_db import EmbeddedGraphDB
+from core import EmbeddedGraphDB
 
 
 @pytest.fixture
