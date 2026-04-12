@@ -27,6 +27,7 @@ from .core.imports import (
     NEO4J_PASSWORD,
     MODEL_NAME,
 )
+from .core.tools.tool_limiter import ToolLimiter
 
 
 class GraphMemoryApp(App[None]):
@@ -62,6 +63,9 @@ class GraphMemoryApp(App[None]):
         # 核心组件
         self._graph: Neo4jGraph | None = None
         self._client: GraphMemoryClient | None = None
+        
+        # 工具调用限制器
+        self._tool_limiter = ToolLimiter()
 
     def compose(self) -> ComposeResult:
         """构建组件树"""
@@ -219,10 +223,16 @@ F6 - 退出
                 if not self._client:
                     raise Exception("API Key 未配置。请按 F2 展开侧边栏，在配置区输入 API Key，然后按 Enter 保存")
 
+            # 重置工具调用限制器（新的一轮对话）
+            self._tool_limiter.reset()
+
+            # 构建初始消息历史
+            messages_history = [{"role": "user", "content": user_input}]
+
             # 参考demo的调用方式
             response = await asyncio.get_event_loop().run_in_executor(
                 None,
-                lambda: self._client.send_message(user_input)
+                lambda: self._client.send_message_with_history(messages_history)
             )
             
             message = response.choices[0].message
@@ -230,8 +240,8 @@ F6 - 退出
             # 处理工具调用循环
             tool_calls = []
             tool_results = []
-            last_assistant_msg = None
             accumulated_content = ""  # 累积所有中间内容
+            rejected_tools = []  # 被拒绝的工具调用
 
             # 显示工具调用摘要
             if message.tool_calls:
@@ -248,8 +258,8 @@ F6 - 退出
                 if message.content:
                     accumulated_content += message.content + "\n\n"
 
-                # 保存包含 tool_calls 的 assistant 消息
-                last_assistant_msg = {
+                # 构建包含 tool_calls 的 assistant 消息
+                assistant_msg = {
                     "role": "assistant",
                     "content": message.content,
                     "tool_calls": [
@@ -263,6 +273,9 @@ F6 - 退出
                         } for tc in message.tool_calls
                     ]
                 }
+                
+                # 添加到消息历史
+                messages_history.append(assistant_msg)
 
                 # 执行当前轮的所有工具调用
                 current_tool_results = []
@@ -272,6 +285,36 @@ F6 - 退出
                         name=tool_call.function.name,
                         arguments=json.loads(tool_call.function.arguments)
                     )
+                    
+                    # 检查工具调用限制
+                    allowed, reason = self._tool_limiter.can_call(tc.name, tc.arguments)
+                    
+                    if not allowed:
+                        # 拒绝调用
+                        rejected_tools.append((tc.name, reason))
+                        result = f"⚠️ 工具调用被拒绝: {reason}"
+                        
+                        # 添加到当前轮结果
+                        tool_result_msg = {
+                            "role": "tool",
+                            "tool_call_id": tc.id,
+                            "content": result
+                        }
+                        current_tool_results.append(tool_result_msg)
+                        
+                        # 添加日志
+                        log_entry = LogEntry(
+                            timestamp=datetime.now(),
+                            tool_name=tc.name,
+                            arguments=tc.arguments,
+                            result=result,
+                            duration=0.0
+                        )
+                        log.add_log(log_entry)
+                        continue
+                    
+                    # 记录调用
+                    self._tool_limiter.record_call(tc.name, tc.arguments)
                     tool_calls.append(tc)
 
                     # 执行工具
@@ -293,11 +336,12 @@ F6 - 退出
                     tool_results.append(tr)
 
                     # 添加到当前轮结果
-                    current_tool_results.append({
+                    tool_result_msg = {
                         "role": "tool",
                         "tool_call_id": tc.id,
                         "content": result
-                    })
+                    }
+                    current_tool_results.append(tool_result_msg)
 
                     # 添加日志
                     log_entry = LogEntry(
@@ -309,14 +353,13 @@ F6 - 退出
                     )
                     log.add_log(log_entry)
 
-                # 继续调用API（参考demo的实现）
+                # 将工具结果添加到消息历史
+                messages_history.extend(current_tool_results)
+
+                # 继续调用API（使用累积的消息历史）
                 response = await asyncio.get_event_loop().run_in_executor(
                     None,
-                    lambda: self._client.send_message(
-                        user_input,
-                        current_tool_results,
-                        last_assistant_msg
-                    )
+                    lambda: self._client.send_message_with_history(messages_history)
                 )
                 message = response.choices[0].message
             
@@ -332,6 +375,12 @@ F6 - 退出
             if tool_calls:
                 tool_names = [tc.name for tc in tool_calls]
                 content = f"✅ 已执行工具: {', '.join(tool_names)}\n\n{content}"
+            
+            # 如果有被拒绝的工具，添加提示
+            if rejected_tools:
+                rejected_info = "\n".join([f"• {name}: {reason}" for name, reason in rejected_tools])
+                content += f"\n\n⚠️ 部分工具调用被限制:\n{rejected_info}"
+                content += f"\n\n📊 工具调用统计:\n{self._tool_limiter.get_summary()}"
             
             assistant_message = Message(
                 role="assistant",
