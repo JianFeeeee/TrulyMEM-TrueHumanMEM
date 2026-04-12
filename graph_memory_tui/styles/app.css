@@ -22,7 +22,7 @@ LeftPanel {
 }
 
 RightPanel {
-    width: 40;
+    width: 70;
     dock: right;
     background: $panel;
     overflow-y: auto;
