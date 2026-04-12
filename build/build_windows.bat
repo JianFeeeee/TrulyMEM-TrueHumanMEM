@@ -1,33 +1,22 @@
 @echo off
-REM Windows打包脚本
+echo Building Windows binary...
 
-echo 开始打包Windows版本...
-
-REM 检查Python
 python --version >nul 2>&1
 if errorlevel 1 (
-    echo 错误: 未找到python
+    echo Error: python not found
     exit /b 1
 )
 
-REM 安装依赖
-echo 安装依赖...
 pip install -r requirements.txt
 
-REM 打包Windows exe文件
-echo 打包Windows exe文件...
-python -m PyInstaller ^
-    --clean ^
-    --onefile ^
-    --name TrulyMEM ^
-    --console ^
-    --add-data "graph_memory_tui/styles/*.css;graph_memory_tui/styles" ^
+python -m PyInstaller --clean --onefile --console ^
+    --add-data "ui/styles;ui/styles" ^
+    --add-data "core/prompts/templates;core/prompts/templates" ^
     --hidden-import textual ^
     --hidden-import openai ^
-    --hidden-import flask ^
     --hidden-import neo4j ^
+    --collect-all textual ^
     trulymem_entry.py
 
-echo 打包完成！
-echo 可执行文件位于: dist\TrulyMEM.exe
+echo Done! Binary: dist\TrulyMEM.exe
 pause

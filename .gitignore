@@ -4,13 +4,11 @@ __pycache__/
 *$py.class
 *.so
 .Python
-build/
 develop-eggs/
 dist/
 downloads/
 eggs/
-.eggs/
-lib/
+.lib/
 lib64/
 parts/
 sdist/
@@ -55,7 +53,6 @@ Thumbs.db
 config.json
 
 # Build
-build/
 dist/
 
 # Temporary
@@ -64,3 +61,6 @@ dist/
 
 # AI Generated
 jimeng*.png
+
+# Test Cache
+.pytest_cache/
