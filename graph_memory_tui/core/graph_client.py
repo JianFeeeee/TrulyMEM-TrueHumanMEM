@@ -318,13 +318,33 @@ class GraphMemoryClient:
         
         messages = [{"role": "system", "content": self.system_prompt}]
         
+        # 添加用户消息
+        messages.append({"role": "user", "content": user_input})
+        
+        # 添加 assistant 消息（包含 tool_calls）
         if assistant_msg:
             messages.append(assistant_msg)
         
+        # 添加工具结果
         if tool_results:
             messages.extend(tool_results)
         
-        messages.append({"role": "user", "content": user_input})
+        response = self.client.chat.completions.create(
+            model=MODEL_NAME,
+            messages=messages,
+            tools=self.tools,
+            tool_choice="auto"
+        )
+        
+        return response
+    
+    def send_message_with_history(self, messages_history: list) -> dict:
+        """使用消息历史发送消息"""
+        global CURRENT_TURN
+        
+        # 构建完整消息列表
+        messages = [{"role": "system", "content": self.system_prompt}]
+        messages.extend(messages_history)
         
         response = self.client.chat.completions.create(
             model=MODEL_NAME,
@@ -341,13 +361,16 @@ class GraphMemoryClient:
 
         messages = [{"role": "system", "content": self.system_prompt}]
 
+        # 添加用户消息
+        messages.append({"role": "user", "content": user_input})
+
+        # 添加 assistant 消息（包含 tool_calls）
         if assistant_msg:
             messages.append(assistant_msg)
 
+        # 添加工具结果
         if tool_results:
             messages.extend(tool_results)
-
-        messages.append({"role": "user", "content": user_input})
 
         stream = self.client.chat.completions.create(
             model=MODEL_NAME,
