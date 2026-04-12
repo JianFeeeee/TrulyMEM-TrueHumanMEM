@@ -1,5 +1,8 @@
 # TrulyMEM - TrueHumanMEM
 
+> **📜 开源协议**: [GNU General Public License v3.0 (GPLv3)](https://www.gnu.org/licenses/gpl-3.0)  
+> 本项目自由开源，可自由使用、修改和分发，但修改后的作品必须以相同许可证发布。
+
 **让 AI 拥有自知、可塑、有分寸感的长期记忆**
 
 *The More Human Choice.*
@@ -178,12 +181,11 @@ bash build_linux.sh
 
 详见 [LICENSE](LICENSE) 文件。
 
-### 许可证要点
-
-- 可以自由使用、修改和分发
-- 必须保留版权声明和许可证
-- 修改后的作品必须以相同许可证发布
-- 必须提供源代码
+> **⚠️ 使用本项目即表示您同意：**
+> - 可以自由使用、修改和分发
+> - 必须保留版权声明和许可证
+> - 修改后的作品必须以 GPLv3 许可证发布
+> - 必须提供源代码
 
 ---
 
