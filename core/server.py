@@ -16,6 +16,10 @@ class MessageType(Enum):
     PROCESS_MESSAGE = "process_message"
     EXECUTE_TOOL = "execute_tool"
     GET_STATUS = "get_status"
+    GET_CONFIG = "get_config"
+    SET_CONFIG = "set_config"
+    GET_HISTORY = "get_history"
+    SAVE_HISTORY = "save_history"
     SHUTDOWN = "shutdown"
 
 
@@ -91,6 +95,14 @@ class BackendServer:
                 self._handle_execute_tool(request)
             elif request.message_type == MessageType.GET_STATUS:
                 self._handle_get_status(request)
+            elif request.message_type == MessageType.GET_CONFIG:
+                self._handle_get_config(request)
+            elif request.message_type == MessageType.SET_CONFIG:
+                self._handle_set_config(request)
+            elif request.message_type == MessageType.GET_HISTORY:
+                self._handle_get_history(request)
+            elif request.message_type == MessageType.SAVE_HISTORY:
+                self._handle_save_history(request)
             elif request.message_type == MessageType.SHUTDOWN:
                 self._running = False
                 self._send_response(request, BackendResponse(
@@ -262,6 +274,69 @@ class BackendServer:
                 error=str(e)
             ))
 
+    def _handle_get_config(self, request: BackendRequest) -> None:
+        try:
+            config = self.get_config()
+            self._send_response(request, BackendResponse(
+                request_id=request.request_id,
+                success=True,
+                data=config
+            ))
+        except Exception as e:
+            self._send_response(request, BackendResponse(
+                request_id=request.request_id,
+                success=False,
+                error=str(e)
+            ))
+
+    def _handle_set_config(self, request: BackendRequest) -> None:
+        try:
+            api_key = request.payload.get("api_key", "")
+            base_url = request.payload.get("base_url", "https://api.deepseek.com")
+            self.update_config(api_key, base_url)
+            self._send_response(request, BackendResponse(
+                request_id=request.request_id,
+                success=True,
+                data={"status": "config_updated"}
+            ))
+        except Exception as e:
+            self._send_response(request, BackendResponse(
+                request_id=request.request_id,
+                success=False,
+                error=str(e)
+            ))
+
+    def _handle_get_history(self, request: BackendRequest) -> None:
+        try:
+            history = self.get_message_history()
+            self._send_response(request, BackendResponse(
+                request_id=request.request_id,
+                success=True,
+                data={"history": history}
+            ))
+        except Exception as e:
+            self._send_response(request, BackendResponse(
+                request_id=request.request_id,
+                success=False,
+                error=str(e)
+            ))
+
+    def _handle_save_history(self, request: BackendRequest) -> None:
+        try:
+            messages = request.payload.get("messages", [])
+            self.save_message_history(messages)
+            self._send_response(request, BackendResponse(
+                request_id=request.request_id,
+                success=True,
+                data={"status": "history_saved"}
+            ))
+        except Exception as e:
+            self._send_response(request, BackendResponse(
+                request_id=request.request_id,
+                success=False,
+                error=str(e)
+            ))
+
     def _send_response(self, request: BackendRequest, response: BackendResponse) -> None:
         if request.response_queue:
             request.response_queue.put(response)
@@ -333,9 +408,19 @@ class BackendServer:
 
     def update_config(self, api_key: str, base_url: str = "https://api.deepseek.com") -> None:
         with self._lock:
+            self._config = {"api_key": api_key, "base_url": base_url}
             if api_key and self._graph:
                 self._client = GraphMemoryClient(
                     api_key=api_key,
                     base_url=base_url,
                     graph=self._graph
                 )
+
+    def get_config(self) -> Dict[str, str]:
+        return getattr(self, "_config", {"api_key": "", "base_url": "https://api.deepseek.com"})
+
+    def save_message_history(self, messages: list) -> None:
+        self._message_history = messages
+
+    def get_message_history(self) -> list:
+        return getattr(self, "_message_history", [])
