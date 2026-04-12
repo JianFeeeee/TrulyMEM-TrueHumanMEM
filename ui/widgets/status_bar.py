@@ -15,8 +15,10 @@ class StatusBar(Static):
 
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
-        self._shortcuts = "F1:帮助 F2:侧边栏 F3:工具详情 F4:查询 F5:清屏 F6:退出"
+        self._shortcuts = "F1:帮助 F2:侧边栏 F3:工具详情 F5:清屏 F6:退出"
         self._license_info = "本项目由jianf设计，以GPLv3形式开源"
+        self._api_status = "未配置"
+        self._processing = False
 
     def on_mount(self) -> None:
         """组件挂载时"""
@@ -24,4 +26,16 @@ class StatusBar(Static):
 
     def _update_display(self) -> None:
         """更新显示"""
-        self.update(f"{self._license_info} | {self._shortcuts}")
+        status_icon = "●" if self._api_status == "已配置" else "○"
+        processing_indicator = " [处理中...]" if self._processing else ""
+        self.update(f"{status_icon} API: {self._api_status}{processing_indicator} | {self._license_info} | {self._shortcuts}")
+
+    def set_api_status(self, configured: bool) -> None:
+        """设置API状态"""
+        self._api_status = "已配置" if configured else "未配置"
+        self._update_display()
+
+    def set_processing(self, processing: bool) -> None:
+        """设置处理状态"""
+        self._processing = processing
+        self._update_display()

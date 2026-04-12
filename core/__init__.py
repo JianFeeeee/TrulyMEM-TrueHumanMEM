@@ -96,27 +96,50 @@ class BackendServer:
         messages = [{"role": "user", "content": user_input}]
         response = self._client.send_message_with_history(messages)
         message = response.choices[0].message
-        content = message.content or "(无��复)"
+        content = message.content or "(无回复)"
         tool_calls = []
         
         while message.tool_calls:
-            args = {}
-            try:
-                import json
-                args = json.loads(message.tool_calls[0].function.arguments)
-            except:
-                pass
+            # 处理所有工具调用
+            tool_results = []
             
-            allowed, reason = limiter.can_call(message.tool_calls[0].function.name, args)
-            if not allowed:
-                tool_calls.append({"name": message.tool_calls[0].function.name, "result": f"工具调用被拒绝: {reason}"})
-                continue
+            for tool_call in message.tool_calls:
+                args = {}
+                try:
+                    import json
+                    args = json.loads(tool_call.function.arguments)
+                except:
+                    pass
+                
+                allowed, reason = limiter.can_call(tool_call.function.name, args)
+                if not allowed:
+                    tool_calls.append({"name": tool_call.function.name, "result": f"工具调用被拒绝: {reason}"})
+                    tool_results.append({"role": "tool", "tool_call_id": tool_call.id, "content": f"工具调用被拒绝: {reason}"})
+                    continue
+                
+                limiter.record_call(tool_call.function.name, args)
+                result = execute_tool(self._graph, tool_call.function.name, args)
+                tool_calls.append({"name": tool_call.function.name, "result": result})
+                tool_results.append({"role": "tool", "tool_call_id": tool_call.id, "content": result})
             
-            limiter.record_call(message.tool_calls[0].function.name, args)
-            result = execute_tool(self._graph, message.tool_calls[0].function.name, args)
-            tool_calls.append({"name": message.tool_calls[0].function.name, "result": result})
-            messages.append({"role": "assistant", "tool_calls": [{"id": "1", "function": {"name": message.tool_calls[0].function.name, "arguments": message.tool_calls[0].function.arguments}}]})
-            messages.append({"role": "tool", "tool_call_id": "1", "content": result})
+            # 添加 assistant 消息（包含完整的 tool_calls，必须有 type 字段）
+            assistant_msg = {
+                "role": "assistant",
+                "content": message.content or "",
+                "tool_calls": [{
+                    "id": tc.id,
+                    "type": "function",
+                    "function": {
+                        "name": tc.function.name,
+                        "arguments": tc.function.arguments
+                    }
+                } for tc in message.tool_calls]
+            }
+            messages.append(assistant_msg)
+            
+            # 添加工具结果
+            messages.extend(tool_results)
+            
             response = self._client.send_message_with_history(messages)
             message = response.choices[0].message
             content = message.content or content

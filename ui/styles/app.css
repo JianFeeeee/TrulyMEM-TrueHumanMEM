@@ -22,15 +22,14 @@ LeftPanel {
 }
 
 RightPanel {
-    width: 70;
+    width: 35;
     dock: right;
     background: $panel;
-    overflow-y: auto;
 }
 
 RightPanel ScrollableContainer {
-    height: 1fr;
-    overflow-y: auto;
+    height: 100%;
+    overflow-y: scroll;
 }
 
 StatusBar {
