@@ -1,4 +1,7 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: GPL-3.0-or-later
+# Copyright (C) 2026 jianf
+
 """
 TrulyMEM 独立入口文件
 用于打包为可执行文件
