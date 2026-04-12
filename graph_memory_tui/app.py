@@ -26,6 +26,7 @@ from .core.imports import (
     NEO4J_USER,
     NEO4J_PASSWORD,
     MODEL_NAME,
+    USE_EMBEDDED_DB,
 )
 from .core.tools.tool_limiter import ToolLimiter
 
@@ -70,7 +71,7 @@ class GraphMemoryApp(App[None]):
     def compose(self) -> ComposeResult:
         """构建组件树"""
         yield LeftPanel()
-        yield RightPanel(self._config)
+        yield RightPanel(self._config, use_embedded_db=USE_EMBEDDED_DB)
         yield StatusBar()
 
     def on_mount(self) -> None:
@@ -131,7 +132,7 @@ class GraphMemoryApp(App[None]):
 F1 - 帮助
 F2 - 切换侧边栏
 F3 - 工具详情
-F4 - 查询框
+F4 - 查询框（仅 Neo4j 模式）
 F5 - 清屏
 F6 - 退出
 
@@ -151,16 +152,20 @@ F6 - 退出
         history.toggle_latest_tool_details()
 
     def action_focus_query(self) -> None:
-        """聚焦查询框"""
+        """聚焦查询框（仅 Neo4j 模式可用）"""
         sidebar = self.query_one(RightPanel)
+        
+        if not sidebar.has_cypher_query_box():
+            self.notify("查询框仅在 Neo4j 模式下可用", title="提示", timeout=3)
+            return
+        
         if sidebar.is_collapsed():
             sidebar.toggle()
             sidebar.update_title()
-        try:
-            query_box = sidebar.get_cypher_query_box()
+        
+        query_box = sidebar.get_cypher_query_box()
+        if query_box:
             query_box.focus()
-        except:
-            pass
 
     def action_clear_history(self) -> None:
         """清屏"""
