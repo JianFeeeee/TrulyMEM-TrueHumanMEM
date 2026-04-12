@@ -57,6 +57,18 @@ OperationLog {
     height: 1fr;
     margin: 1;
     overflow-y: auto;
+    padding: 1;
+}
+
+OperationLog .log-entry {
+    color: $text;
+    margin: 0 0 1 0;
+    height: auto;
+}
+
+OperationLog .log-empty {
+    color: $text-muted;
+    text-style: italic;
 }
 
 CypherQueryBox {
