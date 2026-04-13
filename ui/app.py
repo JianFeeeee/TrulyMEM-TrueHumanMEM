@@ -5,6 +5,7 @@ from textual.binding import Binding
 
 from core import BackendServer, BackendClient
 from .models.message import Message
+from .services.config_service import ConfigService
 
 
 class GraphMemoryApp(App):
@@ -22,18 +23,24 @@ class GraphMemoryApp(App):
         Binding("f6", "quit", "退出"),
     ]
 
-    def __init__(self, backend_server: BackendServer = None, **kwargs):
+    def __init__(self, backend_server: BackendServer = None, config_service: ConfigService = None, **kwargs):
         super().__init__(**kwargs)
         self._backend_server = backend_server
         self._backend_client = BackendClient(backend_server) if backend_server else None
+        self._config_service = config_service
         self._api_configured = False
 
     def compose(self) -> ComposeResult:
         from .widgets.left_panel import LeftPanel
         from .widgets.right_panel import RightPanel
         from .widgets.status_bar import StatusBar
+        from .models.config import AppConfig
+        
+        # 获取初始配置
+        initial_config = self._config_service.get_config() if self._config_service else AppConfig()
+        
         yield LeftPanel()
-        yield RightPanel()
+        yield RightPanel(config=initial_config)
         yield StatusBar()
 
     def on_mount(self) -> None:
@@ -137,16 +144,17 @@ class GraphMemoryApp(App):
             return
         
         config = event.config
-        api_key = config.api_key
-        base_url = config.base_url
         
         # 异步更新配置，避免阻塞UI
-        asyncio.create_task(self._update_config_async(api_key, base_url))
+        asyncio.create_task(self._update_config_async(config))
     
-    async def _update_config_async(self, api_key: str, base_url: str) -> None:
+    async def _update_config_async(self, config) -> None:
         """异步更新配置"""
         from .widgets.status_bar import StatusBar
         status_bar = self.query_one(StatusBar)
+        
+        api_key = config.api_key
+        base_url = config.base_url
         
         try:
             result = await asyncio.get_event_loop().run_in_executor(
@@ -157,6 +165,11 @@ class GraphMemoryApp(App):
             if result.get("success"):
                 self._api_configured = bool(api_key)
                 status_bar.set_api_status(self._api_configured)
+                
+                # 保存配置到文件（使用完整的config对象，保留model字段）
+                if self._config_service:
+                    self._config_service.set_config(config)
+                
                 self.notify("✅ 配置已保存并生效", title="配置成功", severity="information")
             else:
                 error = result.get("error", "未知错误")
