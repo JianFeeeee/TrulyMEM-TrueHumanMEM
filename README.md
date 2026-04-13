@@ -203,9 +203,14 @@ pytest tests/
 > - 必须提供源代码
 
 ---
-## 特别鸣谢
+## 特别鸣谢（不分先后）
 - 感谢 [Prof.Meiting Wang ](https://www.xxmu.edu.cn/yxgcxy/info/1260/4252.htm) 为本项目提供学术指导
+
 - 感谢 [逝水秋生白](https://atomgit.com/cenber)为 本项目提供的架构支持
+
+- 感谢 anzhitinglan 为本项目提供的测试资源支持与相关指导
+
+- 感谢 崔莉萍老师 为本项目提供的理论指导
 
 ---
 ## 贡献
