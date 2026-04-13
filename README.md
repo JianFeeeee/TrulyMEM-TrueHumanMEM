@@ -1,5 +1,9 @@
 # TrulyMEM - TrueHumanMEM
 
+<p align="center">
+  <img src="pic/image.png" alt="TrulyMEM Logo" width="200">
+</p>
+
 > **📜 开源协议**: [GNU General Public License v3.0 (GPLv3)](https://www.gnu.org/licenses/gpl-3.0)  
 > 本项目自由开源，可自由使用、修改和分发，但修改后的作品必须以相同许可证发布。
 

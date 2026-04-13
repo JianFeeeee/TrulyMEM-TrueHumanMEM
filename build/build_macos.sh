@@ -17,6 +17,12 @@ fi
 echo "Installing dependencies..."
 pip3 install -r requirements.txt
 
+echo "Generating ICNS icon..."
+if [ -d "pic/TrulyMEM.iconset" ]; then
+    iconutil -c icns pic/TrulyMEM.iconset -o pic/TrulyMEM.icns
+    echo "ICNS icon generated: pic/TrulyMEM.icns"
+fi
+
 echo "Cleaning previous builds..."
 rm -rf build/dist build/__pycache__ 2>/dev/null || true
 
@@ -26,6 +32,7 @@ python3 -m PyInstaller trulymem_entry.py \
     --onefile \
     --console \
     --name TrulyMEM \
+    --icon "pic/TrulyMEM.icns" \
     --add-data "ui/styles:ui/styles" \
     --add-data "core/prompts/templates:core/prompts/templates" \
     --hidden-import textual \
