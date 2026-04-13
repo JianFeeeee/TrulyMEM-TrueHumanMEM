@@ -13,13 +13,21 @@ os.chdir(application_path)
 
 from core import BackendServer
 from ui import GraphMemoryApp
+from ui.services.config_service import ConfigService
 
 
 def main():
-    backend_server = BackendServer(db_path="graph_memory.db", use_embedded_db=True)
-    backend_server.start(api_key="", base_url="https://api.deepseek.com")
+    # 配置文件保存在应用根目录（exe同级目录或源码根目录）
+    config_file = application_path / "config.json"
     
-    app = GraphMemoryApp(backend_server=backend_server)
+    # 加载配置
+    config_service = ConfigService(config_file=config_file)
+    config = config_service.get_config()
+    
+    backend_server = BackendServer(db_path="graph_memory.db", use_embedded_db=True)
+    backend_server.start(api_key=config.api_key, base_url=config.base_url)
+    
+    app = GraphMemoryApp(backend_server=backend_server, config_service=config_service)
     
     try:
         app.run()
