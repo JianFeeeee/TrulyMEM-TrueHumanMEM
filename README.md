@@ -204,7 +204,8 @@ pytest tests/
 
 ---
 ## 特别鸣谢
-
+- 感谢 [Prof.Meiting Wang ](urlhttps://www.xxmu.edu.cn/yxgcxy/info/1260/4252.htm) 为本项目提供学术指导
+- 感谢 [逝水秋生白](urlhttps://atomgit.com/cenber)为 本项目提供的架构支持
 
 ---
 ## 贡献
