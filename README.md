@@ -100,17 +100,22 @@ TrulyMEM-TrueHumanMEM/
 ### 启动流程
 
 ```python
-# 1. 创建后端
-server = BackendServer(db_path="graph_memory.db")
-server.start(api_key="your-key")
+# 1. 加载配置
+from ui.services.config_service import ConfigService
+config_service = ConfigService(config_file="config.json")
+config = config_service.get_config()
 
-# 2. 创建UI（可选，后端可独立使用）
-app = GraphMemoryApp(backend_server=server)
+# 2. 创建后端
+server = BackendServer(db_path="graph_memory.db", use_embedded_db=True)
+server.start(api_key=config.api_key, base_url=config.base_url)
+
+# 3. 创建UI（可选，后端可独立使用）
+app = GraphMemoryApp(backend_server=server, config_service=config_service)
 app.run()
 
 # 或直接使用后端
 client = BackendClient(server)
-result = client.send_message("hello")
+result = client.process_message("hello")
 ```
 
 ---

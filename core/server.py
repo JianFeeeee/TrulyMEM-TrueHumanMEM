@@ -225,21 +225,12 @@ class BackendServer:
             ))
 
     def _handle_execute_tool(self, request: BackendRequest) -> None:
+        """处理直接工具调用请求（前端直接调用，不受次数限制）"""
         try:
             tool_name = request.payload.get("tool_name")
             arguments = request.payload.get("arguments", {})
             
-            allowed, reason = self._tool_limiter.can_call(tool_name, arguments)
-            if not allowed:
-                self._send_response(request, BackendResponse(
-                    request_id=request.request_id,
-                    success=False,
-                    error=f"工具调用被拒绝: {reason}"
-                ))
-                return
-            
-            self._tool_limiter.record_call(tool_name, arguments)
-            
+            # 前端直接调用的工具不受次数限制，直接执行
             result = execute_tool(self._graph, tool_name, arguments)
             
             self._send_response(request, BackendResponse(

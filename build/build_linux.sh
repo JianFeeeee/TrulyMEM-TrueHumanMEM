@@ -9,6 +9,11 @@ cd "$PROJECT_ROOT"
 
 echo "Project root: $PROJECT_ROOT"
 
+if ! command -v python3 &> /dev/null; then
+    echo "Error: python3 not found"
+    exit 1
+fi
+
 echo "Installing dependencies..."
 pip3 install -r requirements.txt 2>/dev/null || pip install -r requirements.txt
 
@@ -50,6 +55,7 @@ python3 -m PyInstaller trulymem_entry.py \
     --hidden-import ui.handlers \
     --hidden-import ui.services \
     --hidden-import ui.services.config_manager \
+    --hidden-import ui.services.config_service \
     --collect-all textual \
     --noconfirm
 

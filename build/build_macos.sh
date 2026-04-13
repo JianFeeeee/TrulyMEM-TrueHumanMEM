@@ -55,6 +55,7 @@ python3 -m PyInstaller trulymem_entry.py \
     --hidden-import ui.handlers \
     --hidden-import ui.services \
     --hidden-import ui.services.config_manager \
+    --hidden-import ui.services.config_service \
     --collect-all textual \
     --noconfirm
 
