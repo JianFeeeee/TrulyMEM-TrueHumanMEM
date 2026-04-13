@@ -14,14 +14,26 @@ if ! command -v python3 &> /dev/null; then
     exit 1
 fi
 
-echo "Installing dependencies..."
-pip3 install -r requirements.txt 2>/dev/null || pip install -r requirements.txt
+# 创建并激活虚拟环境
+VENV_DIR="$PROJECT_ROOT/.venv_build"
+
+echo "Creating virtual environment: $VENV_DIR"
+python3 -m venv "$VENV_DIR"
+
+echo "Activating virtual environment..."
+source "$VENV_DIR/bin/activate"
+
+echo "Upgrading pip in virtual environment..."
+pip install --upgrade pip
+
+echo "Installing dependencies in virtual environment..."
+pip install -r requirements.txt
 
 echo "Cleaning previous builds..."
 rm -rf build/dist build/__pycache__ 2>/dev/null || true
 
 echo "Running PyInstaller..."
-python3 -m PyInstaller trulymem_entry.py \
+python -m PyInstaller trulymem_entry.py \
     --clean \
     --onefile \
     --console \
@@ -62,3 +74,10 @@ python3 -m PyInstaller trulymem_entry.py \
 echo "===== Build Complete ====="
 echo "Binary: dist/TrulyMEM"
 ls -la dist/
+
+# 清理虚拟环境
+echo "Cleaning up virtual environment..."
+deactivate
+rm -rf "$VENV_DIR"
+
+echo "Build finished successfully!"
