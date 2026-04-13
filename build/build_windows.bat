@@ -20,6 +20,7 @@ python -m PyInstaller trulymem_entry.py ^
     --onefile ^
     --console ^
     --name TrulyMEM ^
+    --icon "pic/TrulyMEM.ico" ^
     --add-data "ui/styles;ui/styles" ^
     --add-data "core/prompts/templates;core/prompts/templates" ^
     --hidden-import textual ^
