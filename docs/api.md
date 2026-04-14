@@ -191,7 +191,8 @@ body = {}  # 无参数
 ```python
 body = {
     "api_key": str,    # API Key
-    "base_url": str    # API Base URL (默认: https://api.deepseek.com)
+    "base_url": str,   # API Base URL (默认: https://api.deepseek.com)
+    "model": str       # 模型名称 (默认: deepseek-chat)
 }
 ```
 
@@ -206,7 +207,8 @@ body = {
 ```python
 result = client.update_config(
     api_key="sk-xxxxx",
-    base_url="https://api.deepseek.com"
+    base_url="https://api.deepseek.com",
+    model="deepseek-chat"
 )
 ```
 
@@ -276,15 +278,25 @@ body = {}  # 无参数
 from core import BackendServer, BackendClient
 
 # 1. 创建并启动后端
-server = BackendServer(db_path="graph_memory.db", use_embedded_db=True)
-server.start(api_key="your-api-key", base_url="https://api.deepseek.com")
+# config_file 默认: ~/.trulymem/config.json
+server = BackendServer(
+    db_path="graph_memory.db",
+    use_embedded_db=True,
+    config_file=None  # 可选，自定义配置路径
+)
+server.start(
+    api_key="your-api-key",
+    base_url="https://api.deepseek.com",
+    model="deepseek-chat"  # 可选，模型名称
+)
 
 # 2. 创建客户端
 client = BackendClient(server)
 
 # 3. 发送消息
 result = client.process_message("你好")
-print(result["content"])
+if result.get("success"):
+    print(result["content"])
 
 # 4. 关闭
 client.shutdown()
@@ -296,8 +308,8 @@ client.shutdown()
 import queue
 from core import BackendServer, Packet, PacketType
 
-server = BackendServer()
-server.start(api_key="your-key")
+server = BackendServer(config_file=None)
+server.start(api_key="your-key", model="deepseek-chat")
 
 # 创建请求包
 response_queue = queue.Queue()
