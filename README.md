@@ -99,7 +99,7 @@ TrulyMEM-TrueHumanMEM/
 │   ├── app.py        # 主应用
 │   ├── widgets/     # UI 组件
 │   └── models/       # 数据模型
-└── tests/            # 测试 (37 tests)
+└── tests/            # 测试 (42 tests)
 ```
 
 ### 启动流程
@@ -172,7 +172,7 @@ result = client.process_message("hello")
 pytest tests/
 ```
 
-37 个测试用例覆盖：
+42 个测试用例覆盖：
 - 数据包协议
 - 后端初始化/启动/关闭
 - 客户端方法
