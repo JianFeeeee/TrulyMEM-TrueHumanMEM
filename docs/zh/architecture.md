@@ -17,21 +17,20 @@ TrulyMEM-TrueHumanMEM/
 │   ├── __init__.py     # 导出 BackendServer, BackendClient, EmbeddedGraphDB
 │   ├── server.py       # BackendServer (Packet 通信协议)
 │   ├── client.py       # BackendClient (Packet 协议客户端)
-│   ├── embedded_db.py # SQLite 图数据库实现
+│   ├── embedded_db.py  # SQLite 图数据库实现
 │   ├── graph_client.py # OpenAI/DeepSeek API 客户端
 │   ├── tool_executor.py # 工具执行器
-│   ├── tool_limiter.py  # 工具调用限制器
+│   ├── tool_limiter.py # 工具调用限制器
 │   ├── tools/          # 工具定义
-│   │   ├── __init__.py
 │   │   └── memory_tools.py
 │   └── prompts/        # 提示词管理
 ├── ui/                 # TUI 显示层（仅显示，无 AI 逻辑）
-│   ├── __init__.py     # 导出 GraphMemoryApp, AppConfig
+│   ├── __init__.py     # 导出 GraphMemoryApp
 │   ├── app.py          # GraphMemoryApp (通过 BackendClient 通信)
 │   ├── widgets/        # TUI 组件
-│   ├── handlers/       # 事件处理
 │   ├── models/         # 数据模型
 │   ├── services/       # 服务层（仅配置管理）
+│   ├── handlers/      # 事件处理
 │   └── styles/         # 样式文件
 └── tests/              # 测试 (42 tests)
 ```

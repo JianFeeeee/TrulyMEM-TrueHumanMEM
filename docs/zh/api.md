@@ -27,6 +27,8 @@ class PacketType(Enum):
     GET_STATUS = "get_status"            # 获取状态
     GET_CONFIG = "get_config"            # 获取配置
     SET_CONFIG = "set_config"            # 设置配置
+    GET_TOOL_LIMITS = "get_tool_limits"   # 获取工具限制
+    SET_TOOL_LIMITS = "set_tool_limits"   # 设置工具限制
     GET_HISTORY = "get_history"           # 获取历史
     SAVE_HISTORY = "save_history"         # 保存历史
     SHUTDOWN = "shutdown"                 # 关闭服务
@@ -214,7 +216,71 @@ result = client.update_config(
 
 ---
 
-### 6. GET_HISTORY - 获取消息历史
+### 6. GET_TOOL_LIMITS - 获取工具限制
+
+获取当前 AI 推理时的工具调用限制配置。
+
+**请求参数：**
+```python
+body = {}  # 无参数
+```
+
+**响应数据：**
+```python
+{
+    "persona_query_max": int,   # 人设图查询上限
+    "persona_update_max": int,  # 人设图修改上限
+    "task_query_max": int,       # 工作记忆查询上限
+    "task_update_max": int,      # 工作记忆修改上限
+    "memory_query_max": int,     # 一般记忆查询上限
+    "memory_update_max": int    # 一般记忆修改上限
+}
+```
+
+**示例：**
+```python
+result = client.get_tool_limits()
+print(result["data"]["persona_query_max"])  # 1
+```
+
+---
+
+### 7. SET_TOOL_LIMITS - 设置工具限制
+
+设置 AI 推理时的工具调用限制。
+
+**请求参数：**
+```python
+body = {
+    "persona_query_max": int,   # 人设图查询上限 (≥1)
+    "persona_update_max": int,  # 人设图修改上限 (≥1)
+    "task_query_max": int,       # 工作记忆查询上限 (≥1)
+    "task_update_max": int,     # 工作记忆修改上限 (≥1)
+    "memory_query_max": int,    # 一般记忆查询上限 (≥1)
+    "memory_update_max": int     # 一般记忆修改上限 (≥1)
+}
+```
+
+**响应数据：**
+```python
+{
+    "status": "tool_limits_updated",
+    "limits": {...}  # 更新后的限制
+}
+```
+
+**示例：**
+```python
+result = client.update_tool_limits(
+    persona_query_max=2,
+    task_query_max=5,
+    memory_query_max=30
+)
+```
+
+---
+
+### 8. GET_HISTORY - 获取消息历史
 
 获取保存的消息历史。
 

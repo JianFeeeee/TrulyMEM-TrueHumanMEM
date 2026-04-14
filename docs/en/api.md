@@ -27,6 +27,8 @@ class PacketType(Enum):
     GET_STATUS = "get_status"            # Get status
     GET_CONFIG = "get_config"            # Get config
     SET_CONFIG = "set_config"            # Set config
+    GET_TOOL_LIMITS = "get_tool_limits"   # Get tool limits
+    SET_TOOL_LIMITS = "set_tool_limits"   # Set tool limits
     GET_HISTORY = "get_history"           # Get history
     SAVE_HISTORY = "save_history"         # Save history
     SHUTDOWN = "shutdown"                 # Shutdown service
@@ -199,7 +201,71 @@ body = {
 
 ---
 
-### 6. GET_HISTORY - Get Message History
+### 6. GET_TOOL_LIMITS - Get Tool Limits
+
+Get current AI reasoning tool call limits.
+
+**Request Parameters:**
+```python
+body = {}  # No parameters
+```
+
+**Response Data:**
+```python
+{
+    "persona_query_max": int,   # Persona graph query limit
+    "persona_update_max": int,  # Persona graph update limit
+    "task_query_max": int,       # Working memory query limit
+    "task_update_max": int,     # Working memory update limit
+    "memory_query_max": int,      # General memory query limit
+    "memory_update_max": int    # General memory update limit
+}
+```
+
+**Example:**
+```python
+result = client.get_tool_limits()
+print(result["data"]["persona_query_max"])  # 1
+```
+
+---
+
+### 7. SET_TOOL_LIMITS - Set Tool Limits
+
+Set AI reasoning tool call limits.
+
+**Request Parameters:**
+```python
+body = {
+    "persona_query_max": int,   # Persona query limit (≥1)
+    "persona_update_max": int,  # Persona update limit (≥1)
+    "task_query_max": int,       # Working memory query limit (≥1)
+    "task_update_max": int,      # Working memory update limit (≥1)
+    "memory_query_max": int,     # General memory query limit (≥1)
+    "memory_update_max": int     # General memory update limit (≥1)
+}
+```
+
+**Response Data:**
+```python
+{
+    "status": "tool_limits_updated",
+    "limits": {...}  # Updated limits
+}
+```
+
+**Example:**
+```python
+result = client.update_tool_limits(
+    persona_query_max=2,
+    task_query_max=5,
+    memory_query_max=30
+)
+```
+
+---
+
+### 8. GET_HISTORY - Get Message History
 
 Get saved message history.
 

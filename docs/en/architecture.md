@@ -17,21 +17,20 @@ TrulyMEM-TrueHumanMEM/
 │   ├── __init__.py     # Export BackendServer, BackendClient, EmbeddedGraphDB
 │   ├── server.py       # BackendServer (Packet communication protocol)
 │   ├── client.py       # BackendClient (Packet protocol client)
-│   ├── embedded_db.py # SQLite graph database implementation
+│   ├── embedded_db.py  # SQLite graph database implementation
 │   ├── graph_client.py # OpenAI/DeepSeek API client
 │   ├── tool_executor.py # Tool executor
-│   ├── tool_limiter.py  # Tool call limiter
+│   ├── tool_limiter.py # Tool call limiter
 │   ├── tools/          # Tool definitions
-│   │   ├── __init__.py
 │   │   └── memory_tools.py
 │   └── prompts/        # Prompt management
 ├── ui/                 # TUI display layer (display only, no AI logic)
-│   ├── __init__.py     # Export GraphMemoryApp, AppConfig
+│   ├── __init__.py     # Export GraphMemoryApp
 │   ├── app.py          # GraphMemoryApp (communicates via BackendClient)
 │   ├── widgets/        # TUI components
-│   ├── handlers/       # Event handlers
 │   ├── models/         # Data models
 │   ├── services/       # Service layer (config only)
+│   ├── handlers/      # Event handlers
 │   └── styles/         # Style files
 └── tests/              # Tests (42 tests)
 ```
