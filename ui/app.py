@@ -128,6 +128,9 @@ class GraphMemoryApp(App):
     async def _process(self, user_input: str) -> None:
         from .widgets.message_history import MessageHistory
         from .widgets.status_bar import StatusBar
+        from .widgets.right_panel import RightPanel
+        from .models.log_entry import LogEntry
+        from datetime import datetime
         
         history = self.query_one(MessageHistory)
         status_bar = self.query_one(StatusBar)
@@ -138,8 +141,29 @@ class GraphMemoryApp(App):
         )
         
         if result.get("success"):
-            content = result.get("content", "(无回复)")
+            # 响应结构: {"success": True, "data": {"content": "...", "tool_calls": [...], ...}, "error": None}
+            data = result.get("data", {})
+            content = data.get("content", "(无回复)")
             history.update_latest_message(content)
+            
+            # 处理工具调用信息，更新操作日志
+            tool_calls = data.get("tool_calls", [])
+            if tool_calls:
+                try:
+                    right_panel = self.query_one(RightPanel)
+                    operation_log = right_panel.get_operation_log()
+                    
+                    for tool_call in tool_calls:
+                        entry = LogEntry(
+                            timestamp=datetime.now(),
+                            tool_name=tool_call.get("name", "unknown"),
+                            arguments=tool_call.get("arguments", {}),
+                            result=str(tool_call.get("result", "")),
+                            duration=0.0  # 后端没有返回耗时信息
+                        )
+                        operation_log.add_log(entry)
+                except Exception:
+                    pass  # 忽略操作日志更新失败
         else:
             error = result.get("error", "未知错误")
             history.update_latest_message(f"❌ 错误: {error}")

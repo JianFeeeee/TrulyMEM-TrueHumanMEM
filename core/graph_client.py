@@ -304,6 +304,16 @@ class GraphMemoryClient:
     """图记忆客户端"""
     
     def __init__(self, api_key: str, base_url: str, graph, model: str = "deepseek-chat"):
+        # 清理可能存在的错误代理环境变量
+        import os
+        proxy_vars = ['http_proxy', 'https_proxy', 'HTTP_PROXY', 'HTTPS_PROXY', 'all_proxy', 'ALL_PROXY']
+        for var in proxy_vars:
+            if var in os.environ:
+                value = os.environ[var]
+                # 如果代理URL没有scheme前缀，添加http://
+                if value and not value.startswith(('http://', 'https://', 'socks5://', 'socks4://')):
+                    os.environ[var] = f'http://{value}'
+        
         self.client = OpenAI(api_key=api_key, base_url=base_url)
         self.graph = graph
         self.tools = TOOLS
