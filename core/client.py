@@ -55,6 +55,22 @@ class BackendClient:
         )
         return self._server.send(packet).body
 
+    def get_tool_limits(self) -> Dict:
+        packet = Packet(
+            id=self._next_id(),
+            type=PacketType.GET_TOOL_LIMITS,
+            body={}
+        )
+        return self._server.send(packet).body
+
+    def update_tool_limits(self, **kwargs) -> Dict:
+        packet = Packet(
+            id=self._next_id(),
+            type=PacketType.SET_TOOL_LIMITS,
+            body=kwargs
+        )
+        return self._server.send(packet).body
+
     def save_history(self, messages: list) -> None:
         packet = Packet(
             id=self._next_id(),

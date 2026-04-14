@@ -64,15 +64,17 @@ python trulymem_entry.py
 
 ## Documentation Index
 
-Detailed technical documentation in the [docs/](docs/) directory:
+Detailed technical documentation in the [docs_en/](docs_en/) directory:
 
 | Document | Content |
 |----------|---------|
-| [docs/架构_EN.md](docs/架构_EN.md) | System architecture, technical design, Packet protocol |
-| [docs/一键启动指南_EN.md](docs/一键启动指南_EN.md) | Complete startup guide and configuration |
-| [docs/记忆机制_EN.md](docs/记忆机制_EN.md) | Internal memory working mechanism |
-| [docs/工作记忆链_EN.md](docs/工作记忆链_EN.md) | Continuous task handling mechanism |
-| [docs/api_EN.md](docs/api_EN.md) | BackendServer API (for extension development) |
+| [docs_en/architecture.md](docs_en/architecture.md) | System architecture and technical design |
+| [docs_en/quick_start.md](docs_en/quick_start.md) | Complete startup guide and configuration |
+| [docs_en/memory.md](docs_en/memory.md) | Internal memory working mechanism |
+| [docs_en/persona.md](docs_en/persona.md) | Persona Graph mechanism |
+| [docs_en/working_memory.md](docs_en/working_memory.md) | Continuous task handling mechanism |
+| [docs_en/api.md](docs_en/api.md) | BackendServer API (for extension development) |
+| [docs_en/prompts.md](docs_en/prompts.md) | Prompt management module |
 
 ---
 
