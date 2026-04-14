@@ -10,11 +10,7 @@ class PromptManager:
     _instance = None
     _cached_prompt = None
     
-    # 用户自定义提示词路径
-    USER_PROMPT_PATH = Path.home() / ".trulymem" / "system_prompt.md"
-    
     def __new__(cls):
-        """单例模式，避免重复加载"""
         if cls._instance is None:
             cls._instance = super().__new__(cls)
         return cls._instance
@@ -25,29 +21,19 @@ class PromptManager:
             self._initialized = True
     
     def get_system_prompt(self) -> str:
-        """获取系统提示词（带缓存）"""
         if PromptManager._cached_prompt is not None:
             return PromptManager._cached_prompt
         
-        # 1. 优先使用用户自定义提示词
-        if self.USER_PROMPT_PATH.exists():
-            with open(self.USER_PROMPT_PATH, "r", encoding="utf-8") as f:
-                PromptManager._cached_prompt = f.read()
-            return PromptManager._cached_prompt
-        
-        # 2. 使用打包的提示词
         prompt_file = self.prompts_dir / "system_prompt.md"
         if prompt_file.exists():
             with open(prompt_file, "r", encoding="utf-8") as f:
                 PromptManager._cached_prompt = f.read()
         else:
-            # 3. 使用内置默认提示词
             PromptManager._cached_prompt = self._build_default_prompt()
         
         return PromptManager._cached_prompt
     
     def _build_default_prompt(self) -> str:
-        """构建默认提示词（精简版）"""
         return """你是TrulyMEM，一个拥有长期记忆能力的AI助手。
 
 ## 核心能力
@@ -89,9 +75,3 @@ class PromptManager:
 - 如何使用工具
 
 记住：灵活应对，保持自然对话体验。"""
-
-    @staticmethod
-    def clear_cache():
-        """清除缓存，强制重新加载提示词"""
-        PromptManager._cached_prompt = None
-        PromptManager._instance = None
