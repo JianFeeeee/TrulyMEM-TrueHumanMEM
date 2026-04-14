@@ -7,6 +7,8 @@
 > **📜 License**: [GNU General Public License v3.0 (GPLv3)](https://www.gnu.org/licenses/gpl-3.0)  
 > This project is free and open source. You are free to use, modify, and distribute, but modified works must be distributed under the same license.
 
+> **中文**: [切换到中文版](./README.md)
+
 **Give AI self-awareness, plasticity, and a sense of proportion in long-term memory**
 
 *The More Human Choice.*
