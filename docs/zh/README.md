@@ -2,7 +2,7 @@
 
 欢迎来到 TrulyMEM 项目中文文档。
 
-> **English**: [切换到英文版](../en/README.md)
+> [Switch to English version](../en/README.md)
 
 ## 文档目录
 

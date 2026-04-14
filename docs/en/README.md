@@ -2,7 +2,7 @@
 
 Welcome to the TrulyMEM English documentation.
 
-> **中文**: [切换到中文版](../zh/README.md)
+> [切换到中文版](../zh/README.md)
 
 ## Documentation Index
 
