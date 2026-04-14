@@ -5,7 +5,6 @@ from textual.binding import Binding
 
 from core import BackendServer, BackendClient
 from .models.message import Message
-from .services.config_service import ConfigService
 
 
 class GraphMemoryApp(App):
@@ -23,11 +22,10 @@ class GraphMemoryApp(App):
         Binding("f6", "quit", "退出"),
     ]
 
-    def __init__(self, backend_server: BackendServer = None, config_service: ConfigService = None, **kwargs):
+    def __init__(self, backend_server: BackendServer = None, config_file: str = None, **kwargs):
         super().__init__(**kwargs)
         self._backend_server = backend_server
         self._backend_client = BackendClient(backend_server) if backend_server else None
-        self._config_service = config_service
         self._api_configured = False
 
     def compose(self) -> ComposeResult:
@@ -36,8 +34,16 @@ class GraphMemoryApp(App):
         from .widgets.status_bar import StatusBar
         from .models.config import AppConfig
         
-        # 获取初始配置
-        initial_config = self._config_service.get_config() if self._config_service else AppConfig()
+        if self._backend_client:
+            result = self._backend_client.get_config()
+            config_data = result.get("data", {})
+            initial_config = AppConfig(
+                api_key=config_data.get("api_key", ""),
+                base_url=config_data.get("base_url", "https://api.deepseek.com"),
+                model=config_data.get("model", "deepseek-chat")
+            )
+        else:
+            initial_config = AppConfig()
         
         yield LeftPanel()
         yield RightPanel(config=initial_config)
@@ -56,7 +62,8 @@ class GraphMemoryApp(App):
             return
         
         status = self._backend_client.get_status()
-        self._api_configured = status.get("config", {}).get("api_key", "") != ""
+        data = status.get("data", {})
+        self._api_configured = data.get("config", {}).get("api_key", "") != ""
         status_bar.set_api_status(self._api_configured)
         
         from .widgets.message_history import MessageHistory
@@ -118,24 +125,19 @@ class GraphMemoryApp(App):
         history = self.query_one(MessageHistory)
         status_bar = self.query_one(StatusBar)
         
-        try:
-            result = await asyncio.get_event_loop().run_in_executor(
-                None,
-                lambda: self._backend_client.send_message(user_input)
-            )
-            
-            # 更新"处理中"消息为实际回复
-            if result.get("success"):
-                content = result.get("content", "(无回复)")
-                history.update_latest_message(content)
-            else:
-                error = result.get("error", "未知错误")
-                history.update_latest_message(f"❌ 错误: {error}")
-                
-        except Exception as e:
-            history.update_latest_message(f"❌ 异常: {str(e)}")
-        finally:
-            status_bar.set_processing(False)
+        result = await asyncio.get_event_loop().run_in_executor(
+            None,
+            lambda: self._backend_client.process_message(user_input)
+        )
+        
+        if result.get("success"):
+            content = result.get("content", "(无回复)")
+            history.update_latest_message(content)
+        else:
+            error = result.get("error", "未知错误")
+            history.update_latest_message(f"❌ 错误: {error}")
+        
+        status_bar.set_processing(False)
 
     def on_config_section_config_changed(self, event) -> None:
         """处理配置变更事件"""
@@ -151,24 +153,41 @@ class GraphMemoryApp(App):
     async def _update_config_async(self, config) -> None:
         """异步更新配置"""
         from .widgets.status_bar import StatusBar
+        from .widgets.config_section import ConfigSection
+        
         status_bar = self.query_one(StatusBar)
         
         api_key = config.api_key
         base_url = config.base_url
+        model = getattr(config, 'model', 'deepseek-chat')
         
         try:
             result = await asyncio.get_event_loop().run_in_executor(
                 None,
-                lambda: self._backend_client.update_config(api_key=api_key, base_url=base_url)
+                lambda: self._backend_client.update_config(api_key=api_key, base_url=base_url, model=model)
             )
             
             if result.get("success"):
                 self._api_configured = bool(api_key)
                 status_bar.set_api_status(self._api_configured)
                 
-                # 保存配置到文件（使用完整的config对象，保留model字段）
-                if self._config_service:
-                    self._config_service.set_config(config)
+                # 从后端重新获取配置并刷新 UI
+                config_result = await asyncio.get_event_loop().run_in_executor(
+                    None,
+                    lambda: self._backend_client.get_config()
+                )
+                config_data = config_result.get("data", {})
+                
+                # 刷新输入框
+                try:
+                    config_section = self.query_one(ConfigSection)
+                    config_section.set_config(AppConfig(
+                        api_key=config_data.get("api_key", ""),
+                        base_url=config_data.get("base_url", "https://api.deepseek.com"),
+                        model=config_data.get("model", "deepseek-chat")
+                    ))
+                except Exception:
+                    pass
                 
                 self.notify("✅ 配置已保存并生效", title="配置成功", severity="information")
             else:

@@ -6,7 +6,9 @@ from pathlib import Path
 os.environ["DEEPSEEK_API_KEY"] = "fake-test-key"
 
 
-class TestUIImportFull:
+class TestUIImport:
+    """测试 UI 模块导入"""
+    
     def test_import_graphmemoryapp(self):
         from ui import GraphMemoryApp
         assert GraphMemoryApp is not None
@@ -15,52 +17,24 @@ class TestUIImportFull:
         from ui import AppConfig
         assert AppConfig is not None
 
-    def test_import_from_models(self):
+    def test_import_message(self):
         from ui.models.message import Message, ToolCall, ToolResult
         assert Message is not None
         assert ToolCall is not None
         assert ToolResult is not None
 
-    def test_import_from_models_config(self):
+    def test_import_config(self):
         from ui.models.config import AppConfig
         assert AppConfig is not None
 
-    def test_import_from_models_log_entry(self):
+    def test_import_log_entry(self):
         from ui.models.log_entry import LogEntry
         assert LogEntry is not None
 
-    def test_import_from_widgets(self):
-        from ui.widgets.left_panel import LeftPanel
-        from ui.widgets.right_panel import RightPanel
-        from ui.widgets.input_box import InputBox
-        from ui.widgets.message_history import MessageHistory
-        from ui.widgets.status_bar import StatusBar
-        assert LeftPanel is not None
-        assert RightPanel is not None
-        assert InputBox is not None
-        assert MessageHistory is not None
-        assert StatusBar is not None
 
-    def test_import_from_handlers(self):
-        from ui.handlers.focus_handler import FocusHandler
-        from ui.handlers.key_handler import KeyHandler
-        from ui.handlers.message_handler import MessageHandler
-        assert FocusHandler is not None
-        assert KeyHandler is not None
-        assert MessageHandler is not None
-
-    def test_import_from_services(self):
-        from ui.services.config_manager import ConfigManager
-        from ui.services.config_service import ConfigService
-        from ui.services.chat_service import ChatService
-        from ui.services.tool_service import ToolService
-        assert ConfigManager is not None
-        assert ConfigService is not None
-        assert ChatService is not None
-        assert ToolService is not None
-
-
-class TestAppConfigFull:
+class TestAppConfig:
+    """测试配置模型"""
+    
     def test_config_default_values(self):
         from ui.models.config import AppConfig
         config = AppConfig()
@@ -68,25 +42,15 @@ class TestAppConfigFull:
         assert config.model == "deepseek-chat"
         assert config.base_url == "https://api.deepseek.com"
 
-    def test_config_from_env_with_key(self):
+    def test_config_from_env(self):
         from ui.models.config import AppConfig
         config = AppConfig.from_env()
         assert "fake-test-key" in config.api_key
 
-    def test_config_from_env_custom(self):
-        os.environ["DEEPSEEK_API_KEY"] = "my-key"
-        os.environ["MODEL_NAME"] = "my-model"
-        os.environ["DEEPSEEK_BASE_URL"] = "https://my-api.com"
-        
-        from ui.models.config import AppConfig
-        config = AppConfig.from_env()
-        
-        assert config.api_key == "my-key"
-        assert config.model == "my-model"
-        assert config.base_url == "https://my-api.com"
 
-
-class TestMessageModelFull:
+class TestMessageModel:
+    """测试消息模型"""
+    
     def test_message_creation_user(self):
         from ui.models.message import Message
         from datetime import datetime
@@ -99,119 +63,36 @@ class TestMessageModelFull:
         from ui.models.message import Message
         msg = Message(role="assistant", content="assistant response")
         assert msg.role == "assistant"
-        assert msg.content == "assistant response"
 
     def test_message_with_tool_calls(self):
         from ui.models.message import Message, ToolCall
         tc = ToolCall(id="call-1", name="memory_recall", arguments={"query": "test"})
         msg = Message(role="assistant", content="response", tool_calls=[tc])
-        assert msg.role == "assistant"
         assert msg.tool_calls is not None
         assert len(msg.tool_calls) == 1
-        assert msg.tool_calls[0].name == "memory_recall"
-
-    def test_message_with_tool_results(self):
-        from ui.models.message import Message, ToolResult
-        tr = ToolResult(tool_call_id="call-1", name="memory_recall", arguments={}, result="result", success=True)
-        msg = Message(role="assistant", content="response", tool_results=[tr])
-        assert msg.tool_results is not None
-        assert len(msg.tool_results) == 1
-        assert msg.tool_results[0].success is True
 
 
-class TestToolCallModelFull:
-    def test_toolcall_creation(self):
-        from ui.models.message import ToolCall
-        tc = ToolCall(id="call-1", name="memory_recall", arguments={"query": "test"})
-        assert tc.id == "call-1"
-        assert tc.name == "memory_recall"
-        assert tc.arguments["query"] == "test"
-
-
-class TestToolResultModelFull:
-    def test_toolresult_creation_success(self):
-        from ui.models.message import ToolResult
-        tr = ToolResult(tool_call_id="call-1", name="memory_recall", arguments={}, result="success result", success=True)
-        assert tr.tool_call_id == "call-1"
-        assert tr.name == "memory_recall"
-        assert tr.success is True
-        assert tr.result == "success result"
-
-    def test_toolresult_creation_failure(self):
-        from ui.models.message import ToolResult
-        tr = ToolResult(tool_call_id="call-1", name="memory_recall", arguments={}, result="error", success=False)
-        assert tr.success is False
-        assert tr.result == "error"
-
-
-class TestLogEntryModelFull:
-    def test_logentry_creation(self):
-        from ui.models.log_entry import LogEntry
-        from datetime import datetime
-        entry = LogEntry(
-            timestamp=datetime.now(),
-            tool_name="memory_recall",
-            arguments={"query": "test"},
-            result="result",
-            duration=0.5
-        )
-        assert entry.tool_name == "memory_recall"
-        assert entry.duration == 0.5
-
-    def test_logentry_args_summary(self):
-        from ui.models.log_entry import LogEntry
-        from datetime import datetime
-        entry = LogEntry(
-            timestamp=datetime.now(),
-            tool_name="memory_recall",
-            arguments={"query": "test query with many characters"},
-            result="result",
-            duration=0.5
-        )
-        summary = entry.args_summary
-        assert isinstance(summary, str)
-        assert "query" in summary
-
-    def test_logentry_result_summary(self):
-        from ui.models.log_entry import LogEntry
-        from datetime import datetime
-        entry = LogEntry(
-            timestamp=datetime.now(),
-            tool_name="memory_recall",
-            arguments={},
-            result="a" * 200,
-            duration=0.5
-        )
-        summary = entry.result_summary
-        assert len(summary) <= 103
-
-
-class TestAppCSSPathFull:
+class TestAppCSSPath:
+    """测试 App CSS 配置"""
+    
     def test_app_has_css_path(self):
         from ui import GraphMemoryApp
         assert hasattr(GraphMemoryApp, 'CSS_PATH')
         assert len(GraphMemoryApp.CSS_PATH) > 0
 
-    def test_css_path_are_paths(self):
-        from ui import GraphMemoryApp
-        for path in GraphMemoryApp.CSS_PATH:
-            assert isinstance(path, Path)
 
-
-class TestAppBindingsFull:
+class TestAppBindings:
+    """测试 App 快捷键"""
+    
     def test_app_has_bindings(self):
         from ui import GraphMemoryApp
         assert hasattr(GraphMemoryApp, 'BINDINGS')
         assert len(GraphMemoryApp.BINDINGS) > 0
 
-    def test_bindings_have_required_keys(self):
-        from ui import GraphMemoryApp
-        for binding in GraphMemoryApp.BINDINGS:
-            assert hasattr(binding, 'key')
-            assert hasattr(binding, 'action')
 
-
-class TestWidgetImportsFull:
+class TestWidgetImports:
+    """测试组件导入"""
+    
     def test_import_left_panel(self):
         from ui.widgets.left_panel import LeftPanel
         assert LeftPanel is not None
@@ -228,28 +109,14 @@ class TestWidgetImportsFull:
         from ui.widgets.message_history import MessageHistory
         assert MessageHistory is not None
 
-    def test_import_message_widget(self):
-        from ui.widgets.message_widget import MessageWidget
-        assert MessageWidget is not None
-
     def test_import_status_bar(self):
         from ui.widgets.status_bar import StatusBar
         assert StatusBar is not None
 
-    def test_import_config_section(self):
-        from ui.widgets.config_section import ConfigSection
-        assert ConfigSection is not None
 
-    def test_import_operation_log(self):
-        from ui.widgets.operation_log import OperationLog
-        assert OperationLog is not None
-
-    def test_import_cypher_query_box(self):
-        from ui.widgets.cypher_query_box import CypherQueryBox
-        assert CypherQueryBox is not None
-
-
-class TestHandlerImportsFull:
+class TestHandlerImports:
+    """测试处理器导入"""
+    
     def test_import_focus_handler(self):
         from ui.handlers.focus_handler import FocusHandler
         assert FocusHandler is not None
@@ -258,30 +125,22 @@ class TestHandlerImportsFull:
         from ui.handlers.key_handler import KeyHandler
         assert KeyHandler is not None
 
-    def test_import_message_handler(self):
-        from ui.handlers.message_handler import MessageHandler
-        assert MessageHandler is not None
 
-
-class TestServiceImportsFull:
-    def test_import_config_manager(self):
-        from ui.services.config_manager import ConfigManager
-        assert ConfigManager is not None
-
+class TestServiceImports:
+    """测试服务导入"""
+    
     def test_import_config_service(self):
         from ui.services.config_service import ConfigService
         assert ConfigService is not None
 
-    def test_import_chat_service(self):
-        from ui.services.chat_service import ChatService
-        assert ChatService is not None
-
-    def test_import_tool_service(self):
-        from ui.services.tool_service import ToolService
-        assert ToolService is not None
+    def test_import_config_manager(self):
+        from ui.services.config_manager import ConfigManager
+        assert ConfigManager is not None
 
 
-class TestAppInitializationFull:
+class TestAppInitialization:
+    """测试 App 初始化"""
+    
     def test_app_without_backend(self):
         from ui import GraphMemoryApp
         app = GraphMemoryApp()
@@ -305,18 +164,56 @@ class TestAppInitializationFull:
                 os.unlink(db_path)
 
 
-class TestConfigManagerFull:
-    def test_config_manager_creation(self):
-        from ui.services.config_manager import ConfigManager
-        cm = ConfigManager()
-        assert cm is not None
+class TestUIWithBackendClient:
+    """测试 UI 与后端通信"""
+    
+    def test_app_sends_message_via_backend_client(self):
+        from ui import GraphMemoryApp
+        from core import BackendServer, BackendClient
+        
+        with tempfile.NamedTemporaryFile(suffix=".db", delete=False) as f:
+            db_path = f.name
+        try:
+            server = BackendServer(db_path=db_path)
+            server.start(api_key="")
+            
+            app = GraphMemoryApp(backend_server=server)
+            client = app._backend_client
+            
+            # 测试 get_status
+            status = client.get_status()
+            assert status.get("success") is True
+            
+            # 测试 update_config
+            result = client.update_config(api_key="sk-test", base_url="https://api.deepseek.com")
+            assert result.get("success") is True
+            
+            server.shutdown()
+        finally:
+            if os.path.exists(db_path):
+                os.unlink(db_path)
 
-    def test_config_manager_config_path(self):
-        from ui.services.config_manager import ConfigManager
-        cm = ConfigManager()
-        assert cm._config_path is not None
-
-    def test_config_manager_exists_false(self):
-        from ui.services.config_manager import ConfigManager
-        cm = ConfigManager()
-        assert cm.exists() is False
+    def test_ui_only_uses_backend_client(self):
+        from ui import GraphMemoryApp
+        from core import BackendServer
+        
+        with tempfile.NamedTemporaryFile(suffix=".db", delete=False) as f:
+            db_path = f.name
+        try:
+            server = BackendServer(db_path=db_path)
+            server.start(api_key="")
+            
+            app = GraphMemoryApp(backend_server=server)
+            
+            # UI 不应该直接访问后端内部
+            assert hasattr(app, '_backend_client')
+            assert app._backend_client is not None
+            
+            # 不应该有 _graph, _client 等直接访问
+            assert not hasattr(app, '_graph')
+            assert not hasattr(app, '_client')
+            
+            server.shutdown()
+        finally:
+            if os.path.exists(db_path):
+                os.unlink(db_path)

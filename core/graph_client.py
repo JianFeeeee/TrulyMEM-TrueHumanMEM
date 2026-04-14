@@ -303,12 +303,12 @@ class Neo4jGraph:
 class GraphMemoryClient:
     """图记忆客户端"""
     
-    def __init__(self, api_key: str, base_url: str, graph):
+    def __init__(self, api_key: str, base_url: str, graph, model: str = "deepseek-chat"):
         self.client = OpenAI(api_key=api_key, base_url=base_url)
         self.graph = graph
         self.tools = TOOLS
+        self.model = model
         
-        # 使用新的提示词管理器
         prompt_manager = PromptManager()
         self.system_prompt = prompt_manager.get_system_prompt()
     
@@ -330,7 +330,7 @@ class GraphMemoryClient:
             messages.extend(tool_results)
         
         response = self.client.chat.completions.create(
-            model=MODEL_NAME,
+            model=self.model,
             messages=messages,
             tools=self.tools,
             tool_choice="auto"
@@ -347,7 +347,7 @@ class GraphMemoryClient:
         messages.extend(messages_history)
         
         response = self.client.chat.completions.create(
-            model=MODEL_NAME,
+            model=self.model,
             messages=messages,
             tools=self.tools,
             tool_choice="auto"
@@ -373,7 +373,7 @@ class GraphMemoryClient:
             messages.extend(tool_results)
 
         stream = self.client.chat.completions.create(
-            model=MODEL_NAME,
+            model=self.model,
             messages=messages,
             tools=self.tools,
             tool_choice="auto",

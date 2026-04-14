@@ -4,7 +4,7 @@
 
 ## 概述
 
-TrulyMEM 后端采用**请求-响应队列模式**，通过 `queue.Queue` 实现线程安全通信。后端在独立线程中运行，处理来自客户端的请求。
+TrulyMEM 后端采用 **Packet 通信协议**，通过 `queue.Queue` 实现线程安全通信。后端在独立线程中运行，处理来自客户端的请求。
 
 ### 核心组件
 
@@ -12,50 +12,51 @@ TrulyMEM 后端采用**请求-响应队列模式**，通过 `queue.Queue` 实现
 |------|------|
 | `BackendServer` | 后端服务器，独立线程运行 |
 | `BackendClient` | 客户端封装，提供便捷方法 |
-| `MessageType` | 请求类型枚举 |
-| `BackendRequest` | 请求数据包 |
-| `BackendResponse` | 响应数据包 |
+| `PacketType` | 请求类型枚举 |
+| `Packet` | 数据包（请求） |
+| `PacketResponse` | 数据包响应 |
 
 ---
 
-## 请求类型 (MessageType)
+## 请求类型 (PacketType)
 
 ```python
-class MessageType(Enum):
+class PacketType(Enum):
     PROCESS_MESSAGE = "process_message"  # 处理消息
     EXECUTE_TOOL = "execute_tool"        # 执行工具
     GET_STATUS = "get_status"            # 获取状态
     GET_CONFIG = "get_config"            # 获取配置
     SET_CONFIG = "set_config"            # 设置配置
-    GET_HISTORY = "get_history"          # 获取历史
-    SAVE_HISTORY = "save_history"        # 保存历史
-    SHUTDOWN = "shutdown"                # 关闭服务
+    GET_HISTORY = "get_history"           # 获取历史
+    SAVE_HISTORY = "save_history"         # 保存历史
+    SHUTDOWN = "shutdown"                 # 关闭服务
 ```
 
 ---
 
 ## 数据包格式
 
-### BackendRequest
+### Packet
 
 ```python
 @dataclass
-class BackendRequest:
-    request_id: str                    # 请求唯一标识
-    message_type: MessageType          # 请求类型
-    payload: Dict[str, Any]            # 请求参数
-    response_queue: queue.Queue        # 响应队列（用于返回结果）
+class Packet:
+    id: str                      # 唯一标识
+    type: PacketType             # 请求类型
+    body: Dict[str, Any]        # 请求参数
+    response_queue: queue.Queue # 响应队列（可选）
+    created_at: float           # 创建时间
 ```
 
-### BackendResponse
+### PacketResponse
 
 ```python
 @dataclass
-class BackendResponse:
-    request_id: str                    # 对应的请求ID
-    success: bool                      # 是否成功
-    data: Any = None                   # 返回数据
-    error: Optional[str] = None        # 错误信息
+class PacketResponse:
+    id: str                      # 对应的请求ID
+    success: bool                # 是否成功
+    data: Any = None             # 返回数据
+    error: Optional[str] = None  # 错误信息
 ```
 
 ---
@@ -68,14 +69,15 @@ class BackendResponse:
 
 **请求参数：**
 ```python
-payload = {
+body = {
     "user_input": str  # 用户输入的消息
 }
 ```
 
 **响应数据：**
 ```python
-data = {
+{
+    "success": True,
     "content": str,           # AI 回复内容
     "tool_calls": [           # 工具调用记录
         {
@@ -92,11 +94,16 @@ data = {
 
 **示例：**
 ```python
-from core import BackendClient
+from core import BackendServer, BackendClient
+
+server = BackendServer(db_path="graph_memory.db", use_embedded_db=True)
+server.start(api_key="your-api-key")
 
 client = BackendClient(server)
 result = client.process_message("你好，请记住我的名字是小明")
-# result = {"success": True, "data": {"content": "...", "tool_calls": [...]}}
+
+if result.get("success"):
+    print(result["content"])
 ```
 
 ---
@@ -109,15 +116,16 @@ result = client.process_message("你好，请记住我的名字是小明")
 
 **请求参数：**
 ```python
-payload = {
+body = {
     "tool_name": str,     # 工具名称
-    "arguments": dict     # 工具参数
+    "arguments": dict    # 工具参数
 }
 ```
 
 **响应数据：**
 ```python
-data = {
+{
+    "success": True,
     "result": str  # 工具执行结果
 }
 ```
@@ -135,22 +143,23 @@ result = client.execute_tool("memory_recall", {"query_intent": "用户信息"})
 
 **请求参数：**
 ```python
-payload = {}  # 无参数
+body = {}  # 无参数
 ```
 
 **响应数据：**
 ```python
-data = {
-    "graph_initialized": bool,  # 图数据库是否初始化
-    "client_initialized": bool, # API 客户端是否初始化
-    "running": bool             # 后端是否运行中
+{
+    "running": bool,              # 后端是否运行中
+    "config": dict,              # 当前配置
+    "graph_initialized": bool,   # 图数据库是否初始化
+    "client_initialized": bool   # API 客户端是否初始化
 }
 ```
 
 **示例：**
 ```python
 status = client.get_status()
-# status = {"success": True, "data": {"running": True, ...}}
+print(status["data"]["running"])  # True
 ```
 
 ---
@@ -161,12 +170,12 @@ status = client.get_status()
 
 **请求参数：**
 ```python
-payload = {}  # 无参数
+body = {}  # 无参数
 ```
 
 **响应数据：**
 ```python
-data = {
+{
     "api_key": str,   # API Key
     "base_url": str   # API Base URL
 }
@@ -180,7 +189,7 @@ data = {
 
 **请求参数：**
 ```python
-payload = {
+body = {
     "api_key": str,    # API Key
     "base_url": str    # API Base URL (默认: https://api.deepseek.com)
 }
@@ -188,7 +197,7 @@ payload = {
 
 **响应数据：**
 ```python
-data = {
+{
     "status": "config_updated"
 }
 ```
@@ -209,12 +218,12 @@ result = client.update_config(
 
 **请求参数：**
 ```python
-payload = {}  # 无参数
+body = {}  # 无参数
 ```
 
 **响应数据：**
 ```python
-data = {
+{
     "history": list  # 消息历史列表
 }
 ```
@@ -227,14 +236,14 @@ data = {
 
 **请求参数：**
 ```python
-payload = {
+body = {
     "messages": list  # 消息列表
 }
 ```
 
 **响应数据：**
 ```python
-data = {
+{
     "status": "history_saved"
 }
 ```
@@ -247,12 +256,12 @@ data = {
 
 **请求参数：**
 ```python
-payload = {}  # 无参数
+body = {}  # 无参数
 ```
 
 **响应数据：**
 ```python
-data = {
+{
     "status": "shutdown"
 }
 ```
@@ -275,36 +284,36 @@ client = BackendClient(server)
 
 # 3. 发送消息
 result = client.process_message("你好")
-print(result["data"]["content"])
+print(result["content"])
 
 # 4. 关闭
 client.shutdown()
 ```
 
-### 直接使用请求队列
+### 使用 Packet 协议
 
 ```python
 import queue
-from core import BackendServer, MessageType, BackendRequest, BackendResponse
+from core import BackendServer, Packet, PacketType
 
 server = BackendServer()
 server.start(api_key="your-key")
 
-# 创建请求
+# 创建请求包
 response_queue = queue.Queue()
-request = BackendRequest(
-    request_id="req-001",
-    message_type=MessageType.PROCESS_MESSAGE,
-    payload={"user_input": "你好"},
+packet = Packet(
+    id="req-001",
+    type=PacketType.PROCESS_MESSAGE,
+    body={"user_input": "你好"},
     response_queue=response_queue
 )
 
 # 发送请求
-server._request_queue.put(request)
+result = server.send(packet)
+print(result.body)
 
-# 等待响应
-response = response_queue.get(timeout=30.0)
-print(response.data)
+# 关闭
+server.shutdown()
 ```
 
 ---
@@ -357,7 +366,7 @@ client = BackendClient(server)
 async def handler(websocket):
     async for message in websocket:
         data = json.loads(message)
-        msg_type = data["type"]
+        msg_type = data.get("type")
         
         if msg_type == "message":
             result = client.process_message(data["content"])
@@ -373,32 +382,9 @@ async def handler(websocket):
 async def main():
     server.start()
     async with websockets.serve(handler, "localhost", 8765):
-        await asyncio.Future()  # run forever
+        await asyncio.Future()
 
 asyncio.run(main())
-```
-
-### 扩展为 gRPC
-
-```protobuf
-// truly_mem.proto
-syntax = "proto3";
-
-service TrulyMEM {
-    rpc ProcessMessage(MessageRequest) returns (MessageResponse);
-    rpc UpdateConfig(ConfigRequest) returns (ConfigResponse);
-    rpc GetStatus(Empty) returns (StatusResponse);
-}
-
-message MessageRequest {
-    string message = 1;
-}
-
-message MessageResponse {
-    bool success = 1;
-    string content = 2;
-    string error = 3;
-}
 ```
 
 ---
@@ -407,7 +393,7 @@ message MessageResponse {
 
 - `BackendServer` 使用 `threading.Lock` 保护共享资源
 - 所有请求通过 `queue.Queue` 传递，线程安全
-- 响应通过每个请求独立的 `response_queue` 返回
+- 响应通过每个请求独立的响应队列返回
 - 默认超时时间：30 秒
 
 ---

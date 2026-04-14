@@ -1,33 +1,43 @@
 #!/usr/bin/env python3
 import sys
+import os
 from pathlib import Path
 
-if getattr(sys, 'frozen', False):
-    application_path = Path(sys.executable).parent
-else:
-    application_path = Path(__file__).parent
+# 用户配置文件始终放在用户目录
+CONFIG_PATH = Path.home() / ".trulymem" / "config.json"
+DB_PATH = Path.home() / ".trulymem" / "graph_memory.db"
 
-sys.path.insert(0, str(application_path))
-import os
-os.chdir(application_path)
+# 源码运行时使用项目目录，打包后使用用户目录
+if getattr(sys, 'frozen', False):
+    # 打包版本：创建用户目录
+    CONFIG_PATH.parent.mkdir(parents=True, exist_ok=True)
+else:
+    # 源码版本：检查项目目录是否有配置（向后兼容）
+    project_dir = Path(__file__).parent
+    project_config = project_dir / "config.json"
+    project_db = project_dir / "graph_memory.db"
+    
+    if project_config.exists():
+        CONFIG_PATH = project_config
+    if project_db.exists():
+        DB_PATH = project_db
+
+sys.path.insert(0, str(Path(__file__).parent))
+os.chdir(Path(__file__).parent)
 
 from core import BackendServer
 from ui import GraphMemoryApp
-from ui.services.config_service import ConfigService
 
 
 def main():
-    # 配置文件保存在应用根目录（exe同级目录或源码根目录）
-    config_file = application_path / "config.json"
+    backend_server = BackendServer(
+        db_path=str(DB_PATH),
+        use_embedded_db=True,
+        config_file=str(CONFIG_PATH)
+    )
+    backend_server.start()
     
-    # 加载配置
-    config_service = ConfigService(config_file=config_file)
-    config = config_service.get_config()
-    
-    backend_server = BackendServer(db_path="graph_memory.db", use_embedded_db=True)
-    backend_server.start(api_key=config.api_key, base_url=config.base_url)
-    
-    app = GraphMemoryApp(backend_server=backend_server, config_service=config_service)
+    app = GraphMemoryApp(backend_server=backend_server, config_file=str(CONFIG_PATH))
     
     try:
         app.run()

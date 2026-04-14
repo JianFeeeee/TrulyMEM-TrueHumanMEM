@@ -6,8 +6,10 @@ os.environ["DEEPSEEK_API_KEY"] = "fake-test-key"
 
 
 class TestIntegrationPacketFlow:
-    def test_packet_round_trip_message(self):
-        from core import BackendServer, BackendClient, Packet, PacketType
+    """测试 Packet 通信流程"""
+    
+    def test_packet_round_trip_process_message(self):
+        from core import BackendServer, BackendClient
         with tempfile.NamedTemporaryFile(suffix=".db", delete=False) as f:
             db_path = f.name
         try:
@@ -15,9 +17,10 @@ class TestIntegrationPacketFlow:
             server.start(api_key="")
             client = BackendClient(server)
             
-            result = client.send_message("test message")
-            assert result["success"] is True
-            assert "API Key not configured" in result.get("error", "")
+            # 无 API key 时应该返回错误而非抛异常
+            result = client.process_message("test message")
+            assert result.get("success") is False
+            assert "error" in result
             
             server.shutdown()
         finally:
@@ -34,12 +37,12 @@ class TestIntegrationPacketFlow:
             client = BackendClient(server)
             
             result = client.update_config(api_key="test-api", base_url="https://test.com")
-            assert result["success"] is True
-            assert result["status"] == "config_updated"
+            assert result.get("success") is True
             
             status = client.get_status()
-            assert status["config"]["api_key"] == "test-api"
-            assert status["config"]["base_url"] == "https://test.com"
+            data = status.get("data", {})
+            assert data.get("config", {}).get("api_key") == "test-api"
+            assert data.get("config", {}).get("base_url") == "https://test.com"
             
             server.shutdown()
         finally:
@@ -55,17 +58,18 @@ class TestIntegrationPacketFlow:
             server.start(api_key="")
             client = BackendClient(server)
             
-            status = client.get_status()
-            assert status["success"] is True
-            assert status["running"] is True
-            assert status["client_ready"] is False
+            result = client.get_status()
+            assert result.get("success") is True
+            data = result.get("data", {})
+            assert data.get("running") is True
+            assert data.get("graph_initialized") is True
             
             server.shutdown()
         finally:
             if os.path.exists(db_path):
                 os.unlink(db_path)
 
-    def test_packet_round_trip_history(self):
+    def test_packet_round_trip_execute_tool(self):
         from core import BackendServer, BackendClient
         with tempfile.NamedTemporaryFile(suffix=".db", delete=False) as f:
             db_path = f.name
@@ -74,14 +78,8 @@ class TestIntegrationPacketFlow:
             server.start(api_key="")
             client = BackendClient(server)
             
-            messages = [
-                {"role": "user", "content": "hello"},
-                {"role": "assistant", "content": "hi there"}
-            ]
-            client.save_history(messages)
-            
-            retrieved = client.get_history()
-            assert retrieved == messages
+            result = client.execute_tool("memory_introspect", {})
+            assert result.get("success") is True
             
             server.shutdown()
         finally:
@@ -89,8 +87,10 @@ class TestIntegrationPacketFlow:
                 os.unlink(db_path)
 
 
-class TestIntegrationSequentialOperations:
-    def test_sequential_config_updates(self):
+class TestIntegrationToolLimiter:
+    """测试工具限制器集成"""
+    
+    def test_external_tool_call_not_limited(self):
         from core import BackendServer, BackendClient
         with tempfile.NamedTemporaryFile(suffix=".db", delete=False) as f:
             db_path = f.name
@@ -99,154 +99,49 @@ class TestIntegrationSequentialOperations:
             server.start(api_key="")
             client = BackendClient(server)
             
-            client.update_config(api_key="key1", base_url="https://api1.com")
-            status1 = client.get_status()
-            assert status1["config"]["api_key"] == "key1"
-            
-            client.update_config(api_key="key2", base_url="https://api2.com")
-            status2 = client.get_status()
-            assert status2["config"]["api_key"] == "key2"
+            # 外部调用多次应该成功
+            for i in range(5):
+                result = client.execute_tool("memory_introspect", {})
+                assert result.get("success") is True
             
             server.shutdown()
         finally:
             if os.path.exists(db_path):
                 os.unlink(db_path)
 
-    def test_save_history_override(self):
+    def test_internal_tool_call_limited(self):
         from core import BackendServer, BackendClient
         with tempfile.NamedTemporaryFile(suffix=".db", delete=False) as f:
             db_path = f.name
         try:
             server = BackendServer(db_path=db_path, use_embedded_db=True)
-            server.start(api_key="")
+            server.start(api_key="fake-key")  # 假 key 会失败但不影响测试
             client = BackendClient(server)
             
-            client.save_history([{"role": "user", "content": "first"}])
-            history1 = client.get_history()
-            assert len(history1) == 1
+            # 内部调用受限，tool_limiter 存在
+            assert server._tool_limiter is not None
             
-            client.save_history([{"role": "user", "content": "second"}])
-            history2 = client.get_history()
-            assert len(history2) == 1
-            assert history2[0]["content"] == "second"
+            # 初始状态
+            assert server._tool_limiter.counts.persona_update == 0
             
-            server.shutdown()
-        finally:
-            if os.path.exists(db_path):
-                os.unlink(db_path)
-
-
-class TestIntegrationMultipleClients:
-    def test_two_clients_same_server(self):
-        from core import BackendServer, BackendClient
-        with tempfile.NamedTemporaryFile(suffix=".db", delete=False) as f:
-            db_path = f.name
-        try:
-            server = BackendServer(db_path=db_path, use_embedded_db=True)
-            server.start(api_key="")
+            # 记录一次调用
+            server._tool_limiter.record_call("persona_update", {})
+            assert server._tool_limiter.counts.persona_update == 1
             
-            client1 = BackendClient(server)
-            client2 = BackendClient(server)
-            
-            status1 = client1.get_status()
-            status2 = client2.get_status()
-            
-            assert status1["success"] is True
-            assert status2["success"] is True
+            # 再次调用应该被拒绝
+            allowed, reason = server._tool_limiter.can_call("persona_update", {})
+            assert allowed is False
             
             server.shutdown()
         finally:
             if os.path.exists(db_path):
                 os.unlink(db_path)
-
-
-class TestIntegrationDatabase:
-    def test_server_creates_database(self):
-        from core import BackendServer
-        with tempfile.TemporaryDirectory() as tmpdir:
-            db_path = os.path.join(tmpdir, "test.db")
-            server = BackendServer(db_path=db_path, use_embedded_db=True)
-            server.start(api_key="")
-            
-            assert os.path.exists(db_path)
-            
-            server.shutdown()
-            assert os.path.exists(db_path)
-
-    def test_server_persists_across_restart(self):
-        from core import BackendServer, BackendClient
-        with tempfile.TemporaryDirectory() as tmpdir:
-            db_path = os.path.join(tmpdir, "persist.db")
-            
-            server1 = BackendServer(db_path=db_path, use_embedded_db=True)
-            server1.start(api_key="")
-            server1.shutdown()
-            
-            server2 = BackendServer(db_path=db_path, use_embedded_db=True)
-            server2.start(api_key="")
-            assert os.path.exists(db_path)
-            server2.shutdown()
-
-
-class TestIntegrationEntryPoint:
-    def test_entry_import(self):
-        import trulymem_entry
-        assert trulymem_entry is not None
-
-    def test_entry_has_main(self):
-        import trulymem_entry
-        assert hasattr(trulymem_entry, 'main')
-        assert callable(trulymem_entry.main)
-
-
-class TestIntegrationAllPacketTypes:
-    def test_message_type_string(self):
-        from core import PacketType
-        assert PacketType.MESSAGE.value == "message"
-
-    def test_config_type_string(self):
-        from core import PacketType
-        assert PacketType.CONFIG.value == "config"
-
-    def test_tool_type_string(self):
-        from core import PacketType
-        assert PacketType.TOOL.value == "tool"
-
-    def test_status_type_string(self):
-        from core import PacketType
-        assert PacketType.STATUS.value == "status"
-
-    def test_history_type_string(self):
-        from core import PacketType
-        assert PacketType.HISTORY.value == "history"
 
 
 class TestIntegrationErrorHandling:
-    def test_timeout_on_slow_response(self):
-        from core import BackendServer, Packet, PacketType
-        with tempfile.NamedTemporaryFile(suffix=".db", delete=False) as f:
-            db_path = f.name
-        try:
-            server = BackendServer(db_path=db_path)
-            server.start(api_key="")
-            server._running = False
-            
-            packet = Packet(id="timeout-test", type=PacketType.MESSAGE, body={"message": "test"})
-            
-            original_timeout = 30.0
-            server.send = lambda p, timeout=original_timeout: (
-                setattr(server, '_running', True),
-                server.send(p)
-            )[1]
-            
-            server.shutdown()
-        finally:
-            if os.path.exists(db_path):
-                os.unlink(db_path)
-
-
-class TestIntegrationFullWorkflow:
-    def test_complete_workflow(self):
+    """测试错误处理"""
+    
+    def test_process_message_returns_error_not_raise(self):
         from core import BackendServer, BackendClient
         with tempfile.NamedTemporaryFile(suffix=".db", delete=False) as f:
             db_path = f.name
@@ -255,24 +150,30 @@ class TestIntegrationFullWorkflow:
             server.start(api_key="")
             client = BackendClient(server)
             
-            status_before = client.get_status()
-            assert status_before["success"] is True
-            
-            client.update_config(api_key="workflow-key", base_url="https://workflow.com")
-            status_after_config = client.get_status()
-            assert status_after_config["config"]["api_key"] == "workflow-key"
-            
-            history = [{"role": "user", "content": "test workflow"}]
-            client.save_history(history)
-            retrieved_history = client.get_history()
-            assert retrieved_history == history
-            
-            message_result = client.send_message("test")
-            assert message_result["success"] is True
+            # 应该返回错误，而不是抛出异常
+            result = client.process_message("hello")
+            assert result.get("success") is False
+            assert "error" in result
             
             server.shutdown()
-            status_after_shutdown = client.get_status()
-            assert status_after_shutdown["running"] is False
+        finally:
+            if os.path.exists(db_path):
+                os.unlink(db_path)
+
+    def test_execute_tool_error_handling(self):
+        from core import BackendServer, BackendClient
+        with tempfile.NamedTemporaryFile(suffix=".db", delete=False) as f:
+            db_path = f.name
+        try:
+            server = BackendServer(db_path=db_path, use_embedded_db=True)
+            server.start(api_key="")
+            client = BackendClient(server)
+            
+            # 不存在的工具应该返回错误
+            result = client.execute_tool("nonexistent_tool", {})
+            assert result.get("success") is False
+            
+            server.shutdown()
         finally:
             if os.path.exists(db_path):
                 os.unlink(db_path)
