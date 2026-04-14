@@ -4,10 +4,25 @@
 
 ## 文档目录
 
-- [架构设计](架构.md) - 系统架构和技术设计
-- [快速开始](一键启动指南.md) - 一键启动指南
-- [工作记忆链机制说明](工作记忆链机制说明.md) - 连续性任务处理
-- [BackendServer API](api.md) - 后端 API 接口文档（供扩展开发）
+| 文档 | 内容 |
+|------|------|
+| [架构设计](架构.md) | 系统架构和技术设计 |
+| [快速开始](一键启动指南.md) | 完整启动指南与配置说明 |
+| [记忆机制](记忆机制.md) | 内部记忆工作机制、人设图、工作记忆链 |
+| [工作记忆链](工作记忆链机制说明.md) | 连续性任务处理机制 |
+| [BackendServer API](api.md) | 后端 API 接口文档（供扩展开发） |
+| [提示词管理](prompts.md) | 提示词管理模块 |
+
+## English Documentation
+
+| Document | Content |
+|----------|---------|
+| [Architecture](架构_EN.md) | System architecture and technical design |
+| [Quick Start](一键启动指南_EN.md) | Complete startup guide and configuration |
+| [Memory Mechanism](记忆机制_EN.md) | Internal memory working mechanism |
+| [Working Memory Chain](工作记忆链_EN.md) | Continuous task handling |
+| [BackendServer API](api_EN.md) | Backend API reference |
+| [Prompt Manager](prompts_EN.md) | Prompt management module |
 
 ## 项目简介
 
