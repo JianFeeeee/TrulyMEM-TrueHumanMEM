@@ -141,6 +141,9 @@ class ConfigSection(Vertical):
                 memory_update_max=int(memory_update.value or 10),
             )
 
+            # 先发送 API 配置更新（is_tool_limits=False）
+            self.post_message(self.ConfigChanged(self._config, is_tool_limits=False))
+            # 再发送工具限制更新（is_tool_limits=True）
             self.post_message(self.ConfigChanged(self._config, is_tool_limits=True))
         except Exception:
             pass
