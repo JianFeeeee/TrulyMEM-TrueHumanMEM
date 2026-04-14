@@ -123,19 +123,20 @@ MessageHistory 显示
 ```python
 # trulymem_entry.py
 def main():
-    # 配置文件保存在应用根目录
-    config_file = application_path / "config.json"
+    # 配置文件路径 (~/.trulymem/config.json 或项目目录)
+    CONFIG_PATH = Path.home() / ".trulymem" / "config.json"
+    DB_PATH = Path.home() / ".trulymem" / "graph_memory.db"
     
-    # 加载配置
-    config_service = ConfigService(config_file=config_file)
-    config = config_service.get_config()
+    # 创建后端（配置由后端管理）
+    backend_server = BackendServer(
+        db_path=str(DB_PATH),
+        use_embedded_db=True,
+        config_file=str(CONFIG_PATH)
+    )
+    backend_server.start()  # 自动加载配置
     
-    # 创建后端
-    backend_server = BackendServer(db_path="graph_memory.db", use_embedded_db=True)
-    backend_server.start(api_key=config.api_key, base_url=config.base_url)
-    
-    # 创建UI
-    app = GraphMemoryApp(backend_server=backend_server, config_service=config_service)
+    # 创建UI（通过 BackendClient 通信）
+    app = GraphMemoryApp(backend_server=backend_server, config_file=str(CONFIG_PATH))
     app.run()
     
     backend_server.shutdown()
