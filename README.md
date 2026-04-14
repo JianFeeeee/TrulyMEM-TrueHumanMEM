@@ -7,6 +7,8 @@
 > **📜 开源协议**: [GNU General Public License v3.0 (GPLv3)](https://www.gnu.org/licenses/gpl-3.0)  
 > 本项目自由开源，可自由使用、修改和分发，但修改后的作品必须以相同许可证发布。
 
+> **English**: [Switch to English version](./README_EN.md)
+
 **让 AI 拥有自知、可塑、有分寸感的长期记忆**
 
 *The More Human Choice.*
