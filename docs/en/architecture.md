@@ -123,19 +123,20 @@ MessageHistory displays
 ```python
 # trulymem_entry.py
 def main():
-    # Config file saved in application root
-    config_file = application_path / "config.json"
+    # Config path (~/.trulymem/config.json or project directory)
+    CONFIG_PATH = Path.home() / ".trulymem" / "config.json"
+    DB_PATH = Path.home() / ".trulymem" / "graph_memory.db"
     
-    # Load config
-    config_service = ConfigService(config_file=config_file)
-    config = config_service.get_config()
+    # Create backend (config managed by backend)
+    backend_server = BackendServer(
+        db_path=str(DB_PATH),
+        use_embedded_db=True,
+        config_file=str(CONFIG_PATH)
+    )
+    backend_server.start()  # Auto loads config
     
-    # Create backend
-    backend_server = BackendServer(db_path="graph_memory.db", use_embedded_db=True)
-    backend_server.start(api_key=config.api_key, base_url=config.base_url)
-    
-    # Create UI
-    app = GraphMemoryApp(backend_server=backend_server, config_service=config_service)
+    # Create UI (communicates via BackendClient)
+    app = GraphMemoryApp(backend_server=backend_server, config_file=str(CONFIG_PATH))
     app.run()
     
     backend_server.shutdown()

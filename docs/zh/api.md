@@ -179,7 +179,8 @@ body = {}  # 无参数
 ```python
 {
     "api_key": str,   # API Key
-    "base_url": str   # API Base URL
+    "base_url": str,  # API Base URL
+    "model": str     # 模型名称
 }
 ```
 

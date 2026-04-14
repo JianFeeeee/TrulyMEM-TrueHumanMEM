@@ -173,7 +173,8 @@ body = {}  # No parameters
 ```python
 {
     "api_key": str,   # API Key
-    "base_url": str   # API Base URL
+    "base_url": str,  # API Base URL
+    "model": str     # Model name
 }
 ```
 
