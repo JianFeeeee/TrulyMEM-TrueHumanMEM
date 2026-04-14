@@ -64,17 +64,17 @@ python trulymem_entry.py
 
 ## 文档索引
 
-详细技术文档请参阅 [docs/](docs/) 目录：
+详细技术文档请参阅 [docs/zh/](docs/zh/) 目录：
 
 | 文档 | 内容 |
 |------|------|
-| [docs/architecture.md](docs/architecture.md) | 系统架构和技术设计 |
-| [docs/quick_start.md](docs/quick_start.md) | 完整启动指南与配置说明 |
-| [docs/memory.md](docs/memory.md) | 内部记忆工作机制 |
-| [docs/persona.md](docs/persona.md) | 人设图机制 |
-| [docs/working_memory.md](docs/working_memory.md) | 连续性任务处理机制 |
-| [docs/api.md](docs/api.md) | 后端 API 接口（供扩展开发） |
-| [docs/prompts.md](docs/prompts.md) | 提示词管理模块 |
+| [docs/zh/architecture.md](docs/zh/architecture.md) | 系统架构和技术设计 |
+| [docs/zh/quick_start.md](docs/zh/quick_start.md) | 完整启动指南与配置说明 |
+| [docs/zh/memory.md](docs/zh/memory.md) | 内部记忆工作机制 |
+| [docs/zh/persona.md](docs/zh/persona.md) | 人设图机制 |
+| [docs/zh/working_memory.md](docs/zh/working_memory.md) | 连续性任务处理机制 |
+| [docs/zh/api.md](docs/zh/api.md) | 后端 API 接口（供扩展开发） |
+| [docs/zh/prompts.md](docs/zh/prompts.md) | 提示词管理模块 |
 
 ---
 

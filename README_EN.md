@@ -64,17 +64,17 @@ python trulymem_entry.py
 
 ## Documentation Index
 
-Detailed technical documentation in the [docs_en/](docs_en/) directory:
+Detailed technical documentation in the [docs/en/](docs/en/) directory:
 
 | Document | Content |
 |----------|---------|
-| [docs_en/architecture.md](docs_en/architecture.md) | System architecture and technical design |
-| [docs_en/quick_start.md](docs_en/quick_start.md) | Complete startup guide and configuration |
-| [docs_en/memory.md](docs_en/memory.md) | Internal memory working mechanism |
-| [docs_en/persona.md](docs_en/persona.md) | Persona Graph mechanism |
-| [docs_en/working_memory.md](docs_en/working_memory.md) | Continuous task handling mechanism |
-| [docs_en/api.md](docs_en/api.md) | BackendServer API (for extension development) |
-| [docs_en/prompts.md](docs_en/prompts.md) | Prompt management module |
+| [docs/en/architecture.md](docs/en/architecture.md) | System architecture and technical design |
+| [docs/en/quick_start.md](docs/en/quick_start.md) | Complete startup guide and configuration |
+| [docs/en/memory.md](docs/en/memory.md) | Internal memory working mechanism |
+| [docs/en/persona.md](docs/en/persona.md) | Persona Graph mechanism |
+| [docs/en/working_memory.md](docs/en/working_memory.md) | Continuous task handling mechanism |
+| [docs/en/api.md](docs/en/api.md) | BackendServer API (for extension development) |
+| [docs/en/prompts.md](docs/en/prompts.md) | Prompt management module |
 
 ---
 
