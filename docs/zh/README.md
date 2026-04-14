@@ -1,6 +1,8 @@
 # TrulyMEM 文档
 
-欢迎来到 TrulyMEM 项目文档。
+欢迎来到 TrulyMEM 项目中文文档。
+
+> **English**: [切换到英文版](../en/README.md)
 
 ## 文档目录
 
