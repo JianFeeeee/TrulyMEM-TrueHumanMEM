@@ -17,6 +17,8 @@ class PacketType(Enum):
     GET_STATUS = "get_status"
     GET_CONFIG = "get_config"
     SET_CONFIG = "set_config"
+    GET_TOOL_LIMITS = "get_tool_limits"
+    SET_TOOL_LIMITS = "set_tool_limits"
     GET_HISTORY = "get_history"
     SAVE_HISTORY = "save_history"
     SHUTDOWN = "shutdown"
@@ -59,6 +61,14 @@ class BackendServer:
         
         self._lock = threading.Lock()
         self._config = {"api_key": "", "base_url": "https://api.deepseek.com", "model": "deepseek-chat"}
+        self._tool_limits = {
+            "persona_query_max": 1,
+            "persona_update_max": 1,
+            "task_query_max": 4,
+            "task_update_max": 2,
+            "memory_query_max": 20,
+            "memory_update_max": 10,
+        }
         self._message_history: list = []
 
     def start(self, api_key: str = "", base_url: str = "https://api.deepseek.com", model: str = "deepseek-chat") -> None:
@@ -96,17 +106,29 @@ class BackendServer:
                 with open(self._config_file, 'r') as f:
                     saved = json.load(f)
                     self._config.update(saved)
+                    for key in self._tool_limits:
+                        if key in saved:
+                            self._tool_limits[key] = saved[key]
             except Exception:
                 pass
 
     def _save_config(self) -> None:
         self._config_file.parent.mkdir(parents=True, exist_ok=True)
+        saved_data = {**self._config, **self._tool_limits}
         with open(self._config_file, 'w') as f:
-            json.dump(self._config, f, indent=2)
+            json.dump(saved_data, f, indent=2)
 
     def _create_tool_limiter(self):
-        from .tool_limiter import ToolLimiter
-        return ToolLimiter()
+        from .tool_limiter import ToolLimiter, ToolLimits
+        limits = ToolLimits(
+            persona_query_max=self._tool_limits.get("persona_query_max", 1),
+            persona_update_max=self._tool_limits.get("persona_update_max", 1),
+            task_query_max=self._tool_limits.get("task_query_max", 4),
+            task_update_max=self._tool_limits.get("task_update_max", 2),
+            memory_query_max=self._tool_limits.get("memory_query_max", 20),
+            memory_update_max=self._tool_limits.get("memory_update_max", 10),
+        )
+        return ToolLimiter(limits)
 
     def _init_graph(self) -> None:
         if self._use_embedded_db:
@@ -142,6 +164,10 @@ class BackendServer:
                 response_body = self._handle_get_config()
             elif packet.type == PacketType.SET_CONFIG:
                 response_body = self._handle_set_config(packet.body)
+            elif packet.type == PacketType.GET_TOOL_LIMITS:
+                response_body = self._handle_get_tool_limits()
+            elif packet.type == PacketType.SET_TOOL_LIMITS:
+                response_body = self._handle_set_tool_limits(packet.body)
             elif packet.type == PacketType.GET_HISTORY:
                 response_body = self._handle_get_history()
             elif packet.type == PacketType.SAVE_HISTORY:
@@ -294,6 +320,27 @@ class BackendServer:
         self.update_config(api_key, base_url, model)
         self._save_config()
         return {"status": "config_updated"}
+
+    def _handle_get_tool_limits(self) -> Dict:
+        return self._tool_limits.copy()
+
+    def _handle_set_tool_limits(self, body: Dict) -> Dict:
+        limits_keys = [
+            "persona_query_max", "persona_update_max",
+            "task_query_max", "task_update_max",
+            "memory_query_max", "memory_update_max"
+        ]
+        for key in limits_keys:
+            if key in body:
+                value = int(body[key])
+                if value < 1:
+                    return {"success": False, "error": f"{key} must be >= 1, got {value}"}
+                self._tool_limits[key] = value
+        
+        self._tool_limiter = self._create_tool_limiter()
+        
+        self._save_config()
+        return {"status": "tool_limits_updated", "limits": self._tool_limits.copy()}
 
     def _handle_get_history(self) -> Dict:
         return {"history": self._message_history}

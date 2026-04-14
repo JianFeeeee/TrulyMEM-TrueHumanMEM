@@ -59,10 +59,12 @@ class TestPacketTypeEnum:
         assert "get_status" in values
         assert "get_config" in values
         assert "set_config" in values
+        assert "get_tool_limits" in values
+        assert "set_tool_limits" in values
         assert "get_history" in values
         assert "save_history" in values
         assert "shutdown" in values
-        assert len(values) == 8
+        assert len(values) == 10
 
 
 class TestPacketCreation:

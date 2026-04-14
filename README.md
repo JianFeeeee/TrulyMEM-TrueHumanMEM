@@ -68,10 +68,13 @@ python trulymem_entry.py
 
 | 文档 | 内容 |
 |------|------|
-| [docs/架构.md](docs/架构.md) | 系统架构、技术设计、数据包协议 |
-| [docs/一键启动指南.md](docs/一键启动指南.md) | 完整启动指南与配置说明 |
-| [docs/工作记忆链机制说明.md](docs/工作记忆链机制说明.md) | 连续性任务处理机制 |
-| [docs/api.md](docs/api.md) | BackendServer API 接口（供扩展开发） |
+| [docs/architecture.md](docs/architecture.md) | 系统架构和技术设计 |
+| [docs/quick_start.md](docs/quick_start.md) | 完整启动指南与配置说明 |
+| [docs/memory.md](docs/memory.md) | 内部记忆工作机制 |
+| [docs/persona.md](docs/persona.md) | 人设图机制 |
+| [docs/working_memory.md](docs/working_memory.md) | 连续性任务处理机制 |
+| [docs/api.md](docs/api.md) | 后端 API 接口（供扩展开发） |
+| [docs/prompts.md](docs/prompts.md) | 提示词管理模块 |
 
 ---
 

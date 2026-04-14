@@ -34,16 +34,23 @@ class GraphMemoryApp(App):
         from .widgets.status_bar import StatusBar
         from .models.config import AppConfig
         
+        initial_config = AppConfig()
+        
         if self._backend_client:
-            result = self._backend_client.get_config()
-            config_data = result.get("data", {})
-            initial_config = AppConfig(
-                api_key=config_data.get("api_key", ""),
-                base_url=config_data.get("base_url", "https://api.deepseek.com"),
-                model=config_data.get("model", "deepseek-chat")
-            )
-        else:
-            initial_config = AppConfig()
+            config_result = self._backend_client.get_config()
+            config_data = config_result.get("data", {})
+            initial_config.api_key = config_data.get("api_key", "")
+            initial_config.base_url = config_data.get("base_url", "https://api.deepseek.com")
+            initial_config.model = config_data.get("model", "deepseek-chat")
+            
+            limits_result = self._backend_client.get_tool_limits()
+            limits_data = limits_result.get("data", {})
+            initial_config.persona_query_max = limits_data.get("persona_query_max", 1)
+            initial_config.persona_update_max = limits_data.get("persona_update_max", 1)
+            initial_config.task_query_max = limits_data.get("task_query_max", 4)
+            initial_config.task_update_max = limits_data.get("task_update_max", 2)
+            initial_config.memory_query_max = limits_data.get("memory_query_max", 20)
+            initial_config.memory_update_max = limits_data.get("memory_update_max", 10)
         
         yield LeftPanel()
         yield RightPanel(config=initial_config)
@@ -140,15 +147,16 @@ class GraphMemoryApp(App):
         status_bar.set_processing(False)
 
     def on_config_section_config_changed(self, event) -> None:
-        """处理配置变更事件"""
         if not self._backend_client:
             self.notify("后端未初始化，无法保存配置", title="错误", severity="error")
             return
         
         config = event.config
         
-        # 异步更新配置，避免阻塞UI
-        asyncio.create_task(self._update_config_async(config))
+        if event.is_tool_limits:
+            asyncio.create_task(self._update_tool_limits_async(config))
+        else:
+            asyncio.create_task(self._update_config_async(config))
     
     async def _update_config_async(self, config) -> None:
         """异步更新配置"""
@@ -190,6 +198,32 @@ class GraphMemoryApp(App):
                     pass
                 
                 self.notify("✅ 配置已保存并生效", title="配置成功", severity="information")
+            else:
+                error = result.get("error", "未知错误")
+                self.notify(f"❌ 配置失败: {error}", title="配置失败", severity="error")
+        except Exception as e:
+            self.notify(f"❌ 配置异常: {str(e)}", title="配置失败", severity="error")
+
+    async def _update_tool_limits_async(self, config) -> None:
+        from .widgets.status_bar import StatusBar
+        
+        status_bar = self.query_one(StatusBar)
+        
+        try:
+            result = await asyncio.get_event_loop().run_in_executor(
+                None,
+                lambda: self._backend_client.update_tool_limits(
+                    persona_query_max=config.persona_query_max,
+                    persona_update_max=config.persona_update_max,
+                    task_query_max=config.task_query_max,
+                    task_update_max=config.task_update_max,
+                    memory_query_max=config.memory_query_max,
+                    memory_update_max=config.memory_update_max,
+                )
+            )
+            
+            if result.get("success"):
+                self.notify("✅ 工具限制已保存", title="配置成功", severity="information")
             else:
                 error = result.get("error", "未知错误")
                 self.notify(f"❌ 配置失败: {error}", title="配置失败", severity="error")
