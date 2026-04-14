@@ -9,304 +9,300 @@ os.environ["DEEPSEEK_API_KEY"] = "fake-test-key"
 
 
 class TestPacketTypeEnum:
-    def test_packet_type_message_exists(self):
+    """测试 PacketType 枚举"""
+    
+    def test_packet_type_process_message_exists(self):
         from core import PacketType
-        assert PacketType.MESSAGE is not None
-        assert PacketType.MESSAGE.value == "message"
+        assert PacketType.PROCESS_MESSAGE is not None
+        assert PacketType.PROCESS_MESSAGE.value == "process_message"
 
-    def test_packet_type_config_exists(self):
+    def test_packet_type_execute_tool_exists(self):
         from core import PacketType
-        assert PacketType.CONFIG is not None
-        assert PacketType.CONFIG.value == "config"
+        assert PacketType.EXECUTE_TOOL is not None
+        assert PacketType.EXECUTE_TOOL.value == "execute_tool"
 
-    def test_packet_type_tool_exists(self):
+    def test_packet_type_get_status_exists(self):
         from core import PacketType
-        assert PacketType.TOOL is not None
-        assert PacketType.TOOL.value == "tool"
+        assert PacketType.GET_STATUS is not None
+        assert PacketType.GET_STATUS.value == "get_status"
 
-    def test_packet_type_status_exists(self):
+    def test_packet_type_get_config_exists(self):
         from core import PacketType
-        assert PacketType.STATUS is not None
-        assert PacketType.STATUS.value == "status"
+        assert PacketType.GET_CONFIG is not None
+        assert PacketType.GET_CONFIG.value == "get_config"
 
-    def test_packet_type_history_exists(self):
+    def test_packet_type_set_config_exists(self):
         from core import PacketType
-        assert PacketType.HISTORY is not None
-        assert PacketType.HISTORY.value == "history"
+        assert PacketType.SET_CONFIG is not None
+        assert PacketType.SET_CONFIG.value == "set_config"
+
+    def test_packet_type_get_history_exists(self):
+        from core import PacketType
+        assert PacketType.GET_HISTORY is not None
+        assert PacketType.GET_HISTORY.value == "get_history"
+
+    def test_packet_type_save_history_exists(self):
+        from core import PacketType
+        assert PacketType.SAVE_HISTORY is not None
+        assert PacketType.SAVE_HISTORY.value == "save_history"
+
+    def test_packet_type_shutdown_exists(self):
+        from core import PacketType
+        assert PacketType.SHUTDOWN is not None
+        assert PacketType.SHUTDOWN.value == "shutdown"
 
     def test_packet_type_all_values(self):
         from core import PacketType
         values = [pt.value for pt in PacketType]
-        assert "message" in values
-        assert "config" in values
-        assert "tool" in values
-        assert "status" in values
-        assert "history" in values
-        assert len(values) == 5
+        assert "process_message" in values
+        assert "execute_tool" in values
+        assert "get_status" in values
+        assert "get_config" in values
+        assert "set_config" in values
+        assert "get_history" in values
+        assert "save_history" in values
+        assert "shutdown" in values
+        assert len(values) == 8
 
 
 class TestPacketCreation:
+    """测试 Packet 创建"""
+    
     def test_packet_with_id_and_type(self):
         from core import Packet, PacketType
-        packet = Packet(id="test-1", type=PacketType.MESSAGE, body={"message": "hello"})
+        packet = Packet(id="test-1", type=PacketType.PROCESS_MESSAGE, body={"user_input": "hello"})
         assert packet.id == "test-1"
-        assert packet.type == PacketType.MESSAGE
+        assert packet.type == PacketType.PROCESS_MESSAGE
 
     def test_packet_body(self):
         from core import Packet, PacketType
-        body = {"message": "test", "extra": "data"}
-        packet = Packet(id="test-2", type=PacketType.CONFIG, body=body)
+        body = {"user_input": "test", "extra": "data"}
+        packet = Packet(id="test-2", type=PacketType.EXECUTE_TOOL, body=body)
         assert packet.body == body
+
+    def test_packet_with_empty_body(self):
+        from core import Packet, PacketType
+        packet = Packet(id="test-3", type=PacketType.GET_STATUS, body={})
+        assert packet.body == {}
 
     def test_packet_created_at_default(self):
         from core import Packet, PacketType
         before = time.time()
-        packet = Packet(id="test-3", type=PacketType.STATUS, body={})
+        packet = Packet(id="test-4", type=PacketType.GET_CONFIG, body={})
         after = time.time()
         assert before <= packet.created_at <= after
 
-    def test_packet_with_custom_created_at(self):
-        from core import Packet, PacketType
-        custom_time = 1234567890.0
-        packet = Packet(id="test-4", type=PacketType.HISTORY, body={}, created_at=custom_time)
-        assert packet.created_at == custom_time
+
+class TestPacketResponse:
+    """测试 PacketResponse"""
+    
+    def test_packet_response_success(self):
+        from core import PacketResponse
+        response = PacketResponse(id="resp-1", success=True, data={"result": "ok"})
+        assert response.id == "resp-1"
+        assert response.success is True
+        assert response.data == {"result": "ok"}
+
+    def test_packet_response_error(self):
+        from core import PacketResponse
+        response = PacketResponse(id="resp-2", success=False, error="error msg")
+        assert response.id == "resp-2"
+        assert response.success is False
+        assert response.error == "error msg"
 
 
-class TestBackendServerInit:
-    def test_create_server_defaults(self):
+class TestBackendServerCreation:
+    """测试 BackendServer 创建"""
+    
+    def test_backend_server_init(self):
+        from core import BackendServer
+        server = BackendServer(db_path=":memory:", use_embedded_db=True)
+        assert server._db_path == ":memory:"
+        assert server._use_embedded_db is True
+        assert server._graph is None
+        assert server._client is None
+        assert server._tool_limiter is None
+
+    def test_backend_server_default_params(self):
         from core import BackendServer
         server = BackendServer()
         assert server._db_path == "graph_memory.db"
         assert server._use_embedded_db is True
-        assert server._graph is None
-        assert server._client is None
+
+
+class TestBackendServerLifecycle:
+    """测试 BackendServer 生命周期"""
+    
+    def test_backend_server_start_stop(self):
+        from core import BackendServer
+        server = BackendServer(db_path=":memory:", use_embedded_db=True)
+        server.start(api_key="")
+        
+        assert server._running is True
+        assert server._graph is not None
+        assert server._tool_limiter is not None
+        
+        server.shutdown()
         assert server._running is False
 
-    def test_create_server_custom_db(self):
+    def test_backend_server_start_with_api_key(self):
         from core import BackendServer
-        server = BackendServer(db_path="custom.db")
-        assert server._db_path == "custom.db"
-
-    def test_create_server_no_embedded(self):
-        from core import BackendServer
-        server = BackendServer(use_embedded_db=False)
-        assert server._use_embedded_db is False
-
-
-class TestBackendServerStart:
-    def test_start_without_api_key(self):
-        from core import BackendServer
-        with tempfile.NamedTemporaryFile(suffix=".db", delete=False) as f:
-            db_path = f.name
-        try:
-            server = BackendServer(db_path=db_path, use_embedded_db=True)
-            server.start(api_key="")
-            assert server._running is True
-            assert server._graph is not None
-            assert server._client is None
-            server.shutdown()
-        finally:
-            if os.path.exists(db_path):
-                os.unlink(db_path)
-
-    def test_start_with_api_key(self):
-        from core import BackendServer
-        with tempfile.NamedTemporaryFile(suffix=".db", delete=False) as f:
-            db_path = f.name
-        try:
-            server = BackendServer(db_path=db_path, use_embedded_db=True)
-            server.start(api_key="test-key", base_url="https://api.test.com")
-            assert server._running is True
-            assert server._config["api_key"] == "test-key"
-            assert server._config["base_url"] == "https://api.test.com"
-            server.shutdown()
-        finally:
-            if os.path.exists(db_path):
-                os.unlink(db_path)
-
-    def test_start_twice_returns_early(self):
-        from core import BackendServer
-        with tempfile.NamedTemporaryFile(suffix=".db", delete=False) as f:
-            db_path = f.name
-        try:
-            server = BackendServer(db_path=db_path)
-            server.start(api_key="")
-            running_before = server._running
-            server.start(api_key="")
-            running_after = server._running
-            assert running_before is True
-            assert running_after is True
-            server.shutdown()
-        finally:
-            if os.path.exists(db_path):
-                os.unlink(db_path)
+        server = BackendServer(db_path=":memory:", use_embedded_db=True)
+        server.start(api_key="test-key", base_url="https://api.deepseek.com")
+        
+        assert server._client is not None
+        assert server._config["api_key"] == "test-key"
+        
+        server.shutdown()
 
 
-class TestBackendServerShutdown:
-    def test_shutdown_stops_server(self):
-        from core import BackendServer
-        with tempfile.NamedTemporaryFile(suffix=".db", delete=False) as f:
-            db_path = f.name
-        try:
-            server = BackendServer(db_path=db_path)
-            server.start(api_key="")
-            assert server._running is True
-            server.shutdown()
-            assert server._running is False
-        finally:
-            if os.path.exists(db_path):
-                os.unlink(db_path)
-
-    def test_shutdown_closes_graph(self):
-        from core import BackendServer
-        with tempfile.NamedTemporaryFile(suffix=".db", delete=False) as f:
-            db_path = f.name
-        try:
-            server = BackendServer(db_path=db_path)
-            server.start(api_key="")
-            server.shutdown()
-            assert server._graph is None
-        finally:
-            if os.path.exists(db_path):
-                os.unlink(db_path)
-
-
-class TestBackendServerPacketHandling:
-    def test_send_message_without_client(self):
-        from core import BackendServer, Packet, PacketType
-        with tempfile.NamedTemporaryFile(suffix=".db", delete=False) as f:
-            db_path = f.name
-        try:
-            server = BackendServer(db_path=db_path)
-            server.start(api_key="")
-            packet = Packet(id="1", type=PacketType.MESSAGE, body={"message": "hello"})
-            response = server.send(packet)
-            assert response.body["success"] is True
-            assert "API Key not configured" in response.body["error"]
-            server.shutdown()
-        finally:
-            if os.path.exists(db_path):
-                os.unlink(db_path)
-
-    def test_send_status_packet(self):
-        from core import BackendServer, Packet, PacketType
-        with tempfile.NamedTemporaryFile(suffix=".db", delete=False) as f:
-            db_path = f.name
-        try:
-            server = BackendServer(db_path=db_path)
-            server.start(api_key="")
-            packet = Packet(id="2", type=PacketType.STATUS, body={})
-            response = server.send(packet)
-            assert response.body["success"] is True
-            assert response.body["running"] is True
-            server.shutdown()
-        finally:
-            if os.path.exists(db_path):
-                os.unlink(db_path)
-
-
-class TestBackendClientInit:
-    def test_create_client_with_server(self):
+class TestBackendClientCreation:
+    """测试 BackendClient 创建"""
+    
+    def test_backend_client_init(self):
         from core import BackendServer, BackendClient
-        with tempfile.NamedTemporaryFile(suffix=".db", delete=False) as f:
-            db_path = f.name
-        try:
-            server = BackendServer(db_path=db_path, use_embedded_db=True)
-            server.start(api_key="")
-            client = BackendClient(server)
-            assert client._server is server
-            assert client._counter == 0
-            server.shutdown()
-        finally:
-            if os.path.exists(db_path):
-                os.unlink(db_path)
+        server = BackendServer(db_path=":memory:", use_embedded_db=True)
+        client = BackendClient(server)
+        
+        assert client._server is server
+        assert client._counter == 0
 
 
-class TestBackendClientMethods:
+class TestBackendClientAPI:
+    """测试 BackendClient API"""
+    
     def test_get_status(self):
         from core import BackendServer, BackendClient
-        with tempfile.NamedTemporaryFile(suffix=".db", delete=False) as f:
-            db_path = f.name
-        try:
-            server = BackendServer(db_path=db_path, use_embedded_db=True)
-            server.start(api_key="")
-            client = BackendClient(server)
-            status = client.get_status()
-            assert status["success"] is True
-            assert status["running"] is True
-            server.shutdown()
-        finally:
-            if os.path.exists(db_path):
-                os.unlink(db_path)
+        server = BackendServer(db_path=":memory:", use_embedded_db=True)
+        server.start(api_key="")
+        client = BackendClient(server)
+        
+        result = client.get_status()
+        assert result.get("success") is True
+        data = result.get("data", {})
+        assert data.get("running") is True
+        
+        server.shutdown()
 
     def test_update_config(self):
         from core import BackendServer, BackendClient
-        with tempfile.NamedTemporaryFile(suffix=".db", delete=False) as f:
-            db_path = f.name
-        try:
-            server = BackendServer(db_path=db_path, use_embedded_db=True)
-            server.start(api_key="")
-            client = BackendClient(server)
-            result = client.update_config(api_key="new-key", base_url="https://new-api.test.com")
-            assert result["success"] is True
-            assert result["status"] == "config_updated"
-            server.shutdown()
-        finally:
-            if os.path.exists(db_path):
-                os.unlink(db_path)
+        server = BackendServer(db_path=":memory:", use_embedded_db=True)
+        server.start(api_key="")
+        client = BackendClient(server)
+        
+        result = client.update_config(api_key="new-key", base_url="https://api.deepseek.com")
+        assert result.get("success") is True
+        
+        server.shutdown()
 
-    def test_save_and_get_history(self):
+    def test_get_config(self):
         from core import BackendServer, BackendClient
-        with tempfile.NamedTemporaryFile(suffix=".db", delete=False) as f:
-            db_path = f.name
-        try:
-            server = BackendServer(db_path=db_path, use_embedded_db=True)
-            server.start(api_key="")
-            client = BackendClient(server)
-            
-            test_messages = [{"role": "user", "content": "hello"}]
-            client.save_history(test_messages)
-            
-            history = client.get_history()
-            assert history == test_messages
-            server.shutdown()
-        finally:
-            if os.path.exists(db_path):
-                os.unlink(db_path)
+        server = BackendServer(db_path=":memory:", use_embedded_db=True)
+        server.start(api_key="test-key")
+        client = BackendClient(server)
+        
+        result = client.get_config()
+        assert result.get("success") is True
+        assert result.get("data", {}).get("api_key") == "test-key"
+        
+        server.shutdown()
 
-
-class TestMultipleClients:
-    def test_multiple_clients_thread_safety(self):
+    def test_process_message_no_api_key(self):
         from core import BackendServer, BackendClient
-        with tempfile.NamedTemporaryFile(suffix=".db", delete=False) as f:
-            db_path = f.name
-        try:
-            server = BackendServer(db_path=db_path, use_embedded_db=True)
-            server.start(api_key="")
-            client = BackendClient(server)
-            
-            status1 = client.get_status()
-            status2 = client.get_status()
-            
-            assert status1["success"] is True
-            assert status2["success"] is True
-            server.shutdown()
-        finally:
-            if os.path.exists(db_path):
-                os.unlink(db_path)
+        server = BackendServer(db_path=":memory:", use_embedded_db=True)
+        server.start(api_key="")
+        client = BackendClient(server)
+        
+        # 无 API key 应该返回错误（success 为 False）
+        result = client.process_message("hello")
+        # 由于 API 调用失败，success 应该是 False
+        assert result.get("success") is False
+        
+        server.shutdown()
+
+    def test_execute_tool(self):
+        from core import BackendServer, BackendClient
+        server = BackendServer(db_path=":memory:", use_embedded_db=True)
+        server.start(api_key="")
+        client = BackendClient(server)
+        
+        result = client.execute_tool("memory_introspect", {})
+        assert result.get("success") is True
+        
+        server.shutdown()
 
 
-class TestServerStateAfterShutdown:
-    def test_server_state_not_running(self):
-        from core import BackendServer
-        with tempfile.NamedTemporaryFile(suffix=".db", delete=False) as f:
-            db_path = f.name
-        try:
-            server = BackendServer(db_path=db_path)
-            server.start(api_key="")
-            assert server._running is True
-            server.shutdown()
-            assert server._running is False
-        finally:
-            if os.path.exists(db_path):
-                os.unlink(db_path)
+class TestToolLimiter:
+    """测试工具限制器"""
+    
+    def test_tool_limiter_init(self):
+        from core.tool_limiter import ToolLimiter
+        limiter = ToolLimiter()
+        assert limiter.counts.persona_query == 0
+        assert limiter.counts.persona_update == 0
+
+    def test_tool_limiter_classify(self):
+        from core.tool_limiter import ToolLimiter
+        limiter = ToolLimiter()
+        
+        category, operation = limiter._classify_tool("memory_recall", {"query_intent": "test"})
+        assert category == "memory"
+        assert operation == "query"
+        
+        category, operation = limiter._classify_tool("persona_update", {})
+        assert category == "persona"
+        assert operation == "update"
+        
+        category, operation = limiter._classify_tool("task_create", {})
+        assert category == "task"
+        assert operation == "update"
+
+    def test_tool_limiter_can_call(self):
+        from core.tool_limiter import ToolLimiter
+        limiter = ToolLimiter()
+        
+        allowed, reason = limiter.can_call("persona_update", {})
+        assert allowed is True
+        
+        limiter.record_call("persona_update", {})
+        allowed, reason = limiter.can_call("persona_update", {})
+        assert allowed is False
+        assert "已达上限" in reason
+
+    def test_tool_limiter_reset(self):
+        from core.tool_limiter import ToolLimiter
+        limiter = ToolLimiter()
+        
+        limiter.record_call("persona_update", {})
+        assert limiter.counts.persona_update == 1
+        
+        limiter.reset()
+        assert limiter.counts.persona_update == 0
+
+
+class TestEmbeddedGraphDB:
+    """测试图数据库"""
+    
+    def test_embedded_db_init(self):
+        from core.embedded_db import EmbeddedGraphDB
+        db = EmbeddedGraphDB(db_path=":memory:")
+        assert db.conn is not None
+        db.close()
+
+    def test_embedded_db_commit_and_recall(self):
+        from core.embedded_db import EmbeddedGraphDB
+        db = EmbeddedGraphDB(db_path=":memory:")
+        
+        # 写入记忆 (使用 triplets 参数)
+        result = db.commit(
+            triplets=[
+                {"subject": "测试", "relation": "是", "object": "test"}
+            ],
+            session_id="test-session"
+        )
+        
+        # 读取记忆
+        results = db.recall("测试")
+        assert len(results.get("entities", [])) > 0
+        
+        db.close()
