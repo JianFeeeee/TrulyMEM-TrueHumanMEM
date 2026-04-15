@@ -180,13 +180,35 @@ class TestUIWithBackendClient:
             app = GraphMemoryApp(backend_server=server)
             client = app._backend_client
             
-            # 测试 get_status
             status = client.get_status()
             assert status.get("success") is True
             
-            # 测试 update_config
-            result = client.update_config(api_key="sk-test", base_url="https://api.deepseek.com")
+            result = client.update_settings(
+                api_config={"api_key": "sk-test", "base_url": "https://api.deepseek.com", "model": "deepseek-chat"},
+                tool_limits={"persona_query_max": 1}
+            )
             assert result.get("success") is True
+            
+            server.shutdown()
+        finally:
+            if os.path.exists(db_path):
+                os.unlink(db_path)
+    
+    def test_ui_get_history(self):
+        from ui import GraphMemoryApp
+        from core import BackendServer
+        
+        with tempfile.NamedTemporaryFile(suffix=".db", delete=False) as f:
+            db_path = f.name
+        try:
+            server = BackendServer(db_path=db_path)
+            server.start(api_key="")
+            
+            app = GraphMemoryApp(backend_server=server)
+            client = app._backend_client
+            
+            history = client.get_history()
+            assert isinstance(history, list)
             
             server.shutdown()
         finally:
