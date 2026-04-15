@@ -235,6 +235,46 @@ class TestBackendClientAPI:
         
         server.shutdown()
 
+    def test_clear_history(self):
+        from core import BackendServer, BackendClient
+        server = BackendServer(db_path=":memory:", use_embedded_db=True)
+        server.start(api_key="")
+        client = BackendClient(server)
+        
+        # 先保存一些历史
+        client.save_history([
+            {"role": "user", "content": "test message 1"},
+            {"role": "assistant", "content": "test response 1"}
+        ])
+        
+        # 验证历史已保存
+        history = client.get_history()
+        assert len(history) >= 2
+        
+        # 清空历史
+        result = client.clear_history()
+        assert result.get("status") == "history_cleared"
+        
+        # 验证历史已清空
+        history = client.get_history()
+        assert len(history) == 0
+        
+        server.shutdown()
+
+    def test_send_message_is_alias(self):
+        """测试 send 方法是 process_message 的别名"""
+        from core import BackendServer, BackendClient
+        server = BackendServer(db_path=":memory:", use_embedded_db=True)
+        server.start(api_key="")
+        client = BackendClient(server)
+        
+        # send 方法应该等同于 process_message
+        # 由于没有真实 API key，应该返回失败
+        result = client.send("test")
+        assert result.get("success") is False
+        
+        server.shutdown()
+
 
 class TestToolLimiter:
     """测试工具限制器"""
