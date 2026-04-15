@@ -64,3 +64,9 @@ jimeng*.png
 
 # Test Cache
 .pytest_cache/
+
+# TypeScript
+node_modules/
+dist/
+*.tsbuildinfo
+tsconfig.tsbuildinfo
