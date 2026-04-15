@@ -26,15 +26,15 @@ class TestPacketTypeEnum:
         assert PacketType.GET_STATUS is not None
         assert PacketType.GET_STATUS.value == "get_status"
 
-    def test_packet_type_get_config_exists(self):
+    def test_packet_type_get_settings_exists(self):
         from core import PacketType
-        assert PacketType.GET_CONFIG is not None
-        assert PacketType.GET_CONFIG.value == "get_config"
+        assert PacketType.GET_SETTINGS is not None
+        assert PacketType.GET_SETTINGS.value == "get_settings"
 
-    def test_packet_type_set_config_exists(self):
+    def test_packet_type_set_settings_exists(self):
         from core import PacketType
-        assert PacketType.SET_CONFIG is not None
-        assert PacketType.SET_CONFIG.value == "set_config"
+        assert PacketType.SET_SETTINGS is not None
+        assert PacketType.SET_SETTINGS.value == "set_settings"
 
     def test_packet_type_get_history_exists(self):
         from core import PacketType
@@ -57,14 +57,12 @@ class TestPacketTypeEnum:
         assert "process_message" in values
         assert "execute_tool" in values
         assert "get_status" in values
-        assert "get_config" in values
-        assert "set_config" in values
-        assert "get_tool_limits" in values
-        assert "set_tool_limits" in values
+        assert "get_settings" in values
+        assert "set_settings" in values
         assert "get_history" in values
         assert "save_history" in values
         assert "shutdown" in values
-        assert len(values) == 10
+        assert len(values) == 8
 
 
 class TestPacketCreation:
@@ -90,7 +88,7 @@ class TestPacketCreation:
     def test_packet_created_at_default(self):
         from core import Packet, PacketType
         before = time.time()
-        packet = Packet(id="test-4", type=PacketType.GET_CONFIG, body={})
+        packet = Packet(id="test-4", type=PacketType.GET_SETTINGS, body={})
         after = time.time()
         assert before <= packet.created_at <= after
 
@@ -186,26 +184,30 @@ class TestBackendClientAPI:
         
         server.shutdown()
 
-    def test_update_config(self):
+    def test_update_settings(self):
         from core import BackendServer, BackendClient
         server = BackendServer(db_path=":memory:", use_embedded_db=True)
         server.start(api_key="")
         client = BackendClient(server)
         
-        result = client.update_config(api_key="new-key", base_url="https://api.deepseek.com")
+        result = client.update_settings(
+            api_config={"api_key": "new-key", "base_url": "https://api.deepseek.com", "model": "deepseek-chat"},
+            tool_limits={"persona_query_max": 2}
+        )
         assert result.get("success") is True
         
         server.shutdown()
 
-    def test_get_config(self):
+    def test_get_settings(self):
         from core import BackendServer, BackendClient
         server = BackendServer(db_path=":memory:", use_embedded_db=True)
         server.start(api_key="test-key")
         client = BackendClient(server)
         
-        result = client.get_config()
+        result = client.get_settings()
         assert result.get("success") is True
-        assert result.get("data", {}).get("api_key") == "test-key"
+        data = result.get("data", {})
+        assert data.get("api_config", {}).get("api_key") == "test-key"
         
         server.shutdown()
 

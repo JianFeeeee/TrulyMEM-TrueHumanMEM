@@ -23,11 +23,22 @@ class BackendClient:
     def process_message(self, user_input: str) -> Dict:
         return self._server.process_message(user_input)
 
-    def update_config(self, api_key: str, base_url: str = "https://api.deepseek.com", model: str = "deepseek-chat") -> Dict:
+    def get_settings(self) -> Dict:
         packet = Packet(
             id=self._next_id(),
-            type=PacketType.SET_CONFIG,
-            body={"api_key": api_key, "base_url": base_url, "model": model}
+            type=PacketType.GET_SETTINGS,
+            body={}
+        )
+        return self._server.send(packet).body
+
+    def update_settings(self, api_config: Dict = None, tool_limits: Dict = None) -> Dict:
+        packet = Packet(
+            id=self._next_id(),
+            type=PacketType.SET_SETTINGS,
+            body={
+                "api_config": api_config or {},
+                "tool_limits": tool_limits or {}
+            }
         )
         return self._server.send(packet).body
 
@@ -44,30 +55,6 @@ class BackendClient:
             id=self._next_id(),
             type=PacketType.GET_STATUS,
             body={}
-        )
-        return self._server.send(packet).body
-
-    def get_config(self) -> Dict:
-        packet = Packet(
-            id=self._next_id(),
-            type=PacketType.GET_CONFIG,
-            body={}
-        )
-        return self._server.send(packet).body
-
-    def get_tool_limits(self) -> Dict:
-        packet = Packet(
-            id=self._next_id(),
-            type=PacketType.GET_TOOL_LIMITS,
-            body={}
-        )
-        return self._server.send(packet).body
-
-    def update_tool_limits(self, **kwargs) -> Dict:
-        packet = Packet(
-            id=self._next_id(),
-            type=PacketType.SET_TOOL_LIMITS,
-            body=kwargs
         )
         return self._server.send(packet).body
 
