@@ -59,6 +59,7 @@ class GraphMemoryApp(App):
 
     def on_mount(self) -> None:
         from .widgets.status_bar import StatusBar
+        from .widgets.message_history import MessageHistory
         status_bar = self.query_one(StatusBar)
         
         if not self._backend_server:
@@ -74,17 +75,15 @@ class GraphMemoryApp(App):
         self._api_configured = data.get("config", {}).get("api_key", "") != ""
         status_bar.set_api_status(self._api_configured)
         
+        history = self.query_one(MessageHistory)
+        
         if self._api_configured:
-            result = self._backend_client.get_history()
-            if result.get("success"):
-                history_data = result.get("data", {})
-                chat_history = history_data.get("history", [])
-                history = self.query_one(MessageHistory)
+            chat_history = self._backend_client.get_history()
+            if chat_history:
                 for msg in chat_history:
                     message = Message(role=msg["role"], content=msg["content"])
                     history.add_message(message)
         
-        history = self.query_one(MessageHistory)
         welcome = Message(
             role="assistant",
             content=f"系统就绪\nAPI Key: {'已配置' if self._api_configured else '未配置'}\n\n输入消息开始对话"
