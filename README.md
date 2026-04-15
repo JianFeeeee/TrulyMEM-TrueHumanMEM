@@ -1,63 +1,56 @@
-# TrulyMEM - WaterFlow 适配版 / WaterFlow Adapter
+# TrulyMEM - WaterFlow 适配版
 
 让 AI 拥有真正的长期记忆能力 - WaterFlow 框架适配版
 
-*Give AI true long-term memory capability - WaterFlow framework adapter version*
+[English Version](./README_EN.md)
 
 ---
 
-## 简介 / Introduction
+## 简介
 
 本项目是将 TrulyMEM 的图记忆能力迁移到 WaterFlow 框架的 TypeScript 实现。
 
-This project ports TrulyMEM's graph memory capability to TypeScript for the WaterFlow framework.
-
 作为 WaterFlow 的内置模块，提供图记忆功能：
-
-As a built-in module for WaterFlow, it provides graph memory functionality:
-
-- **recall**: 检索记忆 / Retrieve memories
-- **commit**: 写入记忆 / Commit memories
-- **purge**: 删除记忆 / Delete memories
-- **introspect**: 查看状态 / Inspect status
-- **persona_update/clear**: 人设管理 / Persona management
-- **task_create/set_state/delete**: 任务管理 / Task management
+- **recall**: 检索记忆
+- **commit**: 写入记忆
+- **purge**: 删除记忆
+- **introspect**: 查看状态
+- **persona_update/clear**: 人设管理
+- **task_create/set_state/delete**: 任务管理
 
 ---
 
-## 目录结构 / Directory Structure
+## 目录结构
 
 ```
 ts/
 ├── src/runtime/core/
-│   ├── graph_memory/           # 图记忆核心模块 / Graph memory core module
-│   │   ├── types.ts            # 类型定义 / Type definitions
-│   │   ├── graph_database.ts   # 图数据库 / Graph database
-│   │   ├── memory_service.ts   # 记忆服务 / Memory service
-│   │   └── index.ts            # 模块导出 / Module exports
+│   ├── graph_memory/           # 图记忆核心模块
+│   │   ├── types.ts            # 类型定义
+│   │   ├── graph_database.ts   # 图数据库
+│   │   ├── memory_service.ts   # 记忆服务
+│   │   └── index.ts            # 模块导出
 │   └── tools/
 │       └── builtin/
-│           └── graph_memory_tool.ts  # Tool 实现 / Tool implementation
+│           └── graph_memory_tool.ts  # Tool 实现
 │
-├── bundled-skills/             # Skill 定义 / Skill definitions
+├── bundled-skills/             # Skill 定义
 │   └── graph_memory/
-│       ├── SKILL.md            # 记忆操作 / Memory operations
-│       ├── persona/SKILL.md   # 人设管理 / Persona management
-│       └── task/SKILL.md       # 任务管理 / Task management
+│       ├── SKILL.md            # 记忆操作
+│       ├── persona/SKILL.md   # 人设管理
+│       └── task/SKILL.md       # 任务管理
 │
-├── package.json                # 项目配置 / Project config
-└── tsconfig.json               # TypeScript 配置 / TypeScript config
+├── package.json                # 项目配置
+└── tsconfig.json               # TypeScript 配置
 ```
 
 ---
 
-## 在 WaterFlow 中使用 / Usage in WaterFlow
+## 在 WaterFlow 中使用
 
-### 方式一：作为独立模块引用 / Method 1: Import as standalone module
+### 方式一：作为独立模块引用
 
 将 `ts/` 目录复制到你的 WaterFlow 项目中：
-
-Copy the `ts/` directory to your WaterFlow project:
 
 ```typescript
 import { GraphMemoryTool, createGraphMemoryTool } from './runtime/core/tools/builtin/graph_memory_tool';
@@ -73,16 +66,14 @@ const result = await tool.handler({
 }, context);
 ```
 
-### 方式二：使用 Skill / Method 2: Use Skill
+### 方式二：使用 Skill
 
 GraphMemory 已配置为 bundled skill，可直接调用：
 
-GraphMemory is configured as a bundled skill and can be called directly:
-
 ```
-使用 skill:graph_memory 进行记忆操作 / Use skill:graph_memory for memory operations
-使用 skill:graph_memory_persona 进行人设管理 / Use skill:graph_memory_persona for persona management
-使用 skill:graph_memory_task 进行任务管理 / Use skill:graph_memory_task for task management
+使用 skill:graph_memory 进行记忆操作
+使用 skill:graph_memory_persona 进行人设管理
+使用 skill:graph_memory_task 进行任务管理
 ```
 
 ---
@@ -97,23 +88,23 @@ const tool = new GraphMemoryTool(sessionId?: string);
 
 #### Actions
 
-| Action | 说明 / Description | 参数 / Parameters |
+| Action | 说明 | 参数 |
 |--------|------|------|
-| `recall` | 检索记忆 / Retrieve memories | `queryIntent`, `seedEntities`, `sessionFilter` |
-| `commit` | 写入记忆 / Commit memories | `triplets`, `sessionId`, `turnId` |
-| `purge` | 删除记忆 / Delete memories | `criteria`, `mode` |
-| `introspect` | 查看状态 / Inspect status | - |
-| `persona_update` | 更新人设 / Update persona | `attributes`, `mode` |
-| `persona_clear` | 清除人设 / Clear persona | `confirm` |
-| `task_create` | 创建任务 / Create task | `task_id`, `description`, `info_nodes` |
-| `task_set_state` | 设置状态 / Set state | `task_id`, `state` |
-| `task_delete` | 删除任务 / Delete task | `task_id` |
+| `recall` | 检索记忆 | `queryIntent`, `seedEntities`, `sessionFilter` |
+| `commit` | 写入记忆 | `triplets`, `sessionId`, `turnId` |
+| `purge` | 删除记忆 | `criteria`, `mode` |
+| `introspect` | 查看状态 | - |
+| `persona_update` | 更新人设 | `attributes`, `mode` |
+| `persona_clear` | 清除人设 | `confirm` |
+| `task_create` | 创建任务 | `task_id`, `description`, `info_nodes` |
+| `task_set_state` | 设置状态 | `task_id`, `state` |
+| `task_delete` | 删除任务 | `task_id` |
 
 ---
 
-## 示例 / Examples
+## 示例
 
-### 写入记忆 / Commit Memory
+### 写入记忆
 
 ```json
 {
@@ -127,7 +118,7 @@ const tool = new GraphMemoryTool(sessionId?: string);
 }
 ```
 
-### 检索记忆 / Recall Memory
+### 检索记忆
 
 ```json
 {
@@ -138,7 +129,7 @@ const tool = new GraphMemoryTool(sessionId?: string);
 }
 ```
 
-### 创建任务 / Create Task
+### 创建任务
 
 ```json
 {
@@ -153,6 +144,6 @@ const tool = new GraphMemoryTool(sessionId?: string);
 
 ---
 
-## 许可证 / License
+## 许可证
 
 [GNU General Public License v3.0 (GPLv3)](LICENSE)
