@@ -1,16 +1,61 @@
-# TrulyMEM - WaterFlow 适配版
+# TrulyMEM - OpenClaw 适配版
 
-让 AI 拥有真正的长期记忆能力 - WaterFlow 框架适配版
+让 AI 拥有真正的长期记忆能力 - OpenClaw 框架适配版
 
 [English Version](./README_EN.md)
 
 ---
 
+## 🤖 AI 自行安装指南
+
+> 本节面向 AI Agent，指导其如何自主安装此 Skill 到 OpenClaw 框架
+
+### 安装步骤
+
+#### 步骤 1：定位 Skill 目录
+
+OpenClaw 的 Skill 优先级：`/.agents/skills/` > `~/.agents/skills/` > `~/.openclaw/skills/`
+
+将本项目的 `skills/` 目录复制到高优先级位置：
+
+```bash
+# 方式 1: 用户级安装 (推荐)
+cp -r skills/ ~/.agents/skills/graph_memory
+
+# 方式 2: 系统级安装
+sudo cp -r skills/ /.agents/skills/graph_memory
+```
+
+#### 步骤 2：验证安装
+
+在 OpenClaw 中调用 Skill：
+
+```
+记得: 我喜欢编程，正在学习 TypeScript
+```
+
+AI 应收到确认消息。
+
+#### 步骤 3：使用 Skill
+
+安装成功后，AI 可以使用以下命令：
+
+| 命令 | 功能 |
+|------|------|
+| `commit` | 写入记忆 |
+| `recall` | 检索记忆 |
+| `purge` | 删除记忆 |
+| `introspect` | 查看状态 |
+| `persona_update/clear` | 人设管理 |
+| `task_create/set_state/delete` | 任务管理 |
+
+---
+
 ## 简介
 
-本项目是将 TrulyMEM 的图记忆能力迁移到 WaterFlow 框架的 TypeScript 实现。
+本项目是将 TrulyMEM 的图记忆能力迁移到 OpenClaw 框架的 TypeScript 实现。
 
-作为 WaterFlow 的内置模块，提供图记忆功能：
+作为 OpenClaw 的 Skill 模块，提供图记忆功能：
 - **recall**: 检索记忆
 - **commit**: 写入记忆
 - **purge**: 删除记忆
@@ -28,42 +73,38 @@ ts/
 │   ├── graph_memory/           # 图记忆核心模块
 │   │   ├── types.ts            # 类型定义
 │   │   ├── graph_database.ts   # 图数据库
-│   │   ├── memory_service.ts   # 记忆服务
-│   │   └── index.ts            # 模块导出
+│   │   ├── memory_service.ts  # 记忆服务
+│   │   └── index.ts         # 模块导出
 │   └── tools/
 │       └── builtin/
 │           └── graph_memory_tool.ts  # Tool 实现
 │
-├── bundled-skills/             # Skill 定义
-│   └── graph_memory/
-│       ├── SKILL.md            # 记忆操作
-│       ├── persona/SKILL.md   # 人设管理
-│       └── task/SKILL.md       # 任务管理
-│
-├── package.json                # 项目配置
-└── tsconfig.json               # TypeScript 配置
+├── package.json            # 项目配置
+└── tsconfig.json           # TypeScript 配置
+
+skills/                     # OpenClaw Skill 定义
+└── graph_memory/
+    ├── SKILL.md            # 记忆操作
+    ├── persona/SKILL.md    # 人设管理
+    └── task/SKILL.md        # 任务管理
 ```
 
 ---
 
-## 在 WaterFlow 中使用
-
-本模块支持两种使用方式：**作为模块直接引用** 或 **作为 Skill 调用**。
+## 在 OpenClaw 中使用
 
 ### 方式一：作为模块直接引用（适合开发者集成）
 
 #### 步骤 1：复制源码
 
-将本项目的 `ts/` 目录复制到你的 WaterFlow 项目中，例如：
+将本项目的 `ts/` 目录复制到你的 OpenClaw 项目中：
 
 ```
-你的WaterFlow项目/
-├── src/
-│   └── runtime/
-│       └── core/
-│           └── graph_memory/    # 从 ts/src/runtime/core/ 复制
-└── ts/                          # 或直接放在项目根目录
-    └── bundled-skills/          # Skill 文件
+你的OpenClaw项目/
+└── src/
+    └── runtime/
+        └── core/
+            └── graph_memory/    # 从 ts/src/runtime/core/ 复制
 ```
 
 #### 步骤 2：编译 TypeScript
@@ -81,22 +122,8 @@ npm run build
 ```typescript
 import { createGraphMemoryTool } from './runtime/core/tools/builtin/graph_memory_tool';
 
-// 创建工具实例，可以传入 sessionId 来区分不同会话
+// 创建工具实例
 const tool = createGraphMemoryTool('my-session-id');
-
-// 准备执行上下文
-const context = {
-  toolCallId: 'call-123',
-  workingDirectory: '/project',
-  abortController: { signal: {} },
-  config: { timeout: 30000 },
-  logger: {
-    info: console.log,
-    warn: console.warn,
-    error: console.error,
-    debug: console.debug
-  }
-};
 
 // 写入记忆示例
 const commitResult = await tool.handler({
@@ -109,9 +136,6 @@ const commitResult = await tool.handler({
   }
 }, context);
 
-console.log(commitResult);
-// 输出: {"success":true,"data":{"createdEntities":4,"createdRelations":2}}
-
 // 检索记忆示例
 const recallResult = await tool.handler({
   action: 'recall',
@@ -119,50 +143,24 @@ const recallResult = await tool.handler({
     queryIntent: '用户 编程'
   }
 }, context);
-
-console.log(recallResult);
-// 输出: {"success":true,"data":{"entities":[...],"relations":[...],"message":"找到 X 个实体, Y 条关系"}}
 ```
 
 ### 方式二：使用 Skill（推荐，适合 AI Agent 调用）
 
-#### 步骤 1：配置 Skill 来源
+#### 步骤 1：放置 Skill 文件
 
-在你的 WaterFlow 项目中，找到 Skill 配置文件，添加 bundled 来源指向本项目的 Skill 目录：
+将 `skills/` 目录复制到 OpenClaw 的 Skill 目录：
 
-```typescript
-// skill_interface.ts 或配置文件中
-import { DEFAULT_SKILL_LOADER_CONFIG } from './skill_interface';
-
-const config = {
-  ...DEFAULT_SKILL_LOADER_CONFIG,
-  sources: {
-    ...DEFAULT_SKILL_LOADER_CONFIG.sources,
-    bundled: './ts/bundled-skills'  // 指向本项目的 Skill 目录
-  },
-  enabledSources: ['project', 'bundled']
-};
+```bash
+cp -r skills/ ~/.agents/skills/graph_memory
 ```
 
 #### 步骤 2：通过 Agent 调用 Skill
 
-在你的 Agent 或 Workflow 中，通过 Tool 调用 Skill：
+在 OpenClaw 中直接调用：
 
 ```
-使用 skill:graph_memory 进行以下操作:
-
-1. 写入记忆: 我喜欢编程，正在学习 TypeScript
-2. 检索记忆: 找出我和编程相关的记忆
-```
-
-或者通过代码调用：
-
-```typescript
-// 通过 SkillTool 调用
-const skillResult = await skillTool.handler({
-  skill: 'graph_memory',
-  args: 'recall - queryIntent: "用户 学习"'
-}, context);
+使用 graph_memory 记住: 我喜欢编程，正在学习 TypeScript
 ```
 
 #### 可用 Skill 列表
@@ -209,7 +207,7 @@ const tool = new GraphMemoryTool(sessionId?: string);
   "params": {
     "triplets": [
       { "subject": "用户", "relation": "喜欢", "object": "TypeScript" },
-      { "subject": "用户", "relation": "正在学习", "object": "WaterFlow" }
+      { "subject": "用户", "relation": "正在学习", "object": "OpenClaw" }
     ]
   }
 }
