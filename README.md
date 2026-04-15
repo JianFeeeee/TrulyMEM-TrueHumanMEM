@@ -48,33 +48,130 @@ ts/
 
 ## 在 WaterFlow 中使用
 
-### 方式一：作为独立模块引用
+本模块支持两种使用方式：**作为模块直接引用** 或 **作为 Skill 调用**。
 
-将 `ts/` 目录复制到你的 WaterFlow 项目中：
+### 方式一：作为模块直接引用（适合开发者集成）
+
+#### 步骤 1：复制源码
+
+将本项目的 `ts/` 目录复制到你的 WaterFlow 项目中，例如：
+
+```
+你的WaterFlow项目/
+├── src/
+│   └── runtime/
+│       └── core/
+│           └── graph_memory/    # 从 ts/src/runtime/core/ 复制
+└── ts/                          # 或直接放在项目根目录
+    └── bundled-skills/          # Skill 文件
+```
+
+#### 步骤 2：编译 TypeScript
+
+```bash
+cd ts/
+npm install
+npm run build
+```
+
+编译后的文件会输出到 `ts/dist/` 目录。
+
+#### 步骤 3：在代码中引用
 
 ```typescript
-import { GraphMemoryTool, createGraphMemoryTool } from './runtime/core/tools/builtin/graph_memory_tool';
+import { createGraphMemoryTool } from './runtime/core/tools/builtin/graph_memory_tool';
 
-const tool = createGraphMemoryTool();
-const result = await tool.handler({
+// 创建工具实例，可以传入 sessionId 来区分不同会话
+const tool = createGraphMemoryTool('my-session-id');
+
+// 准备执行上下文
+const context = {
+  toolCallId: 'call-123',
+  workingDirectory: '/project',
+  abortController: { signal: {} },
+  config: { timeout: 30000 },
+  logger: {
+    info: console.log,
+    warn: console.warn,
+    error: console.error,
+    debug: console.debug
+  }
+};
+
+// 写入记忆示例
+const commitResult = await tool.handler({
   action: 'commit',
   params: {
     triplets: [
-      { subject: '用户', relation: '喜欢', object: '编程' }
+      { subject: '用户', relation: '喜欢', object: '编程' },
+      { subject: '用户', relation: '正在学习', object: 'TypeScript' }
     ]
   }
 }, context);
+
+console.log(commitResult);
+// 输出: {"success":true,"data":{"createdEntities":4,"createdRelations":2}}
+
+// 检索记忆示例
+const recallResult = await tool.handler({
+  action: 'recall',
+  params: {
+    queryIntent: '用户 编程'
+  }
+}, context);
+
+console.log(recallResult);
+// 输出: {"success":true,"data":{"entities":[...],"relations":[...],"message":"找到 X 个实体, Y 条关系"}}
 ```
 
-### 方式二：使用 Skill
+### 方式二：使用 Skill（推荐，适合 AI Agent 调用）
 
-GraphMemory 已配置为 bundled skill，可直接调用：
+#### 步骤 1：配置 Skill 来源
+
+在你的 WaterFlow 项目中，找到 Skill 配置文件，添加 bundled 来源指向本项目的 Skill 目录：
+
+```typescript
+// skill_interface.ts 或配置文件中
+import { DEFAULT_SKILL_LOADER_CONFIG } from './skill_interface';
+
+const config = {
+  ...DEFAULT_SKILL_LOADER_CONFIG,
+  sources: {
+    ...DEFAULT_SKILL_LOADER_CONFIG.sources,
+    bundled: './ts/bundled-skills'  // 指向本项目的 Skill 目录
+  },
+  enabledSources: ['project', 'bundled']
+};
+```
+
+#### 步骤 2：通过 Agent 调用 Skill
+
+在你的 Agent 或 Workflow 中，通过 Tool 调用 Skill：
 
 ```
-使用 skill:graph_memory 进行记忆操作
-使用 skill:graph_memory_persona 进行人设管理
-使用 skill:graph_memory_task 进行任务管理
+使用 skill:graph_memory 进行以下操作:
+
+1. 写入记忆: 我喜欢编程，正在学习 TypeScript
+2. 检索记忆: 找出我和编程相关的记忆
 ```
+
+或者通过代码调用：
+
+```typescript
+// 通过 SkillTool 调用
+const skillResult = await skillTool.handler({
+  skill: 'graph_memory',
+  args: 'recall - queryIntent: "用户 学习"'
+}, context);
+```
+
+#### 可用 Skill 列表
+
+| Skill 名称 | 功能 | 使用场景 |
+|------------|------|----------|
+| `graph_memory` | 记忆 CRUD | 读取/写入/删除记忆 |
+| `graph_memory_persona` | 人设管理 | 设置 AI 角色性格 |
+| `graph_memory_task` | 任务管理 | 创建/更新长期任务 |
 
 ---
 
