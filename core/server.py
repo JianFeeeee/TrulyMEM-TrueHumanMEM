@@ -345,7 +345,7 @@ class BackendServer:
 
     def _handle_save_history(self, body: Dict) -> Dict:
         messages = body.get("messages", [])
-        if messages and messages[0].get("action") == "clear":
+        if not messages:
             self._graph.clear_chat_records()
             return {"status": "history_cleared"}
         result = self._graph.save_chat_records(messages)

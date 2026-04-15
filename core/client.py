@@ -78,7 +78,7 @@ class BackendClient:
         packet = Packet(
             id=self._next_id(),
             type=PacketType.SAVE_HISTORY,
-            body={"messages": [{"action": "clear"}]}
+            body={"messages": []}
         )
         return self._server.send(packet).body
     
