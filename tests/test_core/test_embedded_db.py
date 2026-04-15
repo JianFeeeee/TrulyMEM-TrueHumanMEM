@@ -160,3 +160,41 @@ def test_close_and_context_manager():
     finally:
         if os.path.exists(db_path):
             os.unlink(db_path)
+
+
+def test_save_and_get_chat_records(db):
+    """测试聊天记录保存和读取"""
+    messages = [
+        {"role": "user", "content": "你好"},
+        {"role": "assistant", "content": "你好，有什么可以帮你？"}
+    ]
+    
+    result = db.save_chat_records(messages)
+    assert result["saved"] == 2
+    
+    history = db.get_chat_records()
+    assert len(history) == 2
+    assert history[0]["role"] == "user"
+    assert history[0]["content"] == "你好"
+    assert history[1]["role"] == "assistant"
+
+
+def test_chat_records_limit_500(db):
+    """测试聊天记录限制500条"""
+    for i in range(600):
+        db.save_chat_records([{"role": "user", "content": f"消息{i}"}])
+    
+    history = db.get_chat_records()
+    assert len(history) == 500
+
+
+def test_get_chat_records_default_limit(db):
+    """测试默认limit参数"""
+    for i in range(100):
+        db.save_chat_records([{"role": "user", "content": f"msg{i}"}])
+    
+    history_50 = db.get_chat_records(limit=50)
+    assert len(history_50) == 50
+    
+    history_default = db.get_chat_records()
+    assert len(history_default) == 100

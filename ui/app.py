@@ -37,20 +37,21 @@ class GraphMemoryApp(App):
         initial_config = AppConfig()
         
         if self._backend_client:
-            config_result = self._backend_client.get_config()
-            config_data = config_result.get("data", {})
-            initial_config.api_key = config_data.get("api_key", "")
-            initial_config.base_url = config_data.get("base_url", "https://api.deepseek.com")
-            initial_config.model = config_data.get("model", "deepseek-chat")
+            settings_result = self._backend_client.get_settings()
+            settings_data = settings_result.get("data", {})
             
-            limits_result = self._backend_client.get_tool_limits()
-            limits_data = limits_result.get("data", {})
-            initial_config.persona_query_max = limits_data.get("persona_query_max", 1)
-            initial_config.persona_update_max = limits_data.get("persona_update_max", 1)
-            initial_config.task_query_max = limits_data.get("task_query_max", 4)
-            initial_config.task_update_max = limits_data.get("task_update_max", 2)
-            initial_config.memory_query_max = limits_data.get("memory_query_max", 20)
-            initial_config.memory_update_max = limits_data.get("memory_update_max", 10)
+            api_config = settings_data.get("api_config", {})
+            initial_config.api_key = api_config.get("api_key", "")
+            initial_config.base_url = api_config.get("base_url", "https://api.deepseek.com")
+            initial_config.model = api_config.get("model", "deepseek-chat")
+            
+            tool_limits = settings_data.get("tool_limits", {})
+            initial_config.persona_query_max = tool_limits.get("persona_query_max", 1)
+            initial_config.persona_update_max = tool_limits.get("persona_update_max", 1)
+            initial_config.task_query_max = tool_limits.get("task_query_max", 4)
+            initial_config.task_update_max = tool_limits.get("task_update_max", 2)
+            initial_config.memory_query_max = tool_limits.get("memory_query_max", 20)
+            initial_config.memory_update_max = tool_limits.get("memory_update_max", 10)
         
         yield LeftPanel()
         yield RightPanel(config=initial_config)
@@ -73,7 +74,16 @@ class GraphMemoryApp(App):
         self._api_configured = data.get("config", {}).get("api_key", "") != ""
         status_bar.set_api_status(self._api_configured)
         
-        from .widgets.message_history import MessageHistory
+        if self._api_configured:
+            result = self._backend_client.get_history()
+            if result.get("success"):
+                history_data = result.get("data", {})
+                chat_history = history_data.get("history", [])
+                history = self.query_one(MessageHistory)
+                for msg in chat_history:
+                    message = Message(role=msg["role"], content=msg["content"])
+                    history.add_message(message)
+        
         history = self.query_one(MessageHistory)
         welcome = Message(
             role="assistant",
@@ -184,79 +194,67 @@ class GraphMemoryApp(App):
             self.notify("后端未初始化，无法保存配置", title="错误", severity="error")
             return
         
-        config = event.config
-        
-        if event.is_tool_limits:
-            asyncio.create_task(self._update_tool_limits_async(config))
-        else:
-            asyncio.create_task(self._update_config_async(config))
+        asyncio.create_task(self._update_settings_async(event.config))
     
-    async def _update_config_async(self, config) -> None:
-        """异步更新配置"""
+    async def _update_settings_async(self, config) -> None:
         from .widgets.status_bar import StatusBar
         from .widgets.config_section import ConfigSection
         
         status_bar = self.query_one(StatusBar)
         
-        api_key = config.api_key
-        base_url = config.base_url
-        model = getattr(config, 'model', 'deepseek-chat')
+        api_config = {
+            "api_key": config.api_key,
+            "base_url": config.base_url,
+            "model": getattr(config, 'model', 'deepseek-chat')
+        }
+        
+        tool_limits = {
+            "persona_query_max": config.persona_query_max,
+            "persona_update_max": config.persona_update_max,
+            "task_query_max": config.task_query_max,
+            "task_update_max": config.task_update_max,
+            "memory_query_max": config.memory_query_max,
+            "memory_update_max": config.memory_update_max,
+        }
         
         try:
             result = await asyncio.get_event_loop().run_in_executor(
                 None,
-                lambda: self._backend_client.update_config(api_key=api_key, base_url=base_url, model=model)
+                lambda: self._backend_client.update_settings(
+                    api_config=api_config,
+                    tool_limits=tool_limits
+                )
             )
             
             if result.get("success"):
-                self._api_configured = bool(api_key)
+                self._api_configured = bool(config.api_key)
                 status_bar.set_api_status(self._api_configured)
                 
-                # 从后端重新获取配置并刷新 UI
-                config_result = await asyncio.get_event_loop().run_in_executor(
+                settings_result = await asyncio.get_event_loop().run_in_executor(
                     None,
-                    lambda: self._backend_client.get_config()
+                    lambda: self._backend_client.get_settings()
                 )
-                config_data = config_result.get("data", {})
+                settings_data = settings_result.get("data", {})
                 
-                # 刷新输入框
                 try:
                     config_section = self.query_one(ConfigSection)
+                    api_cfg = settings_data.get("api_config", {})
+                    tool_lmts = settings_data.get("tool_limits", {})
                     config_section.set_config(AppConfig(
-                        api_key=config_data.get("api_key", ""),
-                        base_url=config_data.get("base_url", "https://api.deepseek.com"),
-                        model=config_data.get("model", "deepseek-chat")
+                        api_key=api_cfg.get("api_key", ""),
+                        base_url=api_cfg.get("base_url", "https://api.deepseek.com"),
+                        model=api_cfg.get("model", "deepseek-chat"),
+                        persona_query_max=tool_lmts.get("persona_query_max", 1),
+                        persona_update_max=tool_lmts.get("persona_update_max", 1),
+                        task_query_max=tool_lmts.get("task_query_max", 4),
+                        task_update_max=tool_lmts.get("task_update_max", 2),
+                        memory_query_max=tool_lmts.get("memory_query_max", 20),
+                        memory_update_max=tool_lmts.get("memory_update_max", 10),
                     ))
                 except Exception:
                     pass
                 
                 self.notify("✅ 配置已保存并生效", title="配置成功", severity="information")
-            else:
-                error = result.get("error", "未知错误")
-                self.notify(f"❌ 配置失败: {error}", title="配置失败", severity="error")
-        except Exception as e:
-            self.notify(f"❌ 配置异常: {str(e)}", title="配置失败", severity="error")
-
-    async def _update_tool_limits_async(self, config) -> None:
-        from .widgets.status_bar import StatusBar
-        
-        status_bar = self.query_one(StatusBar)
-        
-        try:
-            result = await asyncio.get_event_loop().run_in_executor(
-                None,
-                lambda: self._backend_client.update_tool_limits(
-                    persona_query_max=config.persona_query_max,
-                    persona_update_max=config.persona_update_max,
-                    task_query_max=config.task_query_max,
-                    task_update_max=config.task_update_max,
-                    memory_query_max=config.memory_query_max,
-                    memory_update_max=config.memory_update_max,
-                )
-            )
-            
-            if result.get("success"):
-                self.notify("✅ 工具限制已保存", title="配置成功", severity="information")
             else:
                 error = result.get("error", "未知错误")
                 self.notify(f"❌ 配置失败: {error}", title="配置失败", severity="error")

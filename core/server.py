@@ -15,10 +15,8 @@ class PacketType(Enum):
     PROCESS_MESSAGE = "process_message"
     EXECUTE_TOOL = "execute_tool"
     GET_STATUS = "get_status"
-    GET_CONFIG = "get_config"
-    SET_CONFIG = "set_config"
-    GET_TOOL_LIMITS = "get_tool_limits"
-    SET_TOOL_LIMITS = "set_tool_limits"
+    GET_SETTINGS = "get_settings"      # 合并：获取 api_config + tool_limits
+    SET_SETTINGS = "set_settings"     # 合并：设置 api_config + tool_limits
     GET_HISTORY = "get_history"
     SAVE_HISTORY = "save_history"
     SHUTDOWN = "shutdown"
@@ -160,14 +158,10 @@ class BackendServer:
                 response_body = self._handle_execute_tool(packet.body)
             elif packet.type == PacketType.GET_STATUS:
                 response_body = self._handle_get_status()
-            elif packet.type == PacketType.GET_CONFIG:
-                response_body = self._handle_get_config()
-            elif packet.type == PacketType.SET_CONFIG:
-                response_body = self._handle_set_config(packet.body)
-            elif packet.type == PacketType.GET_TOOL_LIMITS:
-                response_body = self._handle_get_tool_limits()
-            elif packet.type == PacketType.SET_TOOL_LIMITS:
-                response_body = self._handle_set_tool_limits(packet.body)
+            elif packet.type == PacketType.GET_SETTINGS:
+                response_body = self._handle_get_settings()
+            elif packet.type == PacketType.SET_SETTINGS:
+                response_body = self._handle_set_settings(packet.body)
             elif packet.type == PacketType.GET_HISTORY:
                 response_body = self._handle_get_history()
             elif packet.type == PacketType.SAVE_HISTORY:
@@ -196,6 +190,8 @@ class BackendServer:
         
         if not self._client:
             return {"success": False, "error": "API Key 未配置", "content": "请先配置 API Key"}
+        
+        self._graph.save_chat_records([{"role": "user", "content": user_input}])
         
         self._tool_limiter.reset()
         
@@ -281,6 +277,8 @@ class BackendServer:
             content += f"\n\n部分工具调用被限制:\n{rejected_info}"
             content += f"\n\n工具调用统计:\n{self._tool_limiter.get_summary()}"
         
+        self._graph.save_chat_records([{"role": "assistant", "content": content}])
+        
         return {
             "success": True,
             "content": content,
@@ -309,45 +307,45 @@ class BackendServer:
             "client_initialized": self._client is not None
         }
 
-    def _handle_get_config(self) -> Dict:
-        return self._config.copy()
+    def _handle_get_settings(self) -> Dict:
+        return {
+            "api_config": self._config.copy(),
+            "tool_limits": self._tool_limits.copy()
+        }
 
-    def _handle_set_config(self, body: Dict) -> Dict:
-        api_key = body.get("api_key", "")
-        base_url = body.get("base_url", "https://api.deepseek.com")
-        model = body.get("model", "deepseek-chat")
+    def _handle_set_settings(self, body: Dict) -> Dict:
+        api_config = body.get("api_config", {})
+        tool_limits = body.get("tool_limits", {})
+        
+        api_key = api_config.get("api_key", "")
+        base_url = api_config.get("base_url", "https://api.deepseek.com")
+        model = api_config.get("model", "deepseek-chat")
         
         self.update_config(api_key, base_url, model)
-        self._save_config()
-        return {"status": "config_updated"}
-
-    def _handle_get_tool_limits(self) -> Dict:
-        return self._tool_limits.copy()
-
-    def _handle_set_tool_limits(self, body: Dict) -> Dict:
+        
         limits_keys = [
             "persona_query_max", "persona_update_max",
             "task_query_max", "task_update_max",
             "memory_query_max", "memory_update_max"
         ]
         for key in limits_keys:
-            if key in body:
-                value = int(body[key])
+            if key in tool_limits:
+                value = int(tool_limits[key])
                 if value < 1:
                     return {"success": False, "error": f"{key} must be >= 1, got {value}"}
                 self._tool_limits[key] = value
         
         self._tool_limiter = self._create_tool_limiter()
-        
         self._save_config()
-        return {"status": "tool_limits_updated", "limits": self._tool_limits.copy()}
+        return {"status": "settings_updated"}
 
     def _handle_get_history(self) -> Dict:
-        return {"history": self._message_history}
+        history = self._graph.get_chat_records(limit=500)
+        return {"history": history}
 
     def _handle_save_history(self, body: Dict) -> Dict:
         messages = body.get("messages", [])
-        self._message_history = messages
+        result = self._graph.save_chat_records(messages)
         return {"status": "history_saved"}
 
     def _send_response(self, request_id: str, response: PacketResponse) -> None:

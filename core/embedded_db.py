@@ -71,6 +71,19 @@ class EmbeddedGraphDB:
         cursor.execute("CREATE INDEX IF NOT EXISTS idx_relation_type ON relations(relation_type)")
         cursor.execute("CREATE INDEX IF NOT EXISTS idx_relation_status ON relations(status)")
         
+        # 创建聊天记录表
+        cursor.execute("""
+            CREATE TABLE IF NOT EXISTS chat_records (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                role TEXT NOT NULL,
+                content TEXT NOT NULL,
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+            )
+        """)
+        
+        # 创建聊天记录索引
+        cursor.execute("CREATE INDEX IF NOT EXISTS idx_chat_created ON chat_records(created_at)")
+        
         self.conn.commit()
     
     def ensure_constraints(self):
@@ -393,6 +406,44 @@ class EmbeddedGraphDB:
                 "deleted": deleted,
                 "message": f"删除了 {deleted} 条关系"
             }
+    
+    def save_chat_records(self, messages: list) -> Dict:
+        """保存聊天记录到数据库"""
+        cursor = self.conn.cursor()
+        
+        saved = 0
+        for msg in messages:
+            role = msg.get("role")
+            content = msg.get("content")
+            if role and content:
+                cursor.execute(
+                    "INSERT INTO chat_records (role, content) VALUES (?, ?)",
+                    (role, content)
+                )
+                saved += 1
+        
+        self.conn.commit()
+        
+        cursor.execute("""
+            DELETE FROM chat_records 
+            WHERE id NOT IN (
+                SELECT id FROM chat_records 
+                ORDER BY id DESC 
+                LIMIT 500
+            )
+        """)
+        self.conn.commit()
+        
+        return {"saved": saved}
+    
+    def get_chat_records(self, limit: int = 500) -> list:
+        """从数据库获取聊天记录"""
+        cursor = self.conn.cursor()
+        cursor.execute("""
+            SELECT role, content FROM chat_records 
+            ORDER BY id ASC LIMIT ?
+        """, (limit,))
+        return [{"role": row[0], "content": row[1]} for row in cursor.fetchall()]
     
     def close(self):
         """关闭数据库连接"""
