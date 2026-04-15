@@ -86,7 +86,16 @@ class GraphMemoryApp(App):
             self._backend_client.shutdown()
 
     def action_show_help(self) -> None:
-        self.notify("F1-帮助 F2-侧边栏 F3-工具详情 F5-清屏 F6-退出", title="快捷键", timeout=10)
+        from pathlib import Path
+        config_path = Path.home() / ".trulymem" / "config.json"
+        db_path = Path.home() / ".trulymem" / "graph_memory.db"
+        
+        help_text = (
+            "F1-帮助 F2-侧边栏 F3-工具详情 F5-清屏 F6-退出\n\n"
+            f"配置文件: {config_path}\n"
+            f"数据库: {db_path}"
+        )
+        self.notify(help_text, title="快捷键 & 配置路径", timeout=15)
 
     def action_toggle_sidebar(self) -> None:
         from .widgets.right_panel import RightPanel

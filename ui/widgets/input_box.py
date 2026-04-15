@@ -1,7 +1,7 @@
 """输入框组件"""
 
-from textual.containers import Container
-from textual.widgets import Input
+from textual.containers import Container, Horizontal
+from textual.widgets import TextArea, Button
 from textual.message import Message
 
 
@@ -21,20 +21,34 @@ class InputBox(Container):
 
     def compose(self):
         """构建输入框"""
-        yield Input(
-            placeholder="输入消息... (Enter发送)",
+        yield TextArea(
+            placeholder="输入消息... (Enter换行)",
             id="input-textarea"
         )
+        with Horizontal(classes="input-buttons"):
+            yield Button("发送", id="send-button", variant="primary")
 
     def on_mount(self) -> None:
         """组件挂载时"""
         # 设置焦点
-        input_widget = self.query_one(Input)
-        input_widget.focus()
+        textarea = self.query_one(TextArea)
+        textarea.focus()
 
-    def on_input_submitted(self, event: Input.Submitted) -> None:
-        """处理输入提交事件"""
-        content = event.value.strip()
+    def on_button_pressed(self, event: Button.Pressed) -> None:
+        """处理按钮点击"""
+        if event.button.id == "send-button":
+            self._send_message()
+
+    def on_key(self, event) -> None:
+        """处理按键事件"""
+        if event.key == "enter" and event.ctrl:
+            self._send_message()
+            event.stop()
+
+    def _send_message(self) -> None:
+        """发送消息"""
+        textarea = self.query_one(TextArea)
+        content = textarea.text.strip()
         if content:
             # 保存到历史
             self._history.append(content)
@@ -42,9 +56,9 @@ class InputBox(Container):
             # 发送消息
             self.post_message(self.SendMessage(content))
             # 清空输入框
-            event.input.value = ""
+            textarea.clear()
 
     def focus(self) -> None:
         """聚焦输入框"""
-        input_widget = self.query_one(Input)
-        input_widget.focus()
+        textarea = self.query_one(TextArea)
+        textarea.focus()
