@@ -73,6 +73,14 @@ class BackendClient:
             body={}
         )
         return self._server.send(packet).body.get("history", [])
-
+    
+    def clear_history(self) -> Dict:
+        packet = Packet(
+            id=self._next_id(),
+            type=PacketType.SAVE_HISTORY,
+            body={"messages": [{"action": "clear"}]}
+        )
+        return self._server.send(packet).body
+    
     def shutdown(self) -> None:
         self._server.shutdown()

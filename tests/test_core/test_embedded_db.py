@@ -198,3 +198,21 @@ def test_get_chat_records_default_limit(db):
     
     history_default = db.get_chat_records()
     assert len(history_default) == 100
+
+
+def test_clear_chat_records(db):
+    """测试清空聊天记录"""
+    db.save_chat_records([
+        {"role": "user", "content": "测试1"},
+        {"role": "assistant", "content": "回复1"},
+        {"role": "user", "content": "测试2"},
+    ])
+    
+    history = db.get_chat_records()
+    assert len(history) == 3
+    
+    result = db.clear_chat_records()
+    assert result["cleared"] is True
+    
+    history_after = db.get_chat_records()
+    assert len(history_after) == 0

@@ -143,7 +143,21 @@ class GraphMemoryApp(App):
         status_bar.set_processing(True)
         
         asyncio.create_task(self._process(user_input))
-
+    
+    def on_input_box_clear_history(self, event) -> None:
+        """处理清空聊天记录事件"""
+        if not self._backend_client:
+            self.notify("后端未初始化", title="错误", severity="error")
+            return
+        
+        self._backend_client.clear_history()
+        
+        from .widgets.message_history import MessageHistory
+        history = self.query_one(MessageHistory)
+        history.clear_messages()
+        
+        self.notify("聊天记录已清空，AI记忆保持不变", title="提示", severity="information")
+    
     async def _process(self, user_input: str) -> None:
         from .widgets.message_history import MessageHistory
         from .widgets.status_bar import StatusBar
