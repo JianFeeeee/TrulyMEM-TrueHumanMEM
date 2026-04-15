@@ -1,0 +1,17 @@
+{
+  "name": "trulymem-waterflow",
+  "version": "1.0.0",
+  "type": "module",
+  "scripts": {
+    "build": "tsc",
+    "test": "vitest"
+  },
+  "dependencies": {
+    "yaml": "^2.8.3"
+  },
+  "devDependencies": {
+    "@types/node": "^25.5.2",
+    "typescript": "^5.0.0",
+    "vitest": "^2.0.0"
+  }
+}
