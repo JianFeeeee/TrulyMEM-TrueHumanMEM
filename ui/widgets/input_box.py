@@ -13,6 +13,11 @@ class InputBox(Container):
         def __init__(self, content: str) -> None:
             self.content = content
             super().__init__()
+    
+    class ClearHistory(Message):
+        """清空聊天记录事件"""
+        def __init__(self) -> None:
+            super().__init__()
 
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
@@ -26,6 +31,7 @@ class InputBox(Container):
             id="input-textarea"
         )
         with Horizontal(classes="input-buttons"):
+            yield Button("清空", id="clear-button", variant="default")
             yield Button("发送", id="send-button", variant="primary")
 
     def on_mount(self) -> None:
@@ -38,6 +44,8 @@ class InputBox(Container):
         """处理按钮点击"""
         if event.button.id == "send-button":
             self._send_message()
+        elif event.button.id == "clear-button":
+            self.post_message(self.ClearHistory())
 
     def on_key(self, event) -> None:
         """处理按键事件"""

@@ -71,18 +71,20 @@ class EmbeddedGraphDB:
         cursor.execute("CREATE INDEX IF NOT EXISTS idx_relation_type ON relations(relation_type)")
         cursor.execute("CREATE INDEX IF NOT EXISTS idx_relation_status ON relations(status)")
         
-        # 创建聊天记录表
         cursor.execute("""
-            CREATE TABLE IF NOT EXISTS chat_records (
-                id INTEGER PRIMARY KEY AUTOINCREMENT,
-                role TEXT NOT NULL,
-                content TEXT NOT NULL,
-                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-            )
+            SELECT name FROM sqlite_master 
+            WHERE type='table' AND name='chat_records'
         """)
-        
-        # 创建聊天记录索引
-        cursor.execute("CREATE INDEX IF NOT EXISTS idx_chat_created ON chat_records(created_at)")
+        if not cursor.fetchone():
+            cursor.execute("""
+                CREATE TABLE chat_records (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    role TEXT NOT NULL,
+                    content TEXT NOT NULL,
+                    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+                )
+            """)
+            cursor.execute("CREATE INDEX idx_chat_created ON chat_records(created_at)")
         
         self.conn.commit()
     
@@ -444,6 +446,13 @@ class EmbeddedGraphDB:
             ORDER BY id ASC LIMIT ?
         """, (limit,))
         return [{"role": row[0], "content": row[1]} for row in cursor.fetchall()]
+    
+    def clear_chat_records(self) -> Dict:
+        """清空聊天记录（保留图数据库）"""
+        cursor = self.conn.cursor()
+        cursor.execute("DELETE FROM chat_records")
+        self.conn.commit()
+        return {"cleared": True}
     
     def close(self):
         """关闭数据库连接"""
