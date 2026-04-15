@@ -103,7 +103,10 @@ client = BackendClient(server)
 result = client.process_message("你好，请记住我的名字是小明")
 
 if result.get("success"):
-    print(result["content"])
+    # 响应数据在 data 字段中
+    print(result["data"]["content"])
+    # 工具调用: result["data"]["tool_calls"]
+    # 被拒绝的工具: result["data"]["rejected_tools"]
 ```
 
 ---
@@ -294,6 +297,7 @@ body = {
 - 消息自动保存到数据库 `chat_records` 表
 - 系统自动限制最多保留 500 条记录，超出后自动删除旧记录
 - 每次调用 `PROCESS_MESSAGE` 时，会自动保存用户消息和AI回复
+- **清空历史**：通过 `SAVE_HISTORY` 传递空消息列表 `messages=[]` 可清空历史，`client.clear_history()` 方法即基于此实现
 
 ---
 

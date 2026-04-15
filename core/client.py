@@ -58,13 +58,14 @@ class BackendClient:
         )
         return self._server.send(packet).body
 
-    def save_history(self, messages: list) -> None:
+    def save_history(self, messages: list) -> Dict:
         packet = Packet(
             id=self._next_id(),
             type=PacketType.SAVE_HISTORY,
             body={"messages": messages}
         )
-        self._server.send(packet)
+        response = self._server.send(packet)
+        return response.body.get("data", {})
 
     def get_history(self) -> list:
         packet = Packet(
@@ -72,7 +73,9 @@ class BackendClient:
             type=PacketType.GET_HISTORY,
             body={}
         )
-        return self._server.send(packet).body.get("history", [])
+        response = self._server.send(packet)
+        data = response.body.get("data", {})
+        return data.get("history", [])
     
     def clear_history(self) -> Dict:
         packet = Packet(
@@ -80,7 +83,8 @@ class BackendClient:
             type=PacketType.SAVE_HISTORY,
             body={"messages": []}
         )
-        return self._server.send(packet).body
+        response = self._server.send(packet)
+        return response.body.get("data", {})
     
     def shutdown(self) -> None:
         self._server.shutdown()

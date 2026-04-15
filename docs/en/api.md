@@ -103,7 +103,10 @@ client = BackendClient(server)
 result = client.process_message("Hello, please remember my name is Xiao Ming")
 
 if result.get("success"):
-    print(result["content"])
+    # Response data is in "data" field
+    print(result["data"]["content"])
+    # Tool calls: result["data"]["tool_calls"]
+    # Rejected tools: result["data"]["rejected_tools"]
 ```
 
 ---
@@ -288,7 +291,7 @@ body = {
 - Messages are automatically saved to database `chat_records` table
 - System automatically keeps only 500 most recent records, older records are deleted
 - Each call to `PROCESS_MESSAGE` will automatically save user message and AI response
-```
+- **Clear History**: Passing empty messages list `messages=[]` clears history, `client.clear_history()` method is implemented based on this
 
 ---
 
