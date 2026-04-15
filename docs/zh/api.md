@@ -25,10 +25,8 @@ class PacketType(Enum):
     PROCESS_MESSAGE = "process_message"  # 处理消息
     EXECUTE_TOOL = "execute_tool"        # 执行工具
     GET_STATUS = "get_status"            # 获取状态
-    GET_CONFIG = "get_config"            # 获取配置
-    SET_CONFIG = "set_config"            # 设置配置
-    GET_TOOL_LIMITS = "get_tool_limits"   # 获取工具限制
-    SET_TOOL_LIMITS = "set_tool_limits"   # 设置工具限制
+    GET_SETTINGS = "get_settings"         # 获取完整配置（api_config + tool_limits）
+    SET_SETTINGS = "set_settings"        # 设置完整配置（api_config + tool_limits）
     GET_HISTORY = "get_history"           # 获取历史
     SAVE_HISTORY = "save_history"         # 保存历史
     SHUTDOWN = "shutdown"                 # 关闭服务
@@ -166,9 +164,9 @@ print(status["data"]["running"])  # True
 
 ---
 
-### 4. GET_CONFIG - 获取配置
+### 4. GET_SETTINGS - 获取完整配置
 
-获取当前 API 配置。
+获取当前 API 配置和工具限制（一次获取全部）。
 
 **请求参数：**
 ```python
@@ -178,112 +176,82 @@ body = {}  # 无参数
 **响应数据：**
 ```python
 {
-    "api_key": str,   # API Key
-    "base_url": str,  # API Base URL
-    "model": str     # 模型名称
+    "api_config": {
+        "api_key": str,   # API Key
+        "base_url": str,  # API Base URL
+        "model": str     # 模型名称
+    },
+    "tool_limits": {
+        "persona_query_max": int,   # 人设图查询上限
+        "persona_update_max": int,  # 人设图修改上限
+        "task_query_max": int,       # 工作记忆查询上限
+        "task_update_max": int,      # 工作记忆修改上限
+        "memory_query_max": int,     # 一般记忆查询上限
+        "memory_update_max": int    # 一般记忆修改上限
+    }
 }
+```
+
+**示例：**
+```python
+result = client.get_settings()
+api_config = result["data"]["api_config"]
+tool_limits = result["data"]["tool_limits"]
 ```
 
 ---
 
-### 5. SET_CONFIG - 设置配置
+### 5. SET_SETTINGS - 设置完整配置
 
-更新 API 配置（API Key 和 Base URL）。
+更新 API 配置和工具限制（一次设置全部）。
 
 **请求参数：**
 ```python
 body = {
-    "api_key": str,    # API Key
-    "base_url": str,   # API Base URL (默认: https://api.deepseek.com)
-    "model": str       # 模型名称 (默认: deepseek-chat)
+    "api_config": {
+        "api_key": str,    # API Key
+        "base_url": str,   # API Base URL (默认: https://api.deepseek.com)
+        "model": str       # 模型名称 (默认: deepseek-chat)
+    },
+    "tool_limits": {
+        "persona_query_max": int,   # 人设图查询上限 (≥1)
+        "persona_update_max": int,  # 人设图修改上限 (≥1)
+        "task_query_max": int,       # 工作记忆查询上限 (≥1)
+        "task_update_max": int,     # 工作记忆修改上限 (≥1)
+        "memory_query_max": int,    # 一般记忆查询上限 (≥1)
+        "memory_update_max": int     # 一般记忆修改上限 (≥1)
+    }
 }
 ```
 
 **响应数据：**
 ```python
 {
-    "status": "config_updated"
+    "status": "settings_updated"
 }
 ```
 
 **示例：**
 ```python
-result = client.update_config(
-    api_key="sk-xxxxx",
-    base_url="https://api.deepseek.com",
-    model="deepseek-chat"
+result = client.update_settings(
+    api_config={
+        "api_key": "sk-xxxxx",
+        "base_url": "https://api.deepseek.com",
+        "model": "deepseek-chat"
+    },
+    tool_limits={
+        "persona_query_max": 2,
+        "task_query_max": 5,
+        "memory_query_max": 30
+    }
 )
 ```
 
 ---
 
-### 6. GET_TOOL_LIMITS - 获取工具限制
+### 6. GET_HISTORY - 获取消息历史
 
-获取当前 AI 推理时的工具调用限制配置。
-
-**请求参数：**
-```python
-body = {}  # 无参数
-```
-
-**响应数据：**
-```python
-{
-    "persona_query_max": int,   # 人设图查询上限
-    "persona_update_max": int,  # 人设图修改上限
-    "task_query_max": int,       # 工作记忆查询上限
-    "task_update_max": int,      # 工作记忆修改上限
-    "memory_query_max": int,     # 一般记忆查询上限
-    "memory_update_max": int    # 一般记忆修改上限
-}
-```
-
-**示例：**
-```python
-result = client.get_tool_limits()
-print(result["data"]["persona_query_max"])  # 1
-```
-
----
-
-### 7. SET_TOOL_LIMITS - 设置工具限制
-
-设置 AI 推理时的工具调用限制。
-
-**请求参数：**
-```python
-body = {
-    "persona_query_max": int,   # 人设图查询上限 (≥1)
-    "persona_update_max": int,  # 人设图修改上限 (≥1)
-    "task_query_max": int,       # 工作记忆查询上限 (≥1)
-    "task_update_max": int,     # 工作记忆修改上限 (≥1)
-    "memory_query_max": int,    # 一般记忆查询上限 (≥1)
-    "memory_update_max": int     # 一般记忆修改上限 (≥1)
-}
-```
-
-**响应数据：**
-```python
-{
-    "status": "tool_limits_updated",
-    "limits": {...}  # 更新后的限制
-}
-```
-
-**示例：**
-```python
-result = client.update_tool_limits(
-    persona_query_max=2,
-    task_query_max=5,
-    memory_query_max=30
-)
-```
-
----
-
-### 8. GET_HISTORY - 获取消息历史
-
-获取保存的消息历史。
+获取保存的消息历史（从数据库读取，用于UI显示，不参与模型推理）。
 
 **请求参数：**
 ```python
@@ -293,20 +261,25 @@ body = {}  # 无参数
 **响应数据：**
 ```python
 {
-    "history": list  # 消息历史列表
+    "history": list  # 消息历史列表 [{"role": "user/assistant", "content": "..."}]
 }
 ```
+
+**说明：**
+- 消息历史存储在数据库 `chat_records` 表中
+- 最多返回最近 500 条记录
+- 历史消息仅用于 UI 显示，不参与模型推理
 
 ---
 
 ### 7. SAVE_HISTORY - 保存消息历史
 
-保存消息历史到内存。
+保存消息历史到数据库（每次处理消息后自动保存，用户消息和AI回复分别保存）。
 
 **请求参数：**
 ```python
 body = {
-    "messages": list  # 消息列表
+    "messages": list  # 消息列表 [{"role": "...", "content": "..."}]
 }
 ```
 
@@ -316,6 +289,11 @@ body = {
     "status": "history_saved"
 }
 ```
+
+**说明：**
+- 消息自动保存到数据库 `chat_records` 表
+- 系统自动限制最多保留 500 条记录，超出后自动删除旧记录
+- 每次调用 `PROCESS_MESSAGE` 时，会自动保存用户消息和AI回复
 
 ---
 
@@ -418,7 +396,10 @@ def send_message():
 @app.route("/config", methods=["POST"])
 def update_config():
     data = request.json
-    result = client.update_config(data["api_key"], data.get("base_url"))
+    result = client.update_settings(
+        api_config=data.get("api_config", {}),
+        tool_limits=data.get("tool_limits", {})
+    )
     return jsonify(result)
 
 @app.route("/status", methods=["GET"])
@@ -449,8 +430,11 @@ async def handler(websocket):
         
         if msg_type == "message":
             result = client.process_message(data["content"])
-        elif msg_type == "config":
-            result = client.update_config(data["api_key"], data.get("base_url"))
+        elif msg_type == "settings":
+            result = client.update_settings(
+                api_config=data.get("api_config", {}),
+                tool_limits=data.get("tool_limits", {})
+            )
         elif msg_type == "status":
             result = client.get_status()
         else:

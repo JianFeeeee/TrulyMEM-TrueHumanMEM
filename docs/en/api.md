@@ -25,10 +25,8 @@ class PacketType(Enum):
     PROCESS_MESSAGE = "process_message"  # Process message
     EXECUTE_TOOL = "execute_tool"        # Execute tool
     GET_STATUS = "get_status"            # Get status
-    GET_CONFIG = "get_config"            # Get config
-    SET_CONFIG = "set_config"            # Set config
-    GET_TOOL_LIMITS = "get_tool_limits"   # Get tool limits
-    SET_TOOL_LIMITS = "set_tool_limits"   # Set tool limits
+    GET_SETTINGS = "get_settings"         # Get all settings (api_config + tool_limits)
+    SET_SETTINGS = "set_settings"        # Set all settings (api_config + tool_limits)
     GET_HISTORY = "get_history"           # Get history
     SAVE_HISTORY = "save_history"         # Save history
     SHUTDOWN = "shutdown"                 # Shutdown service
@@ -160,9 +158,9 @@ body = {}  # No parameters
 
 ---
 
-### 4. GET_CONFIG - Get Config
+### 4. GET_SETTINGS - Get All Settings
 
-Get current API configuration.
+Get current API config and tool limits (all at once).
 
 **Request parameters:**
 ```python
@@ -172,103 +170,82 @@ body = {}  # No parameters
 **Response data:**
 ```python
 {
-    "api_key": str,   # API Key
-    "base_url": str,  # API Base URL
-    "model": str     # Model name
+    "api_config": {
+        "api_key": str,   # API Key
+        "base_url": str,  # API Base URL
+        "model": str     # Model name
+    },
+    "tool_limits": {
+        "persona_query_max": int,   # Persona graph query limit
+        "persona_update_max": int,  # Persona graph update limit
+        "task_query_max": int,       # Working memory query limit
+        "task_update_max": int,      # Working memory update limit
+        "memory_query_max": int,      # General memory query limit
+        "memory_update_max": int     # General memory update limit
+    }
 }
+```
+
+**Example:**
+```python
+result = client.get_settings()
+api_config = result["data"]["api_config"]
+tool_limits = result["data"]["tool_limits"]
 ```
 
 ---
 
-### 5. SET_CONFIG - Set Config
+### 5. SET_SETTINGS - Set All Settings
 
-Update API configuration (API Key and Base URL).
+Update API config and tool limits (all at once).
 
 **Request parameters:**
 ```python
 body = {
-    "api_key": str,    # API Key
-    "base_url": str,   # API Base URL (default: https://api.deepseek.com)
-    "model": str       # Model name (default: deepseek-chat)
+    "api_config": {
+        "api_key": str,    # API Key
+        "base_url": str,   # API Base URL (default: https://api.deepseek.com)
+        "model": str       # Model name (default: deepseek-chat)
+    },
+    "tool_limits": {
+        "persona_query_max": int,   # Persona query limit (≥1)
+        "persona_update_max": int,  # Persona update limit (≥1)
+        "task_query_max": int,       # Working memory query limit (≥1)
+        "task_update_max": int,      # Working memory update limit (≥1)
+        "memory_query_max": int,     # General memory query limit (≥1)
+        "memory_update_max": int     # General memory update limit (≥1)
+    }
 }
 ```
 
 **Response data:**
 ```python
 {
-    "status": "config_updated"
-}
-```
-
----
-
-### 6. GET_TOOL_LIMITS - Get Tool Limits
-
-Get current AI reasoning tool call limits.
-
-**Request Parameters:**
-```python
-body = {}  # No parameters
-```
-
-**Response Data:**
-```python
-{
-    "persona_query_max": int,   # Persona graph query limit
-    "persona_update_max": int,  # Persona graph update limit
-    "task_query_max": int,       # Working memory query limit
-    "task_update_max": int,     # Working memory update limit
-    "memory_query_max": int,      # General memory query limit
-    "memory_update_max": int    # General memory update limit
+    "status": "settings_updated"
 }
 ```
 
 **Example:**
 ```python
-result = client.get_tool_limits()
-print(result["data"]["persona_query_max"])  # 1
-```
-
----
-
-### 7. SET_TOOL_LIMITS - Set Tool Limits
-
-Set AI reasoning tool call limits.
-
-**Request Parameters:**
-```python
-body = {
-    "persona_query_max": int,   # Persona query limit (≥1)
-    "persona_update_max": int,  # Persona update limit (≥1)
-    "task_query_max": int,       # Working memory query limit (≥1)
-    "task_update_max": int,      # Working memory update limit (≥1)
-    "memory_query_max": int,     # General memory query limit (≥1)
-    "memory_update_max": int     # General memory update limit (≥1)
-}
-```
-
-**Response Data:**
-```python
-{
-    "status": "tool_limits_updated",
-    "limits": {...}  # Updated limits
-}
-```
-
-**Example:**
-```python
-result = client.update_tool_limits(
-    persona_query_max=2,
-    task_query_max=5,
-    memory_query_max=30
+result = client.update_settings(
+    api_config={
+        "api_key": "sk-xxxxx",
+        "base_url": "https://api.deepseek.com",
+        "model": "deepseek-chat"
+    },
+    tool_limits={
+        "persona_query_max": 2,
+        "task_query_max": 5,
+        "memory_query_max": 30
+    }
 )
 ```
 
 ---
 
-### 8. GET_HISTORY - Get Message History
+### 6. GET_HISTORY - Get Message History
 
-Get saved message history.
+Get saved message history (from database, for UI display only, not used in model inference).
 
 **Request parameters:**
 ```python
@@ -278,20 +255,25 @@ body = {}  # No parameters
 **Response data:**
 ```python
 {
-    "history": list  # Message history list
+    "history": list  # Message history list [{"role": "user/assistant", "content": "..."}]
 }
 ```
+
+**Notes:**
+- Message history is stored in database `chat_records` table
+- Returns up to 500 most recent records
+- History messages are only for UI display, not used in model inference
 
 ---
 
 ### 7. SAVE_HISTORY - Save Message History
 
-Save message history to memory.
+Save message history to database (automatically saved after each message processing, user message and AI response saved separately).
 
 **Request parameters:**
 ```python
 body = {
-    "messages": list  # Message list
+    "messages": list  # Message list [{"role": "...", "content": "..."}]
 }
 ```
 
@@ -300,6 +282,12 @@ body = {
 {
     "status": "history_saved"
 }
+```
+
+**Notes:**
+- Messages are automatically saved to database `chat_records` table
+- System automatically keeps only 500 most recent records, older records are deleted
+- Each call to `PROCESS_MESSAGE` will automatically save user message and AI response
 ```
 
 ---
@@ -403,7 +391,10 @@ def send_message():
 @app.route("/config", methods=["POST"])
 def update_config():
     data = request.json
-    result = client.update_config(data["api_key"], data.get("base_url"))
+    result = client.update_settings(
+        api_config=data.get("api_config", {}),
+        tool_limits=data.get("tool_limits", {})
+    )
     return jsonify(result)
 
 @app.route("/status", methods=["GET"])
@@ -434,8 +425,11 @@ async def handler(websocket):
         
         if msg_type == "message":
             result = client.process_message(data["content"])
-        elif msg_type == "config":
-            result = client.update_config(data["api_key"], data.get("base_url"))
+        elif msg_type == "settings":
+            result = client.update_settings(
+                api_config=data.get("api_config", {}),
+                tool_limits=data.get("tool_limits", {})
+            )
         elif msg_type == "status":
             result = client.get_status()
         else:
