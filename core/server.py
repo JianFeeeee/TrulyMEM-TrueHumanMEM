@@ -366,7 +366,7 @@ class BackendServer:
         self._input_queue.put(packet)
         
         try:
-            response = resp_q.get(timeout=30.0)
+            response = resp_q.get(timeout=300.0)
             return Packet(
                 id=response.id,
                 type=packet.type,
