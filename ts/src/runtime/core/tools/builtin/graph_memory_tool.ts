@@ -1,4 +1,4 @@
-import type { Tool, ToolCategory, PermissionLevel, ToolInputSchema, ToolExecutionContext, ToolOutput } from '../tool_interface';
+import type { Tool, ToolCategory, PermissionLevel, ToolInputSchema, ToolOutput, ToolInput, ToolExecutionContext } from 'waterflow/runtime/core/tools/tool_interface';
 import { GraphDatabase } from '../../graph_memory/graph_database';
 import { MemoryService } from '../../graph_memory/memory_service';
 
@@ -8,7 +8,7 @@ const GRAPH_MEMORY_TOOL_DESCRIPTION = `图记忆工具 - 让 AI 拥有真正的�
 
 操作:
 - recall: 检索记忆
-- commit: 写入记忆  
+- commit: 写入记忆
 - purge: 删除记忆
 - introspect: 查看状态
 - persona_update/clear: 人设管理
@@ -20,6 +20,7 @@ export class GraphMemoryTool implements Tool {
   readonly description = GRAPH_MEMORY_TOOL_DESCRIPTION;
   readonly category: ToolCategory = 'analysis';
   readonly permissionLevel: PermissionLevel = 'safe';
+  readonly alwaysLoad = true;
 
   readonly inputSchema: ToolInputSchema = {
     type: 'object',
@@ -100,14 +101,18 @@ export class GraphMemoryTool implements Tool {
     this.service = new MemoryService(this.db);
   }
 
-  async handler(params: Record<string, unknown>, _context: ToolExecutionContext): Promise<ToolOutput> {
+  async handler(params: ToolInput, context: ToolExecutionContext): Promise<ToolOutput> {
     const action = params.action as string;
     const actionParams = params.params as Record<string, unknown>;
+    const logger = context?.logger;
 
     try {
+      logger?.info(`[GraphMemoryTool] Executing action: ${action}`);
       const result = await this.executeAction(action, actionParams);
+      logger?.info(`[GraphMemoryTool] Action ${action} completed successfully`);
       return JSON.stringify({ success: true, data: result }, null, 2);
     } catch (error) {
+      logger?.error(`[GraphMemoryTool] Action ${action} failed:`, error);
       return JSON.stringify({
         success: false,
         error: {

@@ -5,6 +5,7 @@ export interface Entity {
   mentionCount: number;
   createdAt: Date;
   updatedAt: Date;
+  depth?: number;  // BFS 搜索深度标注
 }
 
 export type RelationStatus = 'active' | 'deleted' | 'archived' | 'superseded';
@@ -21,6 +22,7 @@ export interface Relation {
   createdAt: Date;
   updatedAt: Date;
   dateBucket: string;
+  depth?: number;  // BFS 搜索深度标注
 }
 
 export interface Triplet {
@@ -71,6 +73,7 @@ export interface CommitResult {
 export interface PurgeResult {
   deleted: number;
   mode: string;
+  message?: string;
 }
 
 export type TaskState = '进行中' | '已完成' | '已暂停' | '已取消';

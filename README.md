@@ -48,122 +48,83 @@ ts/
 
 ## 在 WaterFlow 中使用
 
-本模块支持两种使用方式：**作为模块直接引用** 或 **作为 Skill 调用**。
+本模块完全不动 WaterFlow 源码，只需在你的入口文件中注册即可。
 
-### 方式一：作为模块直接引用（适合开发者集成）
+### 快速开始（推荐）
 
-#### 步骤 1：复制源码
-
-将本项目的 `ts/` 目录复制到你的 WaterFlow 项目中，例如：
-
-```
-你的WaterFlow项目/
-├── src/
-│   └── runtime/
-│       └── core/
-│           └── graph_memory/    # 从 ts/src/runtime/core/ 复制
-└── ts/                          # 或直接放在项目根目录
-    └── bundled-skills/          # Skill 文件
-```
-
-#### 步骤 2：编译 TypeScript
+#### 步骤 1：安装依赖
 
 ```bash
-cd ts/
-npm install
-npm run build
+npm install /path/to/TrulyMEM-TrueHumanMEM/ts
 ```
 
-编译后的文件会输出到 `ts/dist/` 目录。
+或在 `package.json` 中添加：
 
-#### 步骤 3：在代码中引用
+```json
+{
+  "dependencies": {
+    "trulymem-waterflow": "file:../TrulyMEM-TrueHumanMEM/ts"
+  }
+}
+```
+
+然后运行：
+
+```bash
+npm install
+```
+
+#### 步骤 2：在你的入口文件中注册
+
+只需两行代码，完全不动 WaterFlow 源码：
 
 ```typescript
-import { createGraphMemoryTool } from './runtime/core/tools/builtin/graph_memory_tool';
+import { getPlatform } from 'waterflow/platform';
+import { installTrulyMEM } from 'trulymem/tools';
 
-// 创建工具实例，可以传入 sessionId 来区分不同会话
-const tool = createGraphMemoryTool('my-session-id');
+// 一行安装，返回配置好的 ToolRegistry
+const registry = installTrulyMEM(getPlatform(), 'my-session-id');
 
-// 准备执行上下文
-const context = {
-  toolCallId: 'call-123',
-  workingDirectory: '/project',
-  abortController: { signal: {} },
-  config: { timeout: 30000 },
-  logger: {
-    info: console.log,
-    warn: console.warn,
-    error: console.error,
-    debug: console.debug
-  }
-};
-
-// 写入记忆示例
-const commitResult = await tool.handler({
-  action: 'commit',
-  params: {
-    triplets: [
-      { subject: '用户', relation: '喜欢', object: '编程' },
-      { subject: '用户', relation: '正在学习', object: 'TypeScript' }
-    ]
-  }
-}, context);
-
-console.log(commitResult);
-// 输出: {"success":true,"data":{"createdEntities":4,"createdRelations":2}}
-
-// 检索记忆示例
-const recallResult = await tool.handler({
-  action: 'recall',
-  params: {
-    queryIntent: '用户 编程'
-  }
-}, context);
-
-console.log(recallResult);
-// 输出: {"success":true,"data":{"entities":[...],"relations":[...],"message":"找到 X 个实体, Y 条关系"}}
+// 继续组装 WaterFlow...
+const toolExecutor = new ToolExecutor(registry);
 ```
 
-### 方式二：使用 Skill（推荐，适合 AI Agent 调用）
+### 手动注册（更灵活）
+
+如果你想自己控制 ToolRegistry 的创建：
+
+```typescript
+import { getPlatform } from 'waterflow/platform';
+import { initializeToolRegistry } from 'waterflow/runtime/core/tools/builtin';
+import { registerGraphMemoryTool } from 'trulymem/tools';
+
+const platform = getPlatform();
+const registry = initializeToolRegistry(platform);
+
+// 注册图记忆工具
+registerGraphMemoryTool(registry, 'my-session-id');
+
+// 继续组装...
+```
+
+### 使用 Skill（AI Agent 调用）
 
 #### 步骤 1：配置 Skill 来源
 
-在你的 WaterFlow 项目中，找到 Skill 配置文件，添加 bundled 来源指向本项目的 Skill 目录：
-
 ```typescript
-// skill_interface.ts 或配置文件中
-import { DEFAULT_SKILL_LOADER_CONFIG } from './skill_interface';
-
 const config = {
   ...DEFAULT_SKILL_LOADER_CONFIG,
   sources: {
     ...DEFAULT_SKILL_LOADER_CONFIG.sources,
-    bundled: './ts/bundled-skills'  // 指向本项目的 Skill 目录
+    bundled: './node_modules/trulymem-waterflow/bundled-skills'
   },
   enabledSources: ['project', 'bundled']
 };
 ```
 
-#### 步骤 2：通过 Agent 调用 Skill
+#### 步骤 2：通过 Agent 调用
 
-在你的 Agent 或 Workflow 中，通过 Tool 调用 Skill：
-
-```
-使用 skill:graph_memory 进行以下操作:
-
-1. 写入记忆: 我喜欢编程，正在学习 TypeScript
-2. 检索记忆: 找出我和编程相关的记忆
-```
-
-或者通过代码调用：
-
-```typescript
-// 通过 SkillTool 调用
-const skillResult = await skillTool.handler({
-  skill: 'graph_memory',
-  args: 'recall - queryIntent: "用户 学习"'
-}, context);
-```
+AI Agent 会自动读取 SKILL.md 并调用 `builtin:graph_memory` 工具。
 
 #### 可用 Skill 列表
 

@@ -49,122 +49,83 @@ ts/
 
 ## Usage in WaterFlow
 
-This module supports two usage methods: **import as module** or **use as Skill**.
+This module requires **zero changes** to WaterFlow source code. Just register it in your entry file.
 
-### Method 1: Import as Module (for developer integration)
+### Quick Start (Recommended)
 
-#### Step 1: Copy source files
-
-Copy the `ts/` directory to your WaterFlow project, for example:
-
-```
-your-waterflow-project/
-├── src/
-│   └── runtime/
-│       └── core/
-│           └── graph_memory/    # Copy from ts/src/runtime/core/
-└── ts/                          # Or place in project root
-    └── bundled-skills/          # Skill files
-```
-
-#### Step 2: Build TypeScript
+#### Step 1: Install
 
 ```bash
-cd ts/
-npm install
-npm run build
+npm install /path/to/TrulyMEM-TrueHumanMEM/ts
 ```
 
-Compiled files will be output to `ts/dist/`.
+Or add to `package.json`:
 
-#### Step 3: Import in your code
+```json
+{
+  "dependencies": {
+    "trulymem-waterflow": "file:../TrulyMEM-TrueHumanMEM/ts"
+  }
+}
+```
+
+Then run:
+
+```bash
+npm install
+```
+
+#### Step 2: Register in your entry file
+
+Just two lines, zero changes to WaterFlow:
 
 ```typescript
-import { createGraphMemoryTool } from './runtime/core/tools/builtin/graph_memory_tool';
+import { getPlatform } from 'waterflow/platform';
+import { installTrulyMEM } from 'trulymem/tools';
 
-// Create tool instance, can pass sessionId to distinguish different sessions
-const tool = createGraphMemoryTool('my-session-id');
+// One-line install, returns configured ToolRegistry
+const registry = installTrulyMEM(getPlatform(), 'my-session-id');
 
-// Prepare execution context
-const context = {
-  toolCallId: 'call-123',
-  workingDirectory: '/project',
-  abortController: { signal: {} },
-  config: { timeout: 30000 },
-  logger: {
-    info: console.log,
-    warn: console.warn,
-    error: console.error,
-    debug: console.debug
-  }
-};
-
-// Commit memory example
-const commitResult = await tool.handler({
-  action: 'commit',
-  params: {
-    triplets: [
-      { subject: 'User', relation: 'likes', object: 'Programming' },
-      { subject: 'User', relation: 'is learning', object: 'TypeScript' }
-    ]
-  }
-}, context);
-
-console.log(commitResult);
-// Output: {"success":true,"data":{"createdEntities":4,"createdRelations":2}}
-
-// Recall memory example
-const recallResult = await tool.handler({
-  action: 'recall',
-  params: {
-    queryIntent: 'User Programming'
-  }
-}, context);
-
-console.log(recallResult);
-// Output: {"success":true,"data":{"entities":[...],"relations":[...],"message":"Found X entities, Y relations"}}
+// Continue assembling WaterFlow...
+const toolExecutor = new ToolExecutor(registry);
 ```
 
-### Method 2: Use Skill (recommended for AI Agent)
+### Manual Registration (More control)
+
+If you want to control ToolRegistry creation yourself:
+
+```typescript
+import { getPlatform } from 'waterflow/platform';
+import { initializeToolRegistry } from 'waterflow/runtime/core/tools/builtin';
+import { registerGraphMemoryTool } from 'trulymem/tools';
+
+const platform = getPlatform();
+const registry = initializeToolRegistry(platform);
+
+// Register graph memory tool
+registerGraphMemoryTool(registry, 'my-session-id');
+
+// Continue assembling...
+```
+
+### Use Skill (AI Agent)
 
 #### Step 1: Configure Skill source
 
-In your WaterFlow project, find the Skill configuration file and add bundled source pointing to this project's Skill directory:
-
 ```typescript
-// skill_interface.ts or config file
-import { DEFAULT_SKILL_LOADER_CONFIG } from './skill_interface';
-
 const config = {
   ...DEFAULT_SKILL_LOADER_CONFIG,
   sources: {
     ...DEFAULT_SKILL_LOADER_CONFIG.sources,
-    bundled: './ts/bundled-skills'  // Point to this project's Skill directory
+    bundled: './node_modules/trulymem-waterflow/bundled-skills'
   },
   enabledSources: ['project', 'bundled']
 };
 ```
 
-#### Step 2: Call Skill via Agent
+#### Step 2: Call via Agent
 
-In your Agent or Workflow, call Skill via Tool:
-
-```
-Use skill:graph_memory for:
-
-1. Commit memory: I like programming, learning TypeScript
-2. Recall memory: Find memories related to me and programming
-```
-
-Or call via code:
-
-```typescript
-// Call via SkillTool
-const skillResult = await skillTool.handler({
-  skill: 'graph_memory',
-  args: 'recall - queryIntent: "User learning"'
-}, context);
-```
+AI Agent automatically reads SKILL.md and calls `builtin:graph_memory` tool.
 
 #### Available Skills
 

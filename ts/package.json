@@ -1,17 +1,28 @@
 {
   "name": "trulymem-waterflow",
   "version": "1.0.0",
+  "description": "TrulyMEM 图记忆系统 - WaterFlow Skill/Tool 实现",
   "type": "module",
+  "main": "./dist/runtime/core/tools/builtin/index.js",
+  "exports": {
+    "./tools": "./dist/runtime/core/tools/builtin/index.js",
+    "./graph_memory": "./dist/runtime/core/graph_memory/index.js",
+    "./skills": "./bundled-skills"
+  },
   "scripts": {
     "build": "tsc",
     "test": "vitest"
   },
+  "peerDependencies": {
+    "waterflow-ts": ">=0.1.0"
+  },
   "dependencies": {
-    "yaml": "^2.8.3"
+    "sql.js": "^1.11.0"
   },
   "devDependencies": {
     "@types/node": "^25.5.2",
     "typescript": "^5.0.0",
-    "vitest": "^2.0.0"
+    "vitest": "^2.0.0",
+    "waterflow-ts": "file:../../WaterFlow/ts"
   }
 }
