@@ -122,7 +122,7 @@ class BackendServer:
             persona_query_max=self._tool_limits.get("persona_query_max", 1),
             persona_update_max=self._tool_limits.get("persona_update_max", 1),
             task_query_max=self._tool_limits.get("task_query_max", 4),
-            task_update_max=self._tool_limits.get("task_update_max", 2),
+            task_update_max=self._tool_limits.get("task_update_max", 5),
             memory_query_max=self._tool_limits.get("memory_query_max", 20),
             memory_update_max=self._tool_limits.get("memory_update_max", 10),
         )
