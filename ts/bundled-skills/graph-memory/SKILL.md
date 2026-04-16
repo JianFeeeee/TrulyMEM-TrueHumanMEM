@@ -1,21 +1,8 @@
 ---
-name: graph_memory
-description: 图记忆工具 - 让 AI 拥有真正的长期记忆能力
-when_to_use: 需要 AI 记住或回忆信息时
-context: inline
-allowed_tools:
-  - builtin:graph_memory
-arguments:
-  - name: action
-    type: string
-    required: true
-    enum: [recall, commit, purge, introspect]
-    description: 记忆操作类型
-  - name: params
-    type: object
-    required: true
-    description: 操作参数
-user_invocable: true
+name: graph-memory
+description: "图记忆工具 - 检索、写入、删除记忆，管理人设和任务。使用 recall 检索、commit 写入、purge 删除"
+metadata: {"openclaw": {"requires": {"bins": ["node"]}}}
+user-invocable: true
 ---
 
 # GraphMemory 图记忆操作
@@ -34,14 +21,6 @@ user_invocable: true
 - `depth`: 检索深度
 - `sessionFilter`: 可选的会话ID过滤
 
-**示例**:
-```
-action: recall
-params:
-  queryIntent: "用户 喜欢 编程"
-  seedEntities: ["用户"]
-```
-
 ### 2. commit - 写入记忆
 
 将信息写入记忆图。
@@ -50,19 +29,6 @@ params:
 - `triplets`: 三元组数组，每个包含 subject, relation, object
 - `sessionId`: 会话ID
 - `turnId`: 轮次ID
-
-**示例**:
-```
-action: commit
-params:
-  triplets:
-    - subject: "用户"
-      relation: "喜欢"
-      object: "Python"
-    - subject: "用户"
-      relation: "正在学习"
-      object: "TypeScript"
-```
 
 ### 3. purge - 删除记忆
 
@@ -73,26 +39,23 @@ params:
 - `mode`: 删除模式 (soft/hard/supersede)
 - `newRelation`: 可选的替代关系
 
-**示例**:
-```
-action: purge
-params:
-  criteria:
-    subject: "旧信息"
-  mode: "soft"
-```
-
 ### 4. introspect - 查看状态
 
 查看当前记忆状态统计。
 
-**参数**: 无
+### 5. archive - 归档旧记忆
 
-**示例**:
-```
-action: introspect
-params: {}
-```
+将 N 天前的非活跃关系标记为归档。
+
+**参数**:
+- `days`: 归档天数（默认 30）
+
+### 6. cleanup - 清理无效数据
+
+物理删除已删除超过 90 天的关系和孤立节点。
+
+**参数**:
+- `dry_run`: 仅预览不删除（默认 true）
 
 ## 使用原则
 

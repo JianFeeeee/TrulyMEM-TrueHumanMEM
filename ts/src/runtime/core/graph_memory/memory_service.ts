@@ -24,6 +24,14 @@ export class MemoryService {
     return this.db.introspect();
   }
 
+  async archive(days: number = 30): Promise<{ archived: number }> {
+    return this.db.archive(days);
+  }
+
+  async cleanup(dryRun: boolean = true): Promise<{ deleted_relations: number; deleted_entities: number; details?: string[] }> {
+    return this.db.cleanup(dryRun);
+  }
+
   async updatePersona(params: { attributes: Array<{ attribute: string; value: string }>; mode?: 'merge' | 'replace' }): Promise<{ status: string; updatedAttributes: number }> {
     const { attributes, mode = 'merge' } = params;
 

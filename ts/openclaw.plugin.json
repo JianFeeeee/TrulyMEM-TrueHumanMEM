@@ -1,0 +1,15 @@
+{
+  "id": "graph-memory",
+  "name": "Graph Memory",
+  "description": "让 AI 拥有真正的长期记忆能力 - 基于图数据库的记忆系统",
+  "configSchema": {
+    "type": "object",
+    "additionalProperties": false,
+    "properties": {
+      "dbPath": {
+        "type": "string",
+        "description": "SQLite 数据库文件路径，默认 graph_memory.db"
+      }
+    }
+  }
+}

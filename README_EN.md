@@ -1,114 +1,30 @@
-# TrulyMEM - OpenClaw Adapter
+# TrulyMEM - OpenClaw Graph Memory Plugin
 
-Give AI true long-term memory capability - OpenClaw framework adapter version
+Give AI true long-term memory capability - OpenClaw framework plugin version
 
 [中文版本](./README.md)
 
 ---
 
-## 🤖 AI Self-Installation Guide
-
-> This section is for AI Agents, guiding them how to self-install this Skill to OpenClaw
-
-### Installation Steps
-
-#### Step 1: Locate Skill Directory
-
-OpenClaw Skill precedence: `/.agents/skills/` > `~/.agents/skills/` > `~/.openclaw/skills/`
-
-Copy the `skills/` directory to a high-priority location:
-
-```bash
-# Method 1: User-level installation (recommended)
-cp -r skills/ ~/.agents/skills/graph_memory
-
-# Method 2: System-level installation
-sudo cp -r skills/ /.agents/skills/graph_memory
-```
-
-#### Step 2: Verify Installation
-
-Invoke Skill in OpenClaw:
-
-```
-Remember: I like programming and am learning TypeScript
-```
-
-AI should receive a confirmation message.
-
-#### Step 3: Use the Skill
-
-After installation, AI can use these commands:
-
-| Command | Function |
-|---------|----------|
-| `commit` | Commit memories |
-| `recall` | Retrieve memories |
-| `purge` | Delete memories |
-| `introspect` | Inspect status |
-| `persona_update/clear` | Persona management |
-| `task_create/set_state/delete` | Task management |
-
----
-
 ## Introduction
 
-This project ports TrulyMEM's graph memory capability to TypeScript for the OpenClaw framework.
+This project is an OpenClaw plugin for graph-based memory with SQLite persistence.
 
-As an OpenClaw Skill module, it provides graph memory functionality:
-
-- **recall**: Retrieve memories
-- **commit**: Commit memories
-- **purge**: Delete memories
-- **introspect**: Inspect status
+**Core Features:**
+- **recall**: Retrieve memories (keyword, seed entities, multi-hop traversal, time filtering)
+- **commit**: Write memories (batch triplet writes)
+- **purge**: Delete memories (soft/hard/supersede modes)
+- **introspect**: View memory statistics
+- **archive**: Archive old memories
+- **cleanup**: Clean up invalid data
 - **persona_update/clear**: Persona management
-- **task_create/set_state/delete**: Task management
+- **task_create/set_state/delete/link_info**: Task management
 
 ---
 
-## Directory Structure
+## Installation
 
-```
-ts/
-├── src/runtime/core/
-│   ├── graph_memory/           # Graph memory core module
-│   │   ├── types.ts            # Type definitions
-│   │   ├── graph_database.ts   # Graph database
-│   │   ├── memory_service.ts  # Memory service
-│   │   └── index.ts         # Module exports
-│   └── tools/
-│       └── builtin/
-│           └── graph_memory_tool.ts  # Tool implementation
-│
-├── package.json            # Project config
-└── tsconfig.json           # TypeScript config
-
-skills/                     # OpenClaw Skill definitions
-└── graph_memory/
-    ├── SKILL.md            # Memory operations
-    ├── persona/SKILL.md   # Persona management
-    └── task/SKILL.md      # Task management
-```
-
----
-
-## Using in OpenClaw
-
-### Method 1: As Module (for Developer Integration)
-
-#### Step 1: Copy Source Code
-
-Copy the `ts/` directory to your OpenClaw project:
-
-```
-yourOpenClawProject/
-└── src/
-    └── runtime/
-        └── core/
-            └── graph_memory/    # Copy from ts/src/runtime/core/
-```
-
-#### Step 2: Compile TypeScript
+### Method 1: As OpenClaw Plugin
 
 ```bash
 cd ts/
@@ -116,126 +32,133 @@ npm install
 npm run build
 ```
 
-Compiled files output to `ts/dist/` directory.
+Add the plugin directory to your OpenClaw config, or use `openclaw plugins install`.
 
-#### Step 3: Import in Code
+### Method 2: As Skill (Recommended)
+
+Copy the `skills/` directory to OpenClaw's skill directory:
+
+```bash
+cp -r skills/graph-memory ~/.agents/skills/graph-memory
+cp -r skills/graph-memory/persona ~/.agents/skills/graph-memory-persona
+cp -r skills/graph-memory/task ~/.agents/skills/graph-memory-task
+```
+
+---
+
+## Directory Structure
+
+```
+ts/
+├── src/
+│   ├── plugin-entry.ts              # OpenClaw Plugin entry point
+│   └── runtime/core/
+│       ├── graph_memory/
+│       │   ├── types.ts             # Type definitions
+│       │   ├── graph_database.ts    # SQLite graph database
+│       │   ├── memory_service.ts    # Memory service
+│       │   └── index.ts             # Module exports
+│       └── tools/
+│           ├── builtin/
+│           │   └── graph_memory_tool.ts  # Tool implementation
+│           └── tool_limiter.ts      # Call rate limiter
+├── bundled-skills/
+│   └── graph-memory/                # Bundled Skill definitions
+│       ├── SKILL.md
+│       ├── persona/SKILL.md
+│       └── task/SKILL.md
+├── package.json
+├── tsconfig.json
+└── openclaw.plugin.json             # Plugin Manifest
+
+skills/                              # Standalone Skill definitions
+└── graph-memory/
+    ├── SKILL.md
+    ├── persona/SKILL.md
+    └── task/SKILL.md
+```
+
+---
+
+## Usage in OpenClaw
+
+### As Plugin
 
 ```typescript
-import { createGraphMemoryTool } from './runtime/core/tools/builtin/graph_memory_tool';
+import registerGraphMemoryPlugin from './dist/plugin-entry.js';
 
-// Create tool instance
-const tool = createGraphMemoryTool('my-session-id');
+registerGraphMemoryPlugin({
+  registerTool(tool) {
+    // OpenClaw will auto-register the tool
+  }
+});
+```
 
-// Commit memory example
-const commitResult = await tool.handler({
+### As Standalone Module
+
+```typescript
+import { createGraphMemoryTool } from './dist/runtime/core/tools/builtin/graph_memory_tool.js';
+
+const tool = createGraphMemoryTool('graph_memory.db', 'my-session-id');
+
+// Write memory
+const result = await tool.execute('call-1', {
   action: 'commit',
   params: {
     triplets: [
-      { subject: '用户', relation: '喜欢', object: '编程' },
-      { subject: '用户', relation: '正在学习', object: 'TypeScript' }
+      { subject: 'User', relation: 'likes', object: 'programming' },
+      { subject: 'User', relation: 'learning', object: 'TypeScript' }
     ]
   }
-}, context);
+});
 
-// Recall memory example
-const recallResult = await tool.handler({
+// Recall memory
+const recallResult = await tool.execute('call-2', {
   action: 'recall',
-  params: {
-    queryIntent: '用户 编程'
-  }
-}, context);
+  params: { queryIntent: 'User programming' }
+});
 ```
-
-### Method 2: Use Skill (Recommended for AI Agent)
-
-#### Step 1: Place Skill Files
-
-Copy `skills/` directory to OpenClaw's Skill directory:
-
-```bash
-cp -r skills/ ~/.agents/skills/graph_memory
-```
-
-#### Step 2: Invoke Skill
-
-Use directly in OpenClaw:
-
-```
-Use graph_memory to remember: I like programming and am learning TypeScript
-```
-
-#### Available Skills
-
-| Skill Name | Function | Use Case |
-|------------|----------|----------|
-| `graph_memory` | Memory CRUD | Read/write/delete memories |
-| `graph_memory_persona` | Persona management | Set AI persona |
-| `graph_memory_task` | Task management | Create/update tasks |
 
 ---
 
 ## API
 
-### GraphMemoryTool
-
-```typescript
-const tool = new GraphMemoryTool(sessionId?: string);
-```
-
-#### Actions
+### Actions
 
 | Action | Description | Parameters |
 |--------|-------------|------------|
-| `recall` | Retrieve memories | `queryIntent`, `seedEntities`, `sessionFilter` |
-| `commit` | Commit memories | `triplets`, `sessionId`, `turnId` |
-| `purge` | Delete memories | `criteria`, `mode` |
-| `introspect` | Inspect status | - |
-| `persona_update` | Update persona | `attributes`, `mode` |
+| `recall` | Retrieve memories | `queryIntent`, `seedEntities`, `depth`, `sessionFilter`, `timeRange` |
+| `commit` | Write memories | `triplets`, `sessionId`, `turnId` |
+| `purge` | Delete memories | `criteria`, `mode` (soft/hard/supersede), `newRelation` |
+| `introspect` | View status | - |
+| `archive` | Archive old memories | `days` (default 30) |
+| `cleanup` | Clean invalid data | `dry_run` (default true) |
+| `persona_update` | Update persona | `attributes`, `mode` (merge/replace) |
 | `persona_clear` | Clear persona | `confirm` |
 | `task_create` | Create task | `task_id`, `description`, `info_nodes` |
-| `task_set_state` | Set task state | `task_id`, `state` |
+| `task_set_state` | Set state | `task_id`, `state` |
 | `task_delete` | Delete task | `task_id` |
+| `task_link_info` | Link info | `task_id`, `info_node` |
 
 ---
 
-## Examples
+## Skills
 
-### Commit Memory
+| Skill Name | Function | Use Case |
+|------------|----------|----------|
+| `graph-memory` | Memory CRUD | Read/write/delete memories |
+| `graph-memory-persona` | Persona management | Set AI role/personality |
+| `graph-memory-task` | Task management | Create/update long-term tasks |
 
-```json
-{
-  "action": "commit",
-  "params": {
-    "triplets": [
-      { "subject": "用户", "relation": "喜欢", "object": "TypeScript" },
-      { "subject": "用户", "relation": "正在学习", "object": "OpenClaw" }
-    ]
-  }
-}
-```
+---
 
-### Recall Memory
+## Development
 
-```json
-{
-  "action": "recall",
-  "params": {
-    "queryIntent": "用户 学习"
-  }
-}
-```
-
-### Create Task
-
-```json
-{
-  "action": "task_create",
-  "params": {
-    "task_id": "Task_学习TypeScript",
-    "description": "学习 TypeScript 并完成项目",
-    "info_nodes": ["文档链接", "教程链接"]
-  }
-}
+```bash
+cd ts/
+npm install
+npm run build    # Compile
+npm test         # Run tests
 ```
 
 ---
