@@ -14,7 +14,7 @@ class ToolLimits:
     
     # 工作记忆链限制
     task_query_max: int = 4          # 每轮最多查询4次工作记忆链
-    task_update_max: int = 2          # 每轮最多修改2次工作记忆链
+    task_update_max: int = 5          # 每轮最多修改5次工作记忆链
     
     # 一般记忆限制
     memory_query_max: int = 20        # 每轮最多查询20次一般记忆
@@ -62,18 +62,9 @@ class ToolLimiter:
         
         # 一般记忆工具
         if tool_name == 'memory_recall':
-            # 判断是查询人设图、工作记忆链还是一般记忆
-            query_intent = arguments.get('query_intent', '').lower()
-            
-            # 检查是否查询人设图
-            if any(kw in query_intent for kw in ['人设', '角色', '性格', '语气', '说话风格', '扮演']):
-                return ('persona', 'query')
-            
-            # 检查是否查询工作记忆链
-            if any(kw in query_intent for kw in ['tasknode', '工作记忆', '任务链', '任务', 'task']):
-                return ('task', 'query')
-            
-            # 一般记忆查询
+            # 所有 memory_recall 统一归为一般记忆查询
+            # 因为 query_intent 内容不可控，无法准确判断查询类型
+            # 写入操作通过工具名称明确区分，不受此影响
             return ('memory', 'query')
         
         if tool_name == 'memory_commit':

@@ -150,14 +150,26 @@ class EmbeddedGraphDB:
                             'mention_count': row['mention_count']
                         })
         
-        # 搜索关系
+        # 广度优先搜索（BFS）扩展实体和关系
         relations = []
+        visited_entity_ids = set(entity_ids)  # 已访问的实体
+        current_layer_ids = set(entity_ids)   # 当前层的实体
         
-        if entity_ids:
-            placeholders = ','.join('?' * len(entity_ids))
+        # 记录每个实体的深度
+        entity_depths = {}  # entity_id -> depth
+        for eid in entity_ids:
+            entity_depths[eid] = 0
+        
+        for layer in range(depth):
+            if not current_layer_ids:
+                break
+            
+            # 查询当前层实体的所有关系
+            placeholders = ','.join('?' * len(current_layer_ids))
             
             query = f"""
-                SELECT r.id, e1.name as source, e2.name as target,
+                SELECT r.id, r.source_id, r.target_id,
+                       e1.name as source, e2.name as target,
                        r.relation_type as type, r.confidence, r.session_id,
                        r.turn_id, r.created_at, r.status
                 FROM relations r
@@ -167,7 +179,7 @@ class EmbeddedGraphDB:
                   AND r.status = 'active'
             """
             
-            params = list(entity_ids) + list(entity_ids)
+            params = list(current_layer_ids) + list(current_layer_ids)
             
             if session_filter:
                 query += " AND r.session_id = ?"
@@ -175,8 +187,18 @@ class EmbeddedGraphDB:
             
             cursor.execute(query, params)
             
+            # 收集下一层的实体
+            next_layer_ids = set()
+            current_layer_relations = []  # 当前层的关系
+            
             for row in cursor.fetchall():
-                relations.append({
+                # 计算关系的深度（取两端实体深度的最大值+1）
+                source_depth = entity_depths.get(row['source_id'], layer)
+                target_depth = entity_depths.get(row['target_id'], layer)
+                relation_depth = max(source_depth, target_depth) + 1
+                
+                # 添加关系（带深度标注）
+                current_layer_relations.append({
                     'source': row['source'],
                     'target': row['target'],
                     'type': row['type'],
@@ -184,8 +206,52 @@ class EmbeddedGraphDB:
                     'session_id': row['session_id'],
                     'turn_id': row['turn_id'],
                     'created_at': row['created_at'],
-                    'status': row['status']
+                    'status': row['status'],
+                    'depth': relation_depth
                 })
+                
+                # 收集新实体（未访问过的）
+                source_id = row['source_id']
+                target_id = row['target_id']
+                
+                if source_id not in visited_entity_ids:
+                    next_layer_ids.add(source_id)
+                    visited_entity_ids.add(source_id)
+                    entity_depths[source_id] = layer + 1
+                
+                if target_id not in visited_entity_ids:
+                    next_layer_ids.add(target_id)
+                    visited_entity_ids.add(target_id)
+                    entity_depths[target_id] = layer + 1
+            
+            relations.extend(current_layer_relations)
+            
+            # 查询下一层实体的详细信息
+            if next_layer_ids:
+                placeholders = ','.join('?' * len(next_layer_ids))
+                cursor.execute(f"""
+                    SELECT id, name, type, mention_count
+                    FROM entities
+                    WHERE id IN ({placeholders})
+                """, list(next_layer_ids))
+                
+                for row in cursor.fetchall():
+                    entities.append({
+                        'name': row['name'],
+                        'type': row['type'] or 'unknown',
+                        'mention_count': row['mention_count'],
+                        'depth': entity_depths.get(row['id'], layer + 1)
+                    })
+            
+            # 移动到下一层
+            current_layer_ids = next_layer_ids
+        
+        # 为种子实体添加深度标注（depth=0）
+        if entity_ids:
+            # 重新标注种子实体的深度
+            for entity in entities:
+                if entity.get('depth') is None:
+                    entity['depth'] = 0
         
         return {
             "entities": entities,
