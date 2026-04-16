@@ -1,7 +1,4 @@
 ---
-name: graph_memory
-description: 图记忆工具 - 让 AI 拥有真正的长期记忆能力
-when_to_use: 需要 AI 记住、回忆、管理信息或任务时
 context: inline
 allowed-tools:
   - builtin:graph_memory
@@ -18,7 +15,9 @@ arguments:
 user-invocable: true
 ---
 
-# GraphMemory 图记忆操作
+# 图记忆工具 - 让 AI 拥有真正的长期记忆能力
+
+**何时使用**: 需要 AI 记住、回忆、管理信息或任务时调用此技能。
 
 你可以通过以下操作与图记忆系统交互。
 
