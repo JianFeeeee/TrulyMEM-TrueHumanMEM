@@ -25,6 +25,14 @@ All memory must be written to the graph database:
 All memory must be read from:
 - `memory_recall` - Retrieve memory
 
+### Working Memory Management (Experimental)
+
+`context_rewrite` allows AI to proactively compress tool call context within a single turn:
+- Distills verbose JSON tool results into concise natural language summaries
+- Summary must include which tools were called and how many calls are summarized
+- After system validates the format, replaces `messages_history` with `[user message, summary]`
+- Ensures LLM retains meta-cognition (knows "I called tools") while reducing JSON noise
+
 ---
 
 ## Mandatory Execution Flow (Per Turn)

@@ -32,7 +32,7 @@ TrulyMEM-TrueHumanMEM/
 │   ├── services/       # 服务层（仅配置管理）
 │   ├── handlers/      # 事件处理
 │   └── styles/         # 样式文件
-└── tests/              # 测试 (42 tests)
+└── tests/              # 测试 (54 tests)
 ```
 
 ## 架构图
@@ -146,13 +146,14 @@ def main():
 
 ## 工具系统
 
-### 记忆工具 (6个)
+### 记忆工具 (7个)
 - `memory_recall` - 检索记忆
 - `memory_commit` - 写入记忆
 - `memory_purge` - 删除记忆
 - `memory_introspect` - 查看状态
 - `memory_archive` - 归档记忆
 - `memory_cleanup` - 清理数据
+- `context_rewrite` - 压缩单轮工具调用上下文（实验性）
 
 ### 人设工具 (2个)
 - `persona_update` - 更新人设
@@ -163,6 +164,19 @@ def main():
 - `task_set_state` - 设置状态
 - `task_delete` - 删除任务
 - `task_link_info` - 关联信息
+
+---
+
+## 工具调用限制
+
+| 类别 | 操作 | 每轮上限 |
+|------|------|---------|
+| 人设图 | 修改 | 1 次 |
+| 工作记忆链 | 修改 | 5 次 |
+| 一般记忆 | 查询 | 20 次 |
+| 一般记忆 | 修改 | 10 次 |
+
+> 注：`memory_recall` 统一计入一般记忆查询，不再区分人设/工作记忆查询。
 
 ---
 

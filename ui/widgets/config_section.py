@@ -63,25 +63,15 @@ class ConfigSection(Vertical):
         limits_title.can_focus = False
         yield limits_title
         
-        l1 = Static("人设图查询:", classes="config-label")
-        l1.can_focus = False
-        yield l1
-        yield Input(value=str(self._config.persona_query_max), placeholder="1", id="persona-query-max")
-        
         l2 = Static("人设图修改:", classes="config-label")
         l2.can_focus = False
         yield l2
         yield Input(value=str(self._config.persona_update_max), placeholder="1", id="persona-update-max")
         
-        l3 = Static("工作记忆查询:", classes="config-label")
-        l3.can_focus = False
-        yield l3
-        yield Input(value=str(self._config.task_query_max), placeholder="4", id="task-query-max")
-        
         l4 = Static("工作记忆修改:", classes="config-label")
         l4.can_focus = False
         yield l4
-        yield Input(value=str(self._config.task_update_max), placeholder="2", id="task-update-max")
+        yield Input(value=str(self._config.task_update_max), placeholder="5", id="task-update-max")
         
         l5 = Static("一般记忆查询:", classes="config-label")
         l5.can_focus = False
@@ -122,9 +112,7 @@ class ConfigSection(Vertical):
             model_input = self.query_one("#model-input", Input)
             base_url_input = self.query_one("#base-url-input", Input)
             
-            persona_query = self.query_one("#persona-query-max", Input)
             persona_update = self.query_one("#persona-update-max", Input)
-            task_query = self.query_one("#task-query-max", Input)
             task_update = self.query_one("#task-update-max", Input)
             memory_query = self.query_one("#memory-query-max", Input)
             memory_update = self.query_one("#memory-update-max", Input)
@@ -133,10 +121,8 @@ class ConfigSection(Vertical):
                 api_key=api_key_input.value,
                 model=model_input.value,
                 base_url=base_url_input.value,
-                persona_query_max=int(persona_query.value or 1),
                 persona_update_max=int(persona_update.value or 1),
-                task_query_max=int(task_query.value or 4),
-                task_update_max=int(task_update.value or 2),
+                task_update_max=int(task_update.value or 5),
                 memory_query_max=int(memory_query.value or 20),
                 memory_update_max=int(memory_update.value or 10),
             )
@@ -162,9 +148,7 @@ class ConfigSection(Vertical):
             model_input.value = config.model
             base_url_input.value = config.base_url
             
-            self.query_one("#persona-query-max", Input).value = str(config.persona_query_max)
             self.query_one("#persona-update-max", Input).value = str(config.persona_update_max)
-            self.query_one("#task-query-max", Input).value = str(config.task_query_max)
             self.query_one("#task-update-max", Input).value = str(config.task_update_max)
             self.query_one("#memory-query-max", Input).value = str(config.memory_query_max)
             self.query_one("#memory-update-max", Input).value = str(config.memory_update_max)

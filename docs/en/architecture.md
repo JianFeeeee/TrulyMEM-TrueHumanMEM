@@ -32,7 +32,7 @@ TrulyMEM-TrueHumanMEM/
 │   ├── services/       # Service layer (config only)
 │   ├── handlers/      # Event handlers
 │   └── styles/         # Style files
-└── tests/              # Tests (42 tests)
+└── tests/              # Tests (54 tests)
 ```
 
 ## Architecture Diagram
@@ -146,13 +146,14 @@ def main():
 
 ## Tool System
 
-### Memory Tools (6)
+### Memory Tools (7)
 - `memory_recall` - Retrieve memory
 - `memory_commit` - Write memory
 - `memory_purge` - Delete memory
 - `memory_introspect` - View status
 - `memory_archive` - Archive memory
 - `memory_cleanup` - Clean data
+- `context_rewrite` - Compress single-turn tool call context (experimental)
 
 ### Persona Tools (2)
 - `persona_update` - Update persona
@@ -163,6 +164,19 @@ def main():
 - `task_set_state` - Set state
 - `task_delete` - Delete task
 - `task_link_info` - Link information
+
+---
+
+## Tool Call Limits
+
+| Category | Operation | Per-Turn Limit |
+|----------|-----------|---------------|
+| Persona graph | Modify | 1 time |
+| Working memory chain | Modify | 5 times |
+| General memory | Query | 20 times |
+| General memory | Modify | 10 times |
+
+> Note: `memory_recall` is uniformly counted as general memory query, no longer distinguished by persona/working memory queries.
 
 ---
 

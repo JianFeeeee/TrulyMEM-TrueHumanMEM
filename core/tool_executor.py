@@ -50,6 +50,10 @@ def execute_tool(graph: Any, tool_name: str, arguments: dict) -> str:
             result = graph.cleanup(dry_run=arguments.get("dry_run", True))
             return json.dumps(result, ensure_ascii=False, default=str)
         
+        elif tool_name == "context_rewrite":
+            result = execute_context_rewrite(graph, arguments)
+            return json.dumps(result, ensure_ascii=False, default=str)
+        
         # 人设图管理工具
         elif tool_name == "persona_update":
             result = execute_persona_update(graph, arguments)
@@ -109,6 +113,24 @@ def format_recall_result(result: dict) -> str:
     
     lines.append("=" * 30)
     return "\n".join(lines)
+
+
+def execute_context_rewrite(graph: Any, arguments: dict) -> dict:
+    """压缩工具调用上下文"""
+    summary = arguments.get("summary", "")
+    
+    # 验证格式：必须包含工具调用标记
+    if "[工具调用总结" not in summary:
+        return {
+            "status": "error",
+            "message": "总结格式错误：必须包含 [工具调用总结: 本次总结了 N 次工具调用 | 调用工具: ...] 标记"
+        }
+    
+    return {
+        "status": "success",
+        "message": "上下文已压缩",
+        "summary": summary
+    }
 
 
 # 人设图管理工具实现
