@@ -1,4 +1,5 @@
 import initSqlJs, { type Database as SqlJsDatabase } from 'sql.js';
+import type { Platform } from 'waterflow/platform/types';
 import type { Entity, Relation, RecallParams, CommitParams, PurgeParams, RecallResult, CommitResult, PurgeResult, MemoryStats } from './types';
 import { getConfig } from './config';
 
@@ -6,7 +7,7 @@ export class GraphDatabase {
   private db: SqlJsDatabase | null = null;
   private sessionId: string;
   private initPromise: Promise<void> | null = null;
-  private _platform: any = null;
+  private _platform: Platform | null = null;
 
   constructor(sessionId?: string) {
     this.sessionId = sessionId || `session-${Date.now()}`;
@@ -20,10 +21,15 @@ export class GraphDatabase {
 
     try {
       const dbPath = this._platform.path.join(this._platform.getCwd(), getConfig().dbPath);
-      const exists = await this._platform.fs.exists(dbPath);
-      if (exists) {
-        const data = await this._platform.fs.readFile(dbPath, { encoding: 'binary' });
-        this.db = new SQL.Database(data as Uint8Array);
+      const fs = this._platform.fs;
+      if (fs) {
+        const exists = await fs.exists(dbPath);
+        if (exists) {
+          const data = await fs.readFile(dbPath, { encoding: 'binary' });
+          this.db = new SQL.Database(new Uint8Array(data as ArrayBuffer));
+        } else {
+          this.db = new SQL.Database();
+        }
       } else {
         this.db = new SQL.Database();
       }
@@ -39,16 +45,18 @@ export class GraphDatabase {
 
     try {
       const platform = this._platform;
+      const fs = platform.fs;
+      if (!fs) return;
       const dbPath = platform.path.join(platform.getCwd(), getConfig().dbPath);
       const dir = platform.path.dirname(dbPath);
-      const dirExists = await platform.fs.exists(dir);
+      const dirExists = await fs.exists(dir);
       if (!dirExists) {
-        await platform.fs.mkdir(dir, true);
+        await fs.mkdir(dir, true);
       }
       const data = this.db.export();
-      await platform.fs.writeFile(dbPath, new Uint8Array(data), { encoding: 'binary' });
+      await fs.writeFile(dbPath, data.buffer as ArrayBuffer, { encoding: 'binary' });
     } catch (error) {
-      this._platform.getLogger().error(`[GraphDatabase] Save failed: ${error}`);
+      console.error(`[GraphDatabase] Save failed: ${error}`);
     }
   }
 

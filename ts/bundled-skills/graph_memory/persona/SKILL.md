@@ -1,9 +1,9 @@
 ---
-name: graph_memory_persona
+name: persona
 description: 管理 AI 人设 - 更新或清除 AI 角色特征
 when_to_use: 需要修改 AI 的角色设定或清除人设时
 context: inline
-allowed_tools:
+allowed-tools:
   - builtin:graph_memory
 arguments:
   - name: action
@@ -22,7 +22,7 @@ arguments:
   - name: confirm
     type: boolean
     description: 确认清除 (用于 clear)
-user_invocable: true
+user-invocable: true
 ---
 
 # GraphMemory Persona 人设管理

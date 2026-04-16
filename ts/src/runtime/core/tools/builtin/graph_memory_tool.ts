@@ -102,6 +102,10 @@ export class GraphMemoryTool implements Tool {
   }
 
   async handler(params: ToolInput, context: ToolExecutionContext): Promise<ToolOutput> {
+    if (context.abortController?.signal?.aborted) {
+      throw new Error('Operation aborted');
+    }
+
     const action = params.action as string;
     const actionParams = params.params as Record<string, unknown>;
     const logger = context?.logger;

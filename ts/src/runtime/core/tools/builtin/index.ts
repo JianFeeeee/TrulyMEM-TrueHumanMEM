@@ -11,8 +11,8 @@ export function registerGraphMemoryTool(
   registry.register(createGraphMemoryTool(sessionId));
 }
 
-export function installTrulyMEM(platform: Platform, sessionId?: string) {
-  const { initializeToolRegistry } = require('waterflow/runtime/core/tools/builtin');
+export async function installTrulyMEM(platform: Platform, sessionId?: string) {
+  const { initializeToolRegistry } = await import('waterflow/runtime/core/tools/builtin');
   const registry = initializeToolRegistry(platform);
   registerGraphMemoryTool(registry, sessionId);
   return registry;

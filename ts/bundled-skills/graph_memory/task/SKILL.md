@@ -1,9 +1,9 @@
 ---
-name: graph_memory_task
+name: task
 description: 管理连续性任务 - 创建、更新、删除任务节点
 when_to_use: 需要创建或管理长期任务时
 context: inline
-allowed_tools:
+allowed-tools:
   - builtin:graph_memory
 arguments:
   - name: action
@@ -28,7 +28,7 @@ arguments:
   - name: info_node
     type: string
     description: 信息节点 (用于 link_info)
-user_invocable: true
+user-invocable: true
 ---
 
 # GraphMemory Task 任务管理

@@ -3,7 +3,7 @@ name: graph_memory
 description: 图记忆工具 - 让 AI 拥有真正的长期记忆能力
 when_to_use: 需要 AI 记住、回忆、管理信息或任务时
 context: inline
-allowed_tools:
+allowed-tools:
   - builtin:graph_memory
 arguments:
   - name: action
@@ -15,7 +15,7 @@ arguments:
     type: object
     required: true
     description: 操作参数
-user_invocable: true
+user-invocable: true
 ---
 
 # GraphMemory 图记忆操作
