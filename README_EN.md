@@ -13,7 +13,6 @@
 
 *The More Human Choice.*
 
-> ⚠️ **Current Branch**: `test` — Testing branch for experimental features. Code here may be unstable and should not be used in production. For stable releases, see the `main` branch.
 
 [![License: GPL v3](https://img.shields.io/badge/License-GPLv3-blue.svg)](https://www.gnu.org/licenses/gpl-3.0)
 [![Python 3.8+](https://img.shields.io/badge/python-3.8+-blue.svg)](https://www.python.org/downloads/)
