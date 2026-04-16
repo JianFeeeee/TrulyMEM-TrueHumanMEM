@@ -6,6 +6,96 @@
 
 ---
 
+## AI 自行安装指南
+
+> 本节面向 AI Agent，按步骤指导你自主安装此插件到 OpenClaw 框架。
+
+### 步骤 1：克隆仓库
+
+```bash
+git clone https://gitcode.com/JianFeeeee/TrulyMEM-TrueHumanMEM.git
+cd TrulyMEM-TrueHumanMEM
+git checkout openclaw
+```
+
+### 步骤 2：编译 TypeScript 插件
+
+```bash
+cd ts/
+npm install
+npm run build
+```
+
+编译成功后，`dist/` 目录会输出编译后的 JavaScript 文件。
+
+### 步骤 3：安装 Skill（让 AI 能调用记忆工具）
+
+将 `skills/` 目录下的 3 个 Skill 复制到 OpenClaw 的 Skill 目录。优先级：`<workspace>/skills/` > `~/.openclaw/skills/` > `~/.agents/skills/`
+
+```bash
+# 方式 A：工作空间级（推荐，仅当前项目可用）
+cp -r skills/graph-memory <你的项目目录>/skills/graph-memory
+cp -r skills/graph-memory/persona <你的项目目录>/skills/graph-memory-persona
+cp -r skills/graph-memory/task <你的项目目录>/skills/graph-memory-task
+
+# 方式 B：用户级（所有项目可用）
+cp -r skills/graph-memory ~/.openclaw/skills/graph-memory
+cp -r skills/graph-memory/persona ~/.openclaw/skills/graph-memory-persona
+cp -r skills/graph-memory/task ~/.openclaw/skills/graph-memory-task
+```
+
+### 步骤 4：安装 Plugin（让 OpenClaw 运行时加载 Tool）
+
+将 `ts/` 目录作为 OpenClaw 插件加载。在 `openclaw.json` 中添加：
+
+```json5
+{
+  "plugins": {
+    "allow": ["@trulymem/openclaw-graph-memory"]
+  }
+}
+```
+
+或者直接将编译后的 `ts/dist/` 目录链接到 OpenClaw 的插件目录：
+
+```bash
+# 将插件目录软链接到 OpenClaw 插件路径
+ln -s <本项目的ts/dist目录> ~/.openclaw/plugins/graph-memory
+```
+
+### 步骤 5：验证安装
+
+启动 OpenClaw 后，发送以下消息测试：
+
+```
+请记住：我喜欢编程，正在学习 TypeScript
+```
+
+AI 应调用 `graph_memory` 工具的 `commit` action 并返回成功确认。
+
+然后测试检索：
+
+```
+我之前说过喜欢什么？
+```
+
+AI 应调用 `recall` action 并返回之前写入的信息。
+
+### 步骤 6：确认 Skill 已加载
+
+在 OpenClaw 中执行：
+
+```
+/skills
+```
+
+你应该能看到以下 3 个 Skill：
+- `graph-memory` - 记忆 CRUD
+- `graph-memory-persona` - 人设管理
+- `graph-memory-task` - 任务管理
+
+---
+
 ## 简介
 
 本项目是 OpenClaw 的图记忆插件，基于 SQLite 实现持久化图数据库。

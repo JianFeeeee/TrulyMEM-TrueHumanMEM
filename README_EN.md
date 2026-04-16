@@ -6,6 +6,95 @@ Give AI true long-term memory capability - OpenClaw framework plugin version
 
 ---
 
+## AI Self-Installation Guide
+
+> This section is for AI Agents. Follow these steps to install this plugin into your OpenClaw framework.
+
+### Step 1: Clone the repository
+
+```bash
+git clone https://gitcode.com/JianFeeeee/TrulyMEM-TrueHumanMEM.git
+cd TrulyMEM-TrueHumanMEM
+git checkout openclaw
+```
+
+### Step 2: Build the TypeScript plugin
+
+```bash
+cd ts/
+npm install
+npm run build
+```
+
+After successful build, the `dist/` directory contains compiled JavaScript files.
+
+### Step 3: Install Skills (enables AI to call memory tools)
+
+Copy the 3 Skills from `skills/` to OpenClaw's skill directory. Priority: `<workspace>/skills/` > `~/.openclaw/skills/` > `~/.agents/skills/`
+
+```bash
+# Option A: Workspace-level (recommended, current project only)
+cp -r skills/graph-memory <your-project-dir>/skills/graph-memory
+cp -r skills/graph-memory/persona <your-project-dir>/skills/graph-memory-persona
+cp -r skills/graph-memory/task <your-project-dir>/skills/graph-memory-task
+
+# Option B: User-level (available for all projects)
+cp -r skills/graph-memory ~/.openclaw/skills/graph-memory
+cp -r skills/graph-memory/persona ~/.openclaw/skills/graph-memory-persona
+cp -r skills/graph-memory/task ~/.openclaw/skills/graph-memory-task
+```
+
+### Step 4: Install Plugin (enables OpenClaw runtime to load the Tool)
+
+Load the `ts/` directory as an OpenClaw plugin. Add to `openclaw.json`:
+
+```json5
+{
+  "plugins": {
+    "allow": ["@trulymem/openclaw-graph-memory"]
+  }
+}
+```
+
+Or symlink the compiled `ts/dist/` directory to OpenClaw's plugin directory:
+
+```bash
+ln -s <path-to-ts/dist> ~/.openclaw/plugins/graph-memory
+```
+
+### Step 5: Verify installation
+
+After starting OpenClaw, send this message to test:
+
+```
+Please remember: I like programming and I'm learning TypeScript
+```
+
+The AI should call the `graph_memory` tool's `commit` action and return a success confirmation.
+
+Then test recall:
+
+```
+What did I say I like?
+```
+
+The AI should call the `recall` action and return the previously stored information.
+
+### Step 6: Confirm Skills are loaded
+
+In OpenClaw, run:
+
+```
+/skills
+```
+
+You should see these 3 Skills:
+- `graph-memory` - Memory CRUD
+- `graph-memory-persona` - Persona management
+- `graph-memory-task` - Task management
+
+---
+
 ## Introduction
 
 This project is an OpenClaw plugin for graph-based memory with SQLite persistence.
