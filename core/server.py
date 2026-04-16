@@ -60,10 +60,8 @@ class BackendServer:
         self._lock = threading.Lock()
         self._config = {"api_key": "", "base_url": "https://api.deepseek.com", "model": "deepseek-chat"}
         self._tool_limits = {
-            "persona_query_max": 1,
             "persona_update_max": 1,
-            "task_query_max": 4,
-            "task_update_max": 2,
+            "task_update_max": 5,
             "memory_query_max": 20,
             "memory_update_max": 10,
         }
@@ -119,9 +117,7 @@ class BackendServer:
     def _create_tool_limiter(self):
         from .tool_limiter import ToolLimiter, ToolLimits
         limits = ToolLimits(
-            persona_query_max=self._tool_limits.get("persona_query_max", 1),
             persona_update_max=self._tool_limits.get("persona_update_max", 1),
-            task_query_max=self._tool_limits.get("task_query_max", 4),
             task_update_max=self._tool_limits.get("task_update_max", 5),
             memory_query_max=self._tool_limits.get("memory_query_max", 20),
             memory_update_max=self._tool_limits.get("memory_update_max", 10),
@@ -243,6 +239,25 @@ class BackendServer:
                 
                 self._tool_limiter.record_call(tool_call.function.name, args)
                 
+                if tool_call.function.name == "context_rewrite":
+                    result = execute_tool(self._graph, tool_call.function.name, args)
+                    result_data = json.loads(result)
+                    
+                    if result_data.get("status") == "success":
+                        user_msg = messages_history[0]
+                        messages_history[:] = [
+                            user_msg,
+                            {"role": "assistant", "content": result_data["summary"]}
+                        ]
+                    
+                    tool_result_msg = {
+                        "role": "tool",
+                        "tool_call_id": tool_call.id,
+                        "content": result
+                    }
+                    current_tool_results.append(tool_result_msg)
+                    continue
+                
                 result = execute_tool(self._graph, tool_call.function.name, args)
                 tool_calls.append({
                     "name": tool_call.function.name,
@@ -324,8 +339,8 @@ class BackendServer:
         self.update_config(api_key, base_url, model)
         
         limits_keys = [
-            "persona_query_max", "persona_update_max",
-            "task_query_max", "task_update_max",
+            "persona_update_max",
+            "task_update_max",
             "memory_query_max", "memory_update_max"
         ]
         for key in limits_keys:
