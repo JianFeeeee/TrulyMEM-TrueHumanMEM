@@ -131,8 +131,20 @@ AI Agent 会自动读取 SKILL.md 并调用 `builtin:graph_memory` 工具。
 | Skill 名称 | 功能 | 使用场景 |
 |------------|------|----------|
 | `graph_memory` | 记忆 CRUD | 读取/写入/删除记忆 |
-| `graph_memory_persona` | 人设管理 | 设置 AI 角色性格 |
-| `graph_memory_task` | 任务管理 | 创建/更新长期任务 |
+| `persona` | 人设管理 | 设置 AI 角色性格 |
+| `task` | 任务管理 | 创建/更新长期任务 |
+
+#### Skill 定义格式说明
+
+WaterFlow 的 SkillLoader 会从 `SKILL.md` 中提取：
+
+- **name**: 从目录名提取（如 `graph_memory`、`persona`、`task`）
+- **description**: 从 Markdown 的第一个 `#` 标题提取
+- **allowed-tools**: 转换为 `allowedTools` 字段
+- **arguments**: 正确映射到 SkillDefinition.arguments
+- **user-invocable**: 转换为 `userInvocable` 字段
+
+**注意**: `when_to_use` 信息已整合到 Markdown body 中，通过 SkillRegistry.search() 可匹配。
 
 ---
 

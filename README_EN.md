@@ -132,8 +132,20 @@ AI Agent automatically reads SKILL.md and calls `builtin:graph_memory` tool.
 | Skill Name | Function | Use Case |
 |------------|----------|----------|
 | `graph_memory` | Memory CRUD | Read/Write/Delete memories |
-| `graph_memory_persona` | Persona management | Set AI role/personality |
-| `graph_memory_task` | Task management | Create/update long-term tasks |
+| `persona` | Persona management | Set AI role/personality |
+| `task` | Task management | Create/update long-term tasks |
+
+#### Skill Definition Format
+
+WaterFlow's SkillLoader extracts from `SKILL.md`:
+
+- **name**: Extracted from directory name (e.g., `graph_memory`, `persona`, `task`)
+- **description**: Extracted from first Markdown `#` heading
+- **allowed-tools**: Converted to `allowedTools` field
+- **arguments**: Properly mapped to SkillDefinition.arguments
+- **user-invocable**: Converted to `userInvocable` field
+
+**Note**: `when_to_use` info is integrated into Markdown body, searchable via SkillRegistry.search().
 
 ---
 
