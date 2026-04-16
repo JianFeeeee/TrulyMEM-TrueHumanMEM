@@ -243,19 +243,23 @@ class BackendServer:
                     result = execute_tool(self._graph, tool_call.function.name, args)
                     result_data = json.loads(result)
                     
+                    # 记录到 tool_calls，让 TUI 显示这个工具调用
+                    tool_calls.append({
+                        "name": tool_call.function.name,
+                        "arguments": args,
+                        "result": result
+                    })
+                    
                     if result_data.get("status") == "success":
                         user_msg = messages_history[0]
+                        # 添加特殊标记，让 AI 知道这是上下文压缩的结果
+                        compressed_content = f"<context_compressed>\n{result_data['summary']}\n</context_compressed>"
                         messages_history[:] = [
                             user_msg,
-                            {"role": "assistant", "content": result_data["summary"]}
+                            {"role": "assistant", "content": compressed_content}
                         ]
-                    
-                    tool_result_msg = {
-                        "role": "tool",
-                        "tool_call_id": tool_call.id,
-                        "content": result
-                    }
-                    current_tool_results.append(tool_result_msg)
+                    # context_rewrite 压缩上下文后，不需要添加 tool 结果消息
+                    # 因为 messages_history 已经被重写为压缩后的状态
                     continue
                 
                 result = execute_tool(self._graph, tool_call.function.name, args)
