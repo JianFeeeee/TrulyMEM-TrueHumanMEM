@@ -192,7 +192,7 @@ class TestBackendClientAPI:
         
         result = client.update_settings(
             api_config={"api_key": "new-key", "base_url": "https://api.deepseek.com", "model": "deepseek-chat"},
-            tool_limits={"persona_query_max": 2}
+            tool_limits={"persona_update_max": 2}
         )
         assert result.get("success") is True
         
@@ -282,8 +282,10 @@ class TestToolLimiter:
     def test_tool_limiter_init(self):
         from core.tool_limiter import ToolLimiter
         limiter = ToolLimiter()
-        assert limiter.counts.persona_query == 0
         assert limiter.counts.persona_update == 0
+        assert limiter.counts.task_update == 0
+        assert limiter.counts.memory_query == 0
+        assert limiter.counts.memory_update == 0
 
     def test_tool_limiter_classify(self):
         from core.tool_limiter import ToolLimiter

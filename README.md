@@ -13,9 +13,12 @@
 
 *The More Human Choice.*
 
+> ⚠️ **当前分支**: `test` — 测试分支，用于测试实验性功能。此处代码可能不稳定，不应用于生产环境。稳定版本请参阅 `main` 分支。
+
 [![License: GPL v3](https://img.shields.io/badge/License-GPLv3-blue.svg)](https://www.gnu.org/licenses/gpl-3.0)
 [![Python 3.8+](https://img.shields.io/badge/python-3.8+-blue.svg)](https://www.python.org/downloads/)
 [![Platform](https://img.shields.io/badge/platform-Windows%20%7C%20Linux%20%7C%20macOS-lightgrey.svg)]()
+[![Branch](https://img.shields.io/badge/branch-test-orange.svg)]()
 
 ---
 

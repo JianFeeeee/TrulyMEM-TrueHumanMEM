@@ -185,7 +185,7 @@ class TestUIWithBackendClient:
             
             result = client.update_settings(
                 api_config={"api_key": "sk-test", "base_url": "https://api.deepseek.com", "model": "deepseek-chat"},
-                tool_limits={"persona_query_max": 1}
+                tool_limits={"persona_update_max": 1}
             )
             assert result.get("success") is True
             

@@ -472,12 +472,11 @@ asyncio.run(main())
 
 | Category | Operation | Per-Turn Limit |
 |----------|-----------|---------------|
-| Persona graph | Query | 1 time |
 | Persona graph | Modify | 1 time |
-| Working memory chain | Query | 4 times |
-| Working memory chain | Modify | 2 times |
+| Working memory chain | Modify | 5 times |
 | General memory | Query | 20 times |
 | General memory | Modify | 10 times |
+| Context compression | Query | Counted as general memory query |
 
 ### Reset Mechanism
 

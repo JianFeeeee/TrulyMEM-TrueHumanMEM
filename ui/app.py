@@ -46,10 +46,8 @@ class GraphMemoryApp(App):
             initial_config.model = api_config.get("model", "deepseek-chat")
             
             tool_limits = settings_data.get("tool_limits", {})
-            initial_config.persona_query_max = tool_limits.get("persona_query_max", 1)
             initial_config.persona_update_max = tool_limits.get("persona_update_max", 1)
-            initial_config.task_query_max = tool_limits.get("task_query_max", 4)
-            initial_config.task_update_max = tool_limits.get("task_update_max", 2)
+            initial_config.task_update_max = tool_limits.get("task_update_max", 5)
             initial_config.memory_query_max = tool_limits.get("memory_query_max", 20)
             initial_config.memory_update_max = tool_limits.get("memory_update_max", 10)
         
@@ -222,9 +220,7 @@ class GraphMemoryApp(App):
         }
         
         tool_limits = {
-            "persona_query_max": config.persona_query_max,
             "persona_update_max": config.persona_update_max,
-            "task_query_max": config.task_query_max,
             "task_update_max": config.task_update_max,
             "memory_query_max": config.memory_query_max,
             "memory_update_max": config.memory_update_max,
@@ -257,10 +253,8 @@ class GraphMemoryApp(App):
                         api_key=api_cfg.get("api_key", ""),
                         base_url=api_cfg.get("base_url", "https://api.deepseek.com"),
                         model=api_cfg.get("model", "deepseek-chat"),
-                        persona_query_max=tool_lmts.get("persona_query_max", 1),
                         persona_update_max=tool_lmts.get("persona_update_max", 1),
-                        task_query_max=tool_lmts.get("task_query_max", 4),
-                        task_update_max=tool_lmts.get("task_update_max", 2),
+                        task_update_max=tool_lmts.get("task_update_max", 5),
                         memory_query_max=tool_lmts.get("memory_query_max", 20),
                         memory_update_max=tool_lmts.get("memory_update_max", 10),
                     ))
