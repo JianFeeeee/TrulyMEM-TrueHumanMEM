@@ -35,13 +35,13 @@ npm run build
 ```bash
 # 方式 A：工作空间级（推荐，仅当前项目可用）
 cp -r skills/graph-memory <你的项目目录>/skills/graph-memory
-cp -r skills/graph-memory/persona <你的项目目录>/skills/graph-memory-persona
-cp -r skills/graph-memory/task <你的项目目录>/skills/graph-memory-task
+cp -r skills/graph-memory-persona <你的项目目录>/skills/graph-memory-persona
+cp -r skills/graph-memory-task <你的项目目录>/skills/graph-memory-task
 
 # 方式 B：用户级（所有项目可用）
 cp -r skills/graph-memory ~/.openclaw/skills/graph-memory
-cp -r skills/graph-memory/persona ~/.openclaw/skills/graph-memory-persona
-cp -r skills/graph-memory/task ~/.openclaw/skills/graph-memory-task
+cp -r skills/graph-memory-persona ~/.openclaw/skills/graph-memory-persona
+cp -r skills/graph-memory-task ~/.openclaw/skills/graph-memory-task
 ```
 
 ### 步骤 4：安装 Plugin（让 OpenClaw 运行时加载 Tool）
@@ -130,8 +130,8 @@ npm run build
 
 ```bash
 cp -r skills/graph-memory ~/.agents/skills/graph-memory
-cp -r skills/graph-memory/persona ~/.agents/skills/graph-memory-persona
-cp -r skills/graph-memory/task ~/.agents/skills/graph-memory-task
+cp -r skills/graph-memory-persona ~/.agents/skills/graph-memory-persona
+cp -r skills/graph-memory-task ~/.agents/skills/graph-memory-task
 ```
 
 ---
@@ -153,19 +153,23 @@ ts/
 │           │   └── graph_memory_tool.ts  # Tool 实现
 │           └── tool_limiter.ts      # 调用限制器
 ├── bundled-skills/
-│   └── graph-memory/                # 内置 Skill 定义
-│       ├── SKILL.md
-│       ├── persona/SKILL.md
-│       └── task/SKILL.md
+│   ├── graph-memory/                # 内置 Skill 定义
+│   │   └── SKILL.md
+│   ├── graph-memory-persona/
+│   │   └── SKILL.md
+│   └── graph-memory-task/
+│       └── SKILL.md
 ├── package.json
 ├── tsconfig.json
 └── openclaw.plugin.json             # Plugin Manifest
 
 skills/                              # 独立 Skill 定义
-└── graph-memory/
-    ├── SKILL.md
-    ├── persona/SKILL.md
-    └── task/SKILL.md
+├── graph-memory/
+│   └── SKILL.md
+├── graph-memory-persona/
+│   └── SKILL.md
+└── graph-memory-task/
+    └── SKILL.md
 ```
 
 ---

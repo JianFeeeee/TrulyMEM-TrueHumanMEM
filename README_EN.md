@@ -35,13 +35,13 @@ Copy the 3 Skills from `skills/` to OpenClaw's skill directory. Priority: `<work
 ```bash
 # Option A: Workspace-level (recommended, current project only)
 cp -r skills/graph-memory <your-project-dir>/skills/graph-memory
-cp -r skills/graph-memory/persona <your-project-dir>/skills/graph-memory-persona
-cp -r skills/graph-memory/task <your-project-dir>/skills/graph-memory-task
+cp -r skills/graph-memory-persona <your-project-dir>/skills/graph-memory-persona
+cp -r skills/graph-memory-task <your-project-dir>/skills/graph-memory-task
 
 # Option B: User-level (available for all projects)
 cp -r skills/graph-memory ~/.openclaw/skills/graph-memory
-cp -r skills/graph-memory/persona ~/.openclaw/skills/graph-memory-persona
-cp -r skills/graph-memory/task ~/.openclaw/skills/graph-memory-task
+cp -r skills/graph-memory-persona ~/.openclaw/skills/graph-memory-persona
+cp -r skills/graph-memory-task ~/.openclaw/skills/graph-memory-task
 ```
 
 ### Step 4: Install Plugin (enables OpenClaw runtime to load the Tool)
@@ -129,8 +129,8 @@ Copy the `skills/` directory to OpenClaw's skill directory:
 
 ```bash
 cp -r skills/graph-memory ~/.agents/skills/graph-memory
-cp -r skills/graph-memory/persona ~/.agents/skills/graph-memory-persona
-cp -r skills/graph-memory/task ~/.agents/skills/graph-memory-task
+cp -r skills/graph-memory-persona ~/.agents/skills/graph-memory-persona
+cp -r skills/graph-memory-task ~/.agents/skills/graph-memory-task
 ```
 
 ---
@@ -152,19 +152,23 @@ ts/
 │           │   └── graph_memory_tool.ts  # Tool implementation
 │           └── tool_limiter.ts      # Call rate limiter
 ├── bundled-skills/
-│   └── graph-memory/                # Bundled Skill definitions
-│       ├── SKILL.md
-│       ├── persona/SKILL.md
-│       └── task/SKILL.md
+│   ├── graph-memory/                # Bundled Skill definitions
+│   │   └── SKILL.md
+│   ├── graph-memory-persona/
+│   │   └── SKILL.md
+│   └── graph-memory-task/
+│       └── SKILL.md
 ├── package.json
 ├── tsconfig.json
 └── openclaw.plugin.json             # Plugin Manifest
 
 skills/                              # Standalone Skill definitions
-└── graph-memory/
-    ├── SKILL.md
-    ├── persona/SKILL.md
-    └── task/SKILL.md
+├── graph-memory/
+│   └── SKILL.md
+├── graph-memory-persona/
+│   └── SKILL.md
+└── graph-memory-task/
+    └── SKILL.md
 ```
 
 ---

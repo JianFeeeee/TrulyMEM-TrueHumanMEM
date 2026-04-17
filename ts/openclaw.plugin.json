@@ -1,7 +1,13 @@
 {
   "id": "graph-memory",
   "name": "Graph Memory",
+  "kind": "memory",
   "description": "让 AI 拥有真正的长期记忆能力 - 基于图数据库的记忆系统",
+  "skills": [
+    "bundled-skills/graph-memory",
+    "bundled-skills/graph-memory-persona",
+    "bundled-skills/graph-memory-task"
+  ],
   "configSchema": {
     "type": "object",
     "additionalProperties": false,
