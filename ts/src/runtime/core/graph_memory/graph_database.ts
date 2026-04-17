@@ -1,5 +1,5 @@
 import initSqlJs, { type Database as SqlJsDatabase } from 'sql.js';
-import type { Platform } from 'waterflow/platform/types';
+import type { Platform } from 'waterflow-ts/dist/platform/types.js';
 import type { Entity, Relation, RecallParams, CommitParams, PurgeParams, RecallResult, CommitResult, PurgeResult, MemoryStats } from './types';
 import { getConfig } from './config';
 
@@ -16,7 +16,7 @@ export class GraphDatabase {
 
   private async initDatabase(): Promise<void> {
     const SQL = await initSqlJs();
-    const { getPlatform } = await import('waterflow/platform');
+    const { getPlatform } = await import('waterflow-ts/dist/platform/index.js');
     this._platform = getPlatform();
 
     try {

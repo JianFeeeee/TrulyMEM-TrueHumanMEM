@@ -1,5 +1,5 @@
 declare module 'waterflow/platform' {
-  import type { Platform, CreatePlatformOptions, PlatformCapabilities } from 'waterflow/platform/types';
+  import type { Platform, CreatePlatformOptions, PlatformCapabilities } from 'waterflow-ts/platform/types';
   export function getPlatform(): Platform;
   export function hasCapability(capability: keyof PlatformCapabilities): boolean;
   export function initPlatform(options?: CreatePlatformOptions): Platform;
@@ -259,6 +259,7 @@ declare module 'waterflow/platform/types' {
   export interface Tool {
     readonly id: string;
     readonly name: string;
+    readonly apiName?: string;
     readonly description: string;
     readonly category: ToolCategory;
     readonly inputSchema: ToolInputSchema;
@@ -346,6 +347,7 @@ declare module 'waterflow/platform/types' {
   export interface BuiltinTool {
     readonly id: string;
     readonly name: string;
+    readonly apiName?: string;
     readonly description: string;
     readonly category: ToolCategory;
     readonly inputSchema: ToolInputSchema;
@@ -355,13 +357,13 @@ declare module 'waterflow/platform/types' {
 }
 
 declare module 'waterflow/runtime/core/tools/tool_interface' {
-  import type { PlatformAbortController } from 'waterflow/platform/types';
-  import type { AgentId } from 'waterflow/shared/types/agent';
-  import type { WorkflowRunner } from 'waterflow/runtime/core/workflow/types';
-  import type { WorkflowRegistryImpl } from 'waterflow/runtime/core/workflow/workflow_registry';
-  import type { AgentRegistryImpl } from 'waterflow/runtime/core/workflow/agent_registry';
-  import type { AgentExecutor } from 'waterflow/runtime/core/agent/agent_executor';
-  import type { MCPClient } from 'waterflow/runtime/core/tools/mcp/mcp_client';
+  import type { PlatformAbortController } from 'waterflow-ts/platform/types';
+  import type { AgentId } from 'waterflow-ts/shared/types/agent';
+  import type { WorkflowRunner } from 'waterflow-ts/runtime/core/workflow/types';
+  import type { WorkflowRegistryImpl } from 'waterflow-ts/runtime/core/workflow/workflow_registry';
+  import type { AgentRegistryImpl } from 'waterflow-ts/runtime/core/workflow/agent_registry';
+  import type { AgentExecutor } from 'waterflow-ts/runtime/core/agent/agent_executor';
+  import type { MCPClient } from 'waterflow-ts/runtime/core/tools/mcp/mcp_client';
 
   export type ToolCategory =
     | 'file'
@@ -403,6 +405,7 @@ declare module 'waterflow/runtime/core/tools/tool_interface' {
     suggestedSource?: 'context' | 'literal' | 'file';
     items?: SchemaProperty;
     properties?: Record<string, SchemaProperty>;
+    required?: string[];
     additionalProperties?: boolean | SchemaProperty;
   }
 
@@ -503,6 +506,7 @@ declare module 'waterflow/runtime/core/tools/tool_interface' {
   export interface Tool {
     readonly id: string;
     readonly name: string;
+    readonly apiName?: string;
     readonly description: string;
     readonly category: ToolCategory;
     readonly inputSchema: ToolInputSchema;
@@ -564,9 +568,9 @@ declare module 'waterflow/runtime/core/tools/tool_interface' {
 }
 
 declare module 'waterflow/runtime/core/tools/builtin' {
-  import type { Platform } from 'waterflow/platform/types';
-  import type { Tool } from 'waterflow/runtime/core/tools/tool_interface';
-  import { ToolRegistry } from 'waterflow/runtime/core/tools/tool_registry';
+  import type { Platform } from 'waterflow-ts/platform/types';
+  import type { Tool } from 'waterflow-ts/runtime/core/tools/tool_interface';
+  import { ToolRegistry } from 'waterflow-ts/runtime/core/tools/tool_registry';
 
   export const FRAMEWORK_TOOLS: Tool[];
   export function initializeToolRegistry(platform: Platform): ToolRegistry;
@@ -574,7 +578,7 @@ declare module 'waterflow/runtime/core/tools/builtin' {
 }
 
 declare module 'waterflow/runtime/core/tools/tool_registry' {
-  import type { Tool, ToolCategory, ToolInput } from 'waterflow/runtime/core/tools/tool_interface';
+  import type { Tool, ToolCategory, ToolInput } from 'waterflow-ts/runtime/core/tools/tool_interface';
 
   export interface ValidationResult {
     valid: boolean;

@@ -1,22 +1,73 @@
-import type { Tool, ToolCategory, PermissionLevel, ToolInputSchema, ToolOutput, ToolInput, ToolExecutionContext } from 'waterflow/runtime/core/tools/tool_interface';
+import type { Tool, ToolCategory, PermissionLevel, ToolInputSchema, ToolOutput, ToolInput, ToolExecutionContext } from 'waterflow-ts/dist/runtime/core/tools/tool_interface.js';
 import { GraphDatabase } from '../../graph_memory/graph_database';
 import { MemoryService } from '../../graph_memory/memory_service';
 
 const GRAPH_MEMORY_TOOL_ID = 'builtin:graph_memory';
+const GRAPH_MEMORY_TOOL_API_NAME = 'graph_memory'; // API 兼容名称（不含冒号，符合 ^[a-zA-Z0-9_-]+$ 要求）
+
+/**
+ * 工具名称映射工具 - 用于处理 API 对工具名称格式的限制
+ * OpenAI/DeepSeek API 要求工具名称符合 ^[a-zA-Z0-9_-]+$ 正则表达式
+ * 而 TrulyMEM 的内部 ID 使用 "builtin:xxx" 格式（含冒号）
+ */
+
+/**
+ * 将内部工具 ID 映射为 API 兼容名称
+ * @param toolId 内部工具 ID，如 "builtin:graph_memory"
+ * @returns API 兼容名称，如 "graph_memory"
+ */
+export function mapToolIdToApiName(toolId: string): string {
+  // 移除 "builtin:" 前缀
+  if (toolId.startsWith('builtin:')) {
+    return toolId.slice(8);
+  }
+  // 其他前缀也移除（如 "mcp:", "plugin:"）
+  const colonIndex = toolId.indexOf(':');
+  if (colonIndex > 0) {
+    return toolId.slice(colonIndex + 1);
+  }
+  return toolId;
+}
+
+/**
+ * 将 API 返回的工具名称映射回内部 ID
+ * @param apiName API 返回的工具名称，如 "graph_memory"
+ * @param prefix 内部 ID 前缀，默认 "builtin:"
+ * @returns 内部工具 ID，如 "builtin:graph_memory"
+ */
+export function mapApiNameToToolId(apiName: string, prefix = 'builtin:'): string {
+  // 如果已经是完整 ID 格式，直接返回
+  if (apiName.includes(':')) {
+    return apiName;
+  }
+  return `${prefix}${apiName}`;
+}
 
 const GRAPH_MEMORY_TOOL_DESCRIPTION = `图记忆工具 - 让 AI 拥有真正的长期记忆能力
 
 操作:
-- recall: 检索记忆
-- commit: 写入记忆
-- purge: 删除记忆
-- introspect: 查看状态
+- recall: 检索记忆 - 提供 queryIntent (搜索意图) 和可选的 seedEntities
+- commit: 写入记忆 - 必须使用 triplets 数组格式，每个三元组包含 subject, relation, object
+- purge: 删除记忆 - 提供 criteria 指定删除条件
+- introspect: 查看状态 - 无参数
 - persona_update/clear: 人设管理
-- task_create/set_state/delete: 任务管理`;
+- task_create/set_state/delete: 任务管理
+
+【commit 操作的三元组格式】
+triplets 必须是数组，每个元素是 {subject, relation, object, confidence} 格式:
+示例: {"action":"commit","params":{"triplets":[{"subject":"Alice","relation":"is a","object":"engineer","confidence":0.95}]}}
+- subject: 实体名称 (如用户名、技术名称)
+- relation: 关系描述 (如 "is a", "likes", "knows")
+- object: 目标实体 (如职业、爱好、技术)
+- confidence: 置信度 0-1 (可选，默认0.9)
+
+【recall 操作】
+示例: {"action":"recall","params":{"queryIntent":"用户的学习偏好","seedEntities":["Alice"]}}`;
 
 export class GraphMemoryTool implements Tool {
   readonly id = GRAPH_MEMORY_TOOL_ID;
   readonly name = 'GraphMemory';
+  readonly apiName = GRAPH_MEMORY_TOOL_API_NAME;
   readonly description = GRAPH_MEMORY_TOOL_DESCRIPTION;
   readonly category: ToolCategory = 'analysis';
   readonly permissionLevel: PermissionLevel = 'safe';
@@ -44,17 +95,17 @@ export class GraphMemoryTool implements Tool {
           sessionFilter: { type: 'string', description: '会话ID过滤' },
           triplets: {
             type: 'array',
+            description: '知识三元组数组。每个三元组描述 subject-relation-object 关系，用于存储记忆知识。',
             items: {
               type: 'object',
-              description: '三元组',
+              description: '三元组: {subject, relation, object, confidence} - subject/relation/object 必填',
               properties: {
-                subject: { type: 'string', description: '主体' },
-                relation: { type: 'string', description: '关系' },
-                object: { type: 'string', description: '客体' },
-                confidence: { type: 'number', description: '置信度' }
+                subject: { type: 'string', description: '主体实体，如人名、技术名称等' },
+                relation: { type: 'string', description: '关系描述，如 "is a", "likes", "knows", "uses" 等' },
+                object: { type: 'string', description: '客体实体，如职业、爱好、技术名称等' },
+                confidence: { type: 'number', description: '置信度 (0-1)，默认 0.9', default: 0.9 }
               }
-            },
-            description: '三元组数组'
+            }
           },
           sessionId: { type: 'string', description: '会话ID' },
           turnId: { type: 'number', description: '轮次ID' },
