@@ -66,6 +66,9 @@ system_prompt = prompt_manager.get_system_prompt()
 | `memory_commit` | 写入记忆 |
 | `memory_purge` | 删除记忆 |
 | `memory_introspect` | 查看状态 |
+| `memory_archive` | 归档记忆 |
+| `memory_cleanup` | 清理数据 |
+| `context_rewrite` | 压缩单轮工具调用上下文 |
 
 #### 人设工具
 

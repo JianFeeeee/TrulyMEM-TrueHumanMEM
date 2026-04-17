@@ -66,6 +66,9 @@ Step 4: Update working memory chain
 | `memory_commit` | Write memory |
 | `memory_purge` | Delete memory |
 | `memory_introspect` | View status |
+| `memory_archive` | Archive memory |
+| `memory_cleanup` | Clean data |
+| `context_rewrite` | Compress single-turn tool call context |
 
 #### Persona Tools
 

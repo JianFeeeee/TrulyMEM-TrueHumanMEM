@@ -185,10 +185,8 @@ body = {}  # 无参数
         "model": str     # 模型名称
     },
     "tool_limits": {
-        "persona_query_max": int,   # 人设图查询上限
         "persona_update_max": int,  # 人设图修改上限
-        "task_query_max": int,       # 工作记忆查询上限
-        "task_update_max": int,      # 工作记忆修改上限
+        "task_update_max": int,      # 工作记忆链修改上限
         "memory_query_max": int,     # 一般记忆查询上限
         "memory_update_max": int    # 一般记忆修改上限
     }
@@ -217,11 +215,9 @@ body = {
         "model": str       # 模型名称 (默认: deepseek-chat)
     },
     "tool_limits": {
-        "persona_query_max": int,   # 人设图查询上限 (≥1)
         "persona_update_max": int,  # 人设图修改上限 (≥1)
-        "task_query_max": int,       # 工作记忆查询上限 (≥1)
-        "task_update_max": int,     # 工作记忆修改上限 (≥1)
-        "memory_query_max": int,    # 一般记忆查询上限 (≥1)
+        "task_update_max": int,      # 工作记忆链修改上限 (≥1)
+        "memory_query_max": int,     # 一般记忆查询上限 (≥1)
         "memory_update_max": int     # 一般记忆修改上限 (≥1)
     }
 }
@@ -243,8 +239,8 @@ result = client.update_settings(
         "model": "deepseek-chat"
     },
     tool_limits={
-        "persona_query_max": 2,
-        "task_query_max": 5,
+        "persona_update_max": 2,
+        "task_update_max": 5,
         "memory_query_max": 30
     }
 )

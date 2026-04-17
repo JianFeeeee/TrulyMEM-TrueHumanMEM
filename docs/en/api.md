@@ -179,10 +179,8 @@ body = {}  # No parameters
         "model": str     # Model name
     },
     "tool_limits": {
-        "persona_query_max": int,   # Persona graph query limit
         "persona_update_max": int,  # Persona graph update limit
-        "task_query_max": int,       # Working memory query limit
-        "task_update_max": int,      # Working memory update limit
+        "task_update_max": int,      # Working memory chain update limit
         "memory_query_max": int,      # General memory query limit
         "memory_update_max": int     # General memory update limit
     }
@@ -211,9 +209,7 @@ body = {
         "model": str       # Model name (default: deepseek-chat)
     },
     "tool_limits": {
-        "persona_query_max": int,   # Persona query limit (≥1)
         "persona_update_max": int,  # Persona update limit (≥1)
-        "task_query_max": int,       # Working memory query limit (≥1)
         "task_update_max": int,      # Working memory update limit (≥1)
         "memory_query_max": int,     # General memory query limit (≥1)
         "memory_update_max": int     # General memory update limit (≥1)
@@ -237,8 +233,8 @@ result = client.update_settings(
         "model": "deepseek-chat"
     },
     tool_limits={
-        "persona_query_max": 2,
-        "task_query_max": 5,
+        "persona_update_max": 2,
+        "task_update_max": 5,
         "memory_query_max": 30
     }
 )

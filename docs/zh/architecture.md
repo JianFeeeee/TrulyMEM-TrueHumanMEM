@@ -153,7 +153,7 @@ def main():
 - `memory_introspect` - 查看状态
 - `memory_archive` - 归档记忆
 - `memory_cleanup` - 清理数据
-- `context_rewrite` - 压缩单轮工具调用上下文（实验性）
+- `context_rewrite` - 压缩单轮工具调用上下文
 
 ### 人设工具 (2个)
 - `persona_update` - 更新人设

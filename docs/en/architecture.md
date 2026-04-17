@@ -153,7 +153,7 @@ def main():
 - `memory_introspect` - View status
 - `memory_archive` - Archive memory
 - `memory_cleanup` - Clean data
-- `context_rewrite` - Compress single-turn tool call context (experimental)
+- `context_rewrite` - Compress single-turn tool call context
 
 ### Persona Tools (2)
 - `persona_update` - Update persona
