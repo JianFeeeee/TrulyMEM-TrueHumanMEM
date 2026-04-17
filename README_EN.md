@@ -80,11 +80,11 @@ npm install
 Just two lines, zero changes to WaterFlow:
 
 ```typescript
-import { getPlatform } from 'waterflow/platform';
+import { getPlatform } from 'waterflow-ts/dist/platform/index.js';
 import { installTrulyMEM } from 'trulymem/tools';
 
 // One-line install, returns configured ToolRegistry
-const registry = installTrulyMEM(getPlatform(), 'my-session-id');
+const registry = await installTrulyMEM(getPlatform(), 'my-session-id');
 
 // Continue assembling WaterFlow...
 const toolExecutor = new ToolExecutor(registry);
@@ -95,8 +95,8 @@ const toolExecutor = new ToolExecutor(registry);
 If you want to control ToolRegistry creation yourself:
 
 ```typescript
-import { getPlatform } from 'waterflow/platform';
-import { initializeToolRegistry } from 'waterflow/runtime/core/tools/builtin';
+import { getPlatform } from 'waterflow-ts/dist/platform/index.js';
+import { initializeToolRegistry } from 'waterflow-ts/dist/runtime/core/tools/builtin/index.js';
 import { registerGraphMemoryTool } from 'trulymem/tools';
 
 const platform = getPlatform();
@@ -161,7 +161,7 @@ const tool = new GraphMemoryTool(sessionId?: string);
 
 | Action | Description | Parameters |
 |--------|-------------|------------|
-| `recall` | Retrieve memories | `queryIntent`, `seedEntities`, `sessionFilter` |
+| `recall` | Retrieve memories | `queryIntent`, `seedEntities`, `depth`, `sessionFilter` |
 | `commit` | Commit memories | `triplets`, `sessionId`, `turnId` |
 | `purge` | Delete memories | `criteria`, `mode` |
 | `introspect` | Inspect status | - |
@@ -170,6 +170,7 @@ const tool = new GraphMemoryTool(sessionId?: string);
 | `task_create` | Create task | `task_id`, `description`, `info_nodes` |
 | `task_set_state` | Set state | `task_id`, `state` |
 | `task_delete` | Delete task | `task_id` |
+| `task_link_info` | Link info to task | `task_id`, `info_node` |
 
 ---
 
@@ -211,6 +212,35 @@ const tool = new GraphMemoryTool(sessionId?: string);
     "info_nodes": ["Documentation", "Tutorial"]
   }
 }
+```
+
+### Link Info to Task
+
+```json
+{
+  "action": "task_link_info",
+  "params": {
+    "task_id": "Task_LearnTypeScript",
+    "info_node": "User likes React"
+  }
+}
+```
+
+---
+
+## API Name Mapping
+
+OpenAI/DeepSeek API requires tool names to match `^[a-zA-Z0-9_-]+$` (no colons).
+Internal tool IDs use `builtin:xxx` format and must be mapped before sending to API.
+
+```typescript
+import { mapToolIdToApiName, mapApiNameToToolId } from 'trulymem/tools';
+
+// Send to API
+const apiName = mapToolIdToApiName('builtin:graph_memory'); // -> 'graph_memory'
+
+// Map back after receiving tool_use
+const internalId = mapApiNameToToolId('graph_memory'); // -> 'builtin:graph_memory'
 ```
 
 ---

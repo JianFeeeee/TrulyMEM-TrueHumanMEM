@@ -79,11 +79,11 @@ npm install
 只需两行代码，完全不动 WaterFlow 源码：
 
 ```typescript
-import { getPlatform } from 'waterflow/platform';
+import { getPlatform } from 'waterflow-ts/dist/platform/index.js';
 import { installTrulyMEM } from 'trulymem/tools';
 
 // 一行安装，返回配置好的 ToolRegistry
-const registry = installTrulyMEM(getPlatform(), 'my-session-id');
+const registry = await installTrulyMEM(getPlatform(), 'my-session-id');
 
 // 继续组装 WaterFlow...
 const toolExecutor = new ToolExecutor(registry);
@@ -94,8 +94,8 @@ const toolExecutor = new ToolExecutor(registry);
 如果你想自己控制 ToolRegistry 的创建：
 
 ```typescript
-import { getPlatform } from 'waterflow/platform';
-import { initializeToolRegistry } from 'waterflow/runtime/core/tools/builtin';
+import { getPlatform } from 'waterflow-ts/dist/platform/index.js';
+import { initializeToolRegistry } from 'waterflow-ts/dist/runtime/core/tools/builtin/index.js';
 import { registerGraphMemoryTool } from 'trulymem/tools';
 
 const platform = getPlatform();
@@ -160,7 +160,7 @@ const tool = new GraphMemoryTool(sessionId?: string);
 
 | Action | 说明 | 参数 |
 |--------|------|------|
-| `recall` | 检索记忆 | `queryIntent`, `seedEntities`, `sessionFilter` |
+| `recall` | 检索记忆 | `queryIntent`, `seedEntities`, `depth`, `sessionFilter` |
 | `commit` | 写入记忆 | `triplets`, `sessionId`, `turnId` |
 | `purge` | 删除记忆 | `criteria`, `mode` |
 | `introspect` | 查看状态 | - |
@@ -169,6 +169,7 @@ const tool = new GraphMemoryTool(sessionId?: string);
 | `task_create` | 创建任务 | `task_id`, `description`, `info_nodes` |
 | `task_set_state` | 设置状态 | `task_id`, `state` |
 | `task_delete` | 删除任务 | `task_id` |
+| `task_link_info` | 关联信息到任务 | `task_id`, `info_node` |
 
 ---
 
@@ -210,6 +211,35 @@ const tool = new GraphMemoryTool(sessionId?: string);
     "info_nodes": ["文档链接", "教程链接"]
   }
 }
+```
+
+### 关联信息到任务
+
+```json
+{
+  "action": "task_link_info",
+  "params": {
+    "task_id": "Task_学习TypeScript",
+    "info_node": "用户喜欢 React"
+  }
+}
+```
+
+---
+
+## API 名称映射
+
+OpenAI/DeepSeek API 要求工具名称符合 `^[a-zA-Z0-9_-]+$` 格式（不含冒号）。
+内部工具 ID 使用 `builtin:xxx` 格式，需映射后发送给 API。
+
+```typescript
+import { mapToolIdToApiName, mapApiNameToToolId } from 'trulymem/tools';
+
+// 发送给 API
+const apiName = mapToolIdToApiName('builtin:graph_memory'); // -> 'graph_memory'
+
+// 收到 tool_use 后映射回
+const internalId = mapApiNameToToolId('graph_memory'); // -> 'builtin:graph_memory'
 ```
 
 ---
