@@ -54,7 +54,8 @@ export class GraphDatabase {
         await fs.mkdir(dir, true);
       }
       const data = this.db.export();
-      await fs.writeFile(dbPath, data.buffer as ArrayBuffer, { encoding: 'binary' });
+      // sql.js returns Uint8Array, convert to Buffer for writeFile compatibility
+      await fs.writeFile(dbPath, Buffer.from(data), { encoding: 'binary' });
     } catch (error) {
       console.error(`[GraphDatabase] Save failed: ${error}`);
     }
