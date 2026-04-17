@@ -11,6 +11,7 @@ fi
 APPDIR="$PROJECT_ROOT/TrulyMEM.AppDir"
 rm -rf "$APPDIR"
 mkdir -p "$APPDIR/usr/bin"
+mkdir -p "$APPDIR/usr/share/trulymem"
 echo "===== Step 1: Build binary with PyInstaller ====="
 VENV_DIR="$PROJECT_ROOT/.venv_appimage"
 rm -rf "$VENV_DIR"
@@ -80,9 +81,21 @@ Exec=TrulyMEM %U
 Icon=trulymem
 Terminal=true
 Type=Application
-Categories=Utility;AI;
+Categories=Utility;X-AI;
 EOF
-[ -f "$PROJECT_ROOT/pic/TrulyMEM.png" ] && cp "$PROJECT_ROOT/pic/TrulyMEM.png" "$APPDIR/trulymem.png"
+# Copy icon file (try multiple possible locations)
+if [ -f "$PROJECT_ROOT/pic/TrulyMEM.png" ]; then
+    cp "$PROJECT_ROOT/pic/TrulyMEM.png" "$APPDIR/trulymem.png"
+elif [ -f "$PROJECT_ROOT/pic/TrulyMEM.iconset/icon_256x256.png" ]; then
+    cp "$PROJECT_ROOT/pic/TrulyMEM.iconset/icon_256x256.png" "$APPDIR/trulymem.png"
+elif [ -f "$PROJECT_ROOT/pic/TrulyMEM.iconset/icon_128x128.png" ]; then
+    cp "$PROJECT_ROOT/pic/TrulyMEM.iconset/icon_128x128.png" "$APPDIR/trulymem.png"
+else
+    echo "Warning: No icon file found, creating placeholder"
+    # Create a simple placeholder icon
+    convert -size 256x256 xc:blue "$APPDIR/trulymem.png" 2>/dev/null || \
+    echo "Note: Install ImageMagick to generate placeholder icon"
+fi
 APPIMAGE="$PROJECT_ROOT/TrulyMEM.AppImage"
 rm -f "$APPIMAGE"
 echo "===== Step 3: Package as AppImage ====="
@@ -108,7 +121,17 @@ fi
 echo "===== Build Complete ====="
 [ -f "$APPIMAGE" ] && echo "AppImage: $APPIMAGE" && ls -la "$APPIMAGE"
 [ -d "$APPDIR" ] && echo "AppDir: $APPDIR (can be packaged manually with appimagetool)"
+echo "===== Cleaning up build artifacts ====="
 deactivate
 rm -rf "$VENV_DIR"
+rm -rf "$PROJECT_ROOT/build/pyinstaller_build"
+rm -rf "$PROJECT_ROOT/build/pyinstaller_build"
 rm -f /tmp/appimagetool
+# Only remove AppDir if AppImage was successfully created
+if [ -f "$APPIMAGE" ]; then
+    echo "Removing AppDir since AppImage was created successfully"
+    rm -rf "$APPDIR"
+else
+    echo "Keeping AppDir for manual packaging"
+fi
 echo "Done!"
