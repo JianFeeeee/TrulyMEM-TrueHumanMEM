@@ -46,22 +46,32 @@ cp -r skills/graph-memory-task ~/.openclaw/skills/graph-memory-task
 
 ### 步骤 4：安装 Plugin（让 OpenClaw 运行时加载 Tool）
 
-将 `ts/` 目录作为 OpenClaw 插件加载。在 `openclaw.json` 中添加：
-
-```json5
-{
-  "plugins": {
-    "allow": ["@trulymem/openclaw-graph-memory"]
-  }
-}
-```
-
-或者直接将编译后的 `ts/dist/` 目录链接到 OpenClaw 的插件目录：
+将编译后的 `ts/` 目录复制到 OpenClaw 的全局扩展目录：
 
 ```bash
-# 将插件目录软链接到 OpenClaw 插件路径
-ln -s <本项目的ts/dist目录> ~/.openclaw/plugins/graph-memory
+# 复制到 OpenClaw extensions 目录
+mkdir -p ~/.openclaw/extensions
+cp -r ts ~/.openclaw/extensions/graph-memory
 ```
+
+然后启用插件：
+
+```bash
+# 启用插件
+openclaw plugins enable graph-memory
+
+# 重启 Gateway（如果使用 systemd 托管）
+systemctl --user restart openclaw-gateway
+```
+
+验证插件已加载：
+
+```bash
+openclaw plugins list
+# 应显示 graph-memory 为 loaded 状态
+```
+
+**注意**：插件启用时会自动切换 `memory` 独占插槽到 `graph-memory`，禁用其他内存插件（如 `memory-core`）。
 
 ### 步骤 5：验证安装
 
@@ -178,15 +188,21 @@ skills/                              # 独立 Skill 定义
 
 ### 作为 Plugin
 
-```typescript
-import registerGraphMemoryPlugin from './dist/plugin-entry.js';
+插件入口导出符合 OpenClaw SDK 规范的对象：
 
-registerGraphMemoryPlugin({
-  registerTool(tool) {
-    // OpenClaw 会自动注册工具
+```typescript
+// plugin-entry.ts 导出格式
+export default {
+  id: 'graph-memory',
+  name: 'Graph Memory',
+  description: '让 AI 拥有真正的长期记忆能力',
+  register(api) {
+    api.registerTool(tool);
   }
-});
+};
 ```
+
+OpenClaw 加载后会自动调用 `register(api)` 注册工具。
 
 ### 作为独立模块
 
