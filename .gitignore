@@ -70,3 +70,7 @@ node_modules/
 dist/
 *.tsbuildinfo
 tsconfig.tsbuildinfo
+
+# Task Archive (runtime generated)
+task_archive/
+ts/task_archive/
