@@ -7,6 +7,8 @@ export interface Entity {
   updatedAt: Date;
 }
 
+export const __types = true;
+
 export type RelationStatus = 'active' | 'deleted' | 'archived' | 'superseded';
 
 export interface Relation {

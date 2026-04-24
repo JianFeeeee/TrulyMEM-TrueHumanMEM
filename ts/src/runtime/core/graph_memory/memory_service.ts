@@ -1,5 +1,5 @@
-import { GraphDatabase } from './graph_database';
-import { TaskNodeStore } from './task_node_store';
+import { GraphDatabase } from './graph_database.js';
+import { TaskNodeStore } from './task_node_store.js';
 import * as fs from 'fs';
 import * as path from 'path';
 import type {
@@ -8,7 +8,7 @@ import type {
   ContextRewriteParams, ContextRewriteResult,
   WorkingMemoryChainParams, WorkingMemoryChainResult,
   TaskNodeCreateParams, TaskNodeChainResult
-} from './types';
+} from './types.js';
 
 export class MemoryService {
   private db: GraphDatabase;

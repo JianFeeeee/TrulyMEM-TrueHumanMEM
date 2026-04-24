@@ -2,7 +2,7 @@ import Database from 'better-sqlite3';
 import type {
   Entity, Relation, RecallParams, CommitParams, PurgeParams,
   RecallResult, CommitResult, PurgeResult, MemoryStats
-} from './types';
+} from './types.js';
 
 export class GraphDatabase {
   private db: Database.Database;
