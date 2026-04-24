@@ -19,6 +19,8 @@ user-invocable: true
 | 结构化记忆 | ❌ 无 | ✅ 三元组图存储 |
 | 人设管理 | ❌ 无 | ✅ persona_update/clear |
 | 任务追踪 | ❌ 无 | ✅ task_create/set_state |
+| 上下文压缩 | ❌ 无 | ✅ context_rewrite |
+| 工作记忆链 | ❌ 无 | ✅ working_memory_chain |
 | 自动触发 | ✅ 自动索引检索 | ❌ LLM 可选调用 |
 
 ## 核心概念
@@ -95,6 +97,56 @@ AI 会执行：
 **参数：**
 - `dry_run`: 仅预览不删除（默认 true，建议先预览再执行）
 
+### 7. context_rewrite - 压缩上下文
+
+当对话历史过长时，将历史对话压缩为关键记忆节点存入图数据库。
+
+**参数：**
+- `context`: 要压缩的长文本（必需）
+- `maxEntities`: 最大提取实体数（默认 20）
+- `summary`: 自定义摘要（可选）
+
+**返回：**
+- `extractedEntities`: 提取的实体数
+- `extractedRelations`: 提取的关系数
+- `summary`: 生成的摘要
+- `compressed`: 是否成功压缩
+
+### 8. working_memory_chain - 工作记忆链
+
+检索当前会话的近期活跃关系和任务节点，形成工作记忆链。
+
+**参数：**
+- `maxDepth`: 检索深度 1-5（默认 3）
+- `recentOnly`: 仅最近（默认 true）
+
+### 9. task_node_create - 创建任务节点
+
+创建一个新的 TaskNode 并自动链接到工作记忆链。
+
+**参数：**
+- `session_id`: 会话 ID（必需）
+- `turn_id`: 轮次 ID（必需）
+- `summary`: 摘要（必需）
+- `key_facts`: 关键事实数组（必需）
+- `raw_context`: 原始上下文（可选，会自动存档到文本文件）
+
+### 10. task_node_get_recent - 获取最近节点
+
+获取最近 N 个任务节点（按时间倒序）。
+
+**参数：**
+- `session_id`: 会话 ID（必需）
+- `limit`: 限制数量（默认 5）
+
+### 11. task_node_get_chain - 获取任务链
+
+获取完整的工作记忆链（从指定节点或最新节点开始回溯）。
+
+**参数：**
+- `session_id`: 会话 ID（必需）
+- `from_node_id`: 起始节点 ID（可选，默认最新）
+
 ## 使用原则
 
 1. **选择性记忆**：只记住重要和持久的信息
@@ -102,3 +154,4 @@ AI 会执行：
 3. **定期清理**：删除过时或错误的信息
 4. **关联思考**：利用关系进行联想记忆
 5. **与 memory-core 配合**：对话历史由 memory-core 管理，结构化事实由 GraphMemory 管理
+6. **主动查询人设**：参考 `graph-memory-persona-force` Skill，在适当时候主动查询用户偏好和决策

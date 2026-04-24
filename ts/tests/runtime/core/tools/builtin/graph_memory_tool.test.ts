@@ -575,8 +575,41 @@ describe('GraphMemoryTool', () => {
       expect(parsed.error.message).toContain('newRelation');
     });
 
+    it('should reject context_rewrite without context', async () => {
+      const result = await tool.execute('call-val-12', {
+        action: 'context_rewrite',
+        params: {}
+      });
+
+      const parsed = JSON.parse(result.content[0].text);
+      expect(parsed.success).toBe(false);
+      expect(parsed.error.message).toContain('context');
+    });
+
+    it('should reject context_rewrite with invalid maxEntities', async () => {
+      const result = await tool.execute('call-val-13', {
+        action: 'context_rewrite',
+        params: { context: '测试', maxEntities: 200 }
+      });
+
+      const parsed = JSON.parse(result.content[0].text);
+      expect(parsed.success).toBe(false);
+      expect(parsed.error.message).toContain('maxEntities');
+    });
+
+    it('should reject working_memory_chain with invalid maxDepth', async () => {
+      const result = await tool.execute('call-val-14', {
+        action: 'working_memory_chain',
+        params: { maxDepth: 10 }
+      });
+
+      const parsed = JSON.parse(result.content[0].text);
+      expect(parsed.success).toBe(false);
+      expect(parsed.error.message).toContain('maxDepth');
+    });
+
     it('should reject missing action', async () => {
-      const result = await tool.execute('call-val-11', {
+      const result = await tool.execute('call-val-15', {
         action: '',
         params: {}
       });
@@ -584,6 +617,76 @@ describe('GraphMemoryTool', () => {
       const parsed = JSON.parse(result.content[0].text);
       expect(parsed.success).toBe(false);
       expect(parsed.error.message).toContain('action');
+    });
+  });
+
+  describe('Context rewrite', () => {
+    it('should compress context and extract entities', async () => {
+      const longContext = '我们在开发一个项目。这个项目使用 TypeScript。TypeScript 是 JavaScript 的超集。我们在写代码。代码在仓库里。仓库用 Git 管理。Git 是版本控制系统。';
+
+      const result = await tool.execute('call-cr-1', {
+        action: 'context_rewrite',
+        params: {
+          context: longContext,
+          maxEntities: 10
+        }
+      });
+
+      const parsed = JSON.parse(result.content[0].text);
+      expect(parsed.success).toBe(true);
+      expect(parsed.data.extractedEntities).toBeGreaterThan(0);
+      expect(parsed.data.summary).toBeTruthy();
+      expect(parsed.data.compressed).toBe(true);
+    });
+
+    it('should use provided summary', async () => {
+      const result = await tool.execute('call-cr-2', {
+        action: 'context_rewrite',
+        params: {
+          context: '测试文本',
+          summary: '用户自定义摘要'
+        }
+      });
+
+      const parsed = JSON.parse(result.content[0].text);
+      expect(parsed.success).toBe(true);
+      expect(parsed.data.summary).toBe('用户自定义摘要');
+    });
+  });
+
+  describe('Working memory chain', () => {
+    it('should return working memory chain', async () => {
+      // 先写入一些数据
+      await tool.execute('call-wmc-1', {
+        action: 'commit',
+        params: {
+          triplets: [
+            { subject: '用户', relation: '喜欢', object: 'Python' },
+            { subject: '用户', relation: '正在学习', object: 'TypeScript' }
+          ]
+        }
+      });
+
+      const result = await tool.execute('call-wmc-2', {
+        action: 'working_memory_chain',
+        params: {}
+      });
+
+      const parsed = JSON.parse(result.content[0].text);
+      expect(parsed.success).toBe(true);
+      expect(parsed.data.chain).toBeDefined();
+      expect(Array.isArray(parsed.data.chain)).toBe(true);
+    });
+
+    it('should respect maxDepth parameter', async () => {
+      const result = await tool.execute('call-wmc-3', {
+        action: 'working_memory_chain',
+        params: { maxDepth: 2 }
+      });
+
+      const parsed = JSON.parse(result.content[0].text);
+      expect(parsed.success).toBe(true);
+      expect(parsed.data.entityCount).toBeDefined();
     });
   });
 });

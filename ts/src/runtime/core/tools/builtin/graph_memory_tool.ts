@@ -10,7 +10,9 @@ export const GraphMemoryToolSchema = Type.Object({
     enum: [
       'recall', 'commit', 'purge', 'introspect', 'archive', 'cleanup',
       'persona_update', 'persona_clear',
-      'task_create', 'task_set_state', 'task_delete', 'task_link_info'
+      'task_create', 'task_set_state', 'task_delete', 'task_link_info',
+      'context_rewrite', 'working_memory_chain',
+      'task_node_create', 'task_node_get_recent', 'task_node_get_chain'
     ]
   }),
   params: Type.Object({
@@ -57,7 +59,18 @@ export const GraphMemoryToolSchema = Type.Object({
     info_nodes: Type.Optional(Type.Array(Type.String({ description: '节点' }), { description: '信息节点' })),
     info_node: Type.Optional(Type.String({ description: '信息节点' })),
     days: Type.Optional(Type.Number({ description: '归档天数' })),
-    dry_run: Type.Optional(Type.Boolean({ description: '仅预览不删除' }))
+    dry_run: Type.Optional(Type.Boolean({ description: '仅预览不删除' })),
+    context: Type.Optional(Type.String({ description: '要压缩的上下文文本' })),
+    maxEntities: Type.Optional(Type.Number({ description: '最大实体数' })),
+    summary: Type.Optional(Type.String({ description: '自定义摘要' })),
+    recentOnly: Type.Optional(Type.Boolean({ description: '仅最近' })),
+    maxDepth: Type.Optional(Type.Number({ description: '最大深度' })),
+    session_id: Type.Optional(Type.String({ description: '会话ID（TaskNode用）' })),
+    turn_id: Type.Optional(Type.Number({ description: '轮次ID' })),
+    key_facts: Type.Optional(Type.Array(Type.String({ description: '关键事实' }), { description: '关键事实数组' })),
+    raw_context: Type.Optional(Type.String({ description: '原始上下文（存档用）' })),
+    limit: Type.Optional(Type.Number({ description: '限制数量' })),
+    from_node_id: Type.Optional(Type.Number({ description: '起始节点ID' }))
   }, { description: '操作参数' })
 });
 
@@ -77,7 +90,12 @@ const GRAPH_MEMORY_TOOL_DESCRIPTION = `图记忆工具 - 让 AI 拥有真正的�
 - task_create: 创建任务（必需参数: task_id, description; 可选: info_nodes）
 - task_set_state: 设置任务状态（必需参数: task_id, state）
 - task_delete: 删除任务（必需参数: task_id）
-- task_link_info: 关联信息（必需参数: task_id, info_node）`;
+- task_link_info: 关联信息（必需参数: task_id, info_node）
+- context_rewrite: 压缩上下文为关键记忆（必需参数: context; 可选: maxEntities, summary）
+- working_memory_chain: 获取工作记忆链（可选参数: maxDepth, recentOnly）
+- task_node_create: 创建任务节点并链接到链（必需参数: session_id, turn_id, summary, key_facts; 可选: raw_context）
+- task_node_get_recent: 获取最近N个任务节点（必需参数: session_id; 可选: limit）
+- task_node_get_chain: 获取完整任务链（必需参数: session_id; 可选: from_node_id）`;
 
 // ==================== 参数验证 ====================
 
@@ -228,6 +246,71 @@ function validateTaskLinkInfoParams(params: Record<string, unknown>): Validation
   return errors;
 }
 
+function validateContextRewriteParams(params: Record<string, unknown>): ValidationError[] {
+  const errors: ValidationError[] = [];
+
+  if (!params.context || typeof params.context !== 'string' || params.context.trim() === '') {
+    errors.push({ field: 'context', message: 'context_rewrite 操作必需提供 context 字符串' });
+  }
+  if (params.maxEntities !== undefined && (typeof params.maxEntities !== 'number' || params.maxEntities < 1 || params.maxEntities > 100)) {
+    errors.push({ field: 'maxEntities', message: 'maxEntities 必须在 1-100 之间' });
+  }
+
+  return errors;
+}
+
+function validateWorkingMemoryChainParams(params: Record<string, unknown>): ValidationError[] {
+  const errors: ValidationError[] = [];
+
+  if (params.maxDepth !== undefined && (typeof params.maxDepth !== 'number' || params.maxDepth < 1 || params.maxDepth > 5)) {
+    errors.push({ field: 'maxDepth', message: 'maxDepth 必须在 1-5 之间' });
+  }
+
+  return errors;
+}
+
+function validateTaskNodeCreateParams(params: Record<string, unknown>): ValidationError[] {
+  const errors: ValidationError[] = [];
+
+  if (!params.session_id || typeof params.session_id !== 'string' || params.session_id.trim() === '') {
+    errors.push({ field: 'session_id', message: 'task_node_create 操作必需提供 session_id 字符串' });
+  }
+  if (params.turn_id === undefined || typeof params.turn_id !== 'number') {
+    errors.push({ field: 'turn_id', message: 'task_node_create 操作必需提供 turn_id 数字' });
+  }
+  if (!params.summary || typeof params.summary !== 'string' || params.summary.trim() === '') {
+    errors.push({ field: 'summary', message: 'task_node_create 操作必需提供 summary 字符串' });
+  }
+  if (!params.key_facts || !Array.isArray(params.key_facts) || params.key_facts.length === 0) {
+    errors.push({ field: 'key_facts', message: 'task_node_create 操作必需提供 key_facts 数组' });
+  }
+
+  return errors;
+}
+
+function validateTaskNodeGetRecentParams(params: Record<string, unknown>): ValidationError[] {
+  const errors: ValidationError[] = [];
+
+  if (!params.session_id || typeof params.session_id !== 'string' || params.session_id.trim() === '') {
+    errors.push({ field: 'session_id', message: 'task_node_get_recent 操作必需提供 session_id 字符串' });
+  }
+  if (params.limit !== undefined && (typeof params.limit !== 'number' || params.limit < 1 || params.limit > 100)) {
+    errors.push({ field: 'limit', message: 'limit 必须在 1-100 之间' });
+  }
+
+  return errors;
+}
+
+function validateTaskNodeGetChainParams(params: Record<string, unknown>): ValidationError[] {
+  const errors: ValidationError[] = [];
+
+  if (!params.session_id || typeof params.session_id !== 'string' || params.session_id.trim() === '') {
+    errors.push({ field: 'session_id', message: 'task_node_get_chain 操作必需提供 session_id 字符串' });
+  }
+
+  return errors;
+}
+
 function validatePersonaClearParams(params: Record<string, unknown>): ValidationError[] {
   const errors: ValidationError[] = [];
 
@@ -249,6 +332,11 @@ function validateParams(action: string, params: Record<string, unknown>): Valida
     case 'task_set_state': return validateTaskSetStateParams(params);
     case 'task_delete': return validateTaskDeleteParams(params);
     case 'task_link_info': return validateTaskLinkInfoParams(params);
+    case 'context_rewrite': return validateContextRewriteParams(params);
+    case 'working_memory_chain': return validateWorkingMemoryChainParams(params);
+    case 'task_node_create': return validateTaskNodeCreateParams(params);
+    case 'task_node_get_recent': return validateTaskNodeGetRecentParams(params);
+    case 'task_node_get_chain': return validateTaskNodeGetChainParams(params);
     default: return [];
   }
 }
@@ -395,6 +483,40 @@ export function createGraphMemoryTool(dbPath?: string, sessionId?: string) {
           task_id: params.task_id as string,
           info_node: params.info_node as string
         });
+
+      case 'context_rewrite':
+        return service.contextRewrite({
+          context: params.context as string,
+          maxEntities: params.maxEntities as number | undefined,
+          summary: params.summary as string | undefined
+        });
+
+      case 'working_memory_chain':
+        return service.workingMemoryChain({
+          maxDepth: params.maxDepth as number | undefined,
+          recentOnly: params.recentOnly as boolean | undefined
+        });
+
+      case 'task_node_create':
+        return service.createTaskNode({
+          session_id: params.session_id as string,
+          turn_id: params.turn_id as number,
+          summary: params.summary as string,
+          key_facts: params.key_facts as string[],
+          raw_context: params.raw_context as string | undefined
+        });
+
+      case 'task_node_get_recent':
+        return service.getRecentTaskNodes(
+          params.session_id as string,
+          params.limit as number | undefined
+        );
+
+      case 'task_node_get_chain':
+        return service.getTaskChain(
+          params.session_id as string,
+          params.from_node_id as number | undefined
+        );
 
       case 'archive':
         return service.archive(params.days as number | undefined);

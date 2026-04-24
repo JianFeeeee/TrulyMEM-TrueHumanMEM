@@ -123,3 +123,48 @@ export interface TaskLinkInfoParams {
   task_id: string;
   info_node: string;
 }
+
+export interface ContextRewriteParams {
+  context: string;
+  maxEntities?: number | undefined;
+  summary?: string | undefined;
+}
+
+export interface ContextRewriteResult {
+  extractedEntities: number;
+  extractedRelations: number;
+  summary: string;
+  compressed: boolean;
+}
+
+export interface WorkingMemoryChainParams {
+  maxDepth?: number | undefined;
+  recentOnly?: boolean | undefined;
+}
+
+export interface WorkingMemoryChainResult {
+  chain: Array<{ subject: string; relation: string; object: string; timestamp: string }>;
+  entityCount: number;
+}
+
+export interface TaskNodeData {
+  id: number;
+  session_id: string;
+  turn_id: number;
+  summary: string;
+  key_facts: string;
+  created_at: string;
+}
+
+export interface TaskNodeCreateParams {
+  session_id: string;
+  turn_id: number;
+  summary: string;
+  key_facts: string[];
+  raw_context?: string | undefined;
+}
+
+export interface TaskNodeChainResult {
+  nodes: TaskNodeData[];
+  relations: Array<{ from: number; to: number; type: string }>;
+}
