@@ -365,6 +365,35 @@ export class MemoryService {
     };
   }
 
+  async storeSemanticMemory(text: string, source?: string, sourceLine?: number): Promise<string> {
+    const id = this.generateId();
+    const semanticSearch = this.db.getSemanticSearch();
+    const embedding = await semanticSearch.generateEmbedding(text);
+    semanticSearch.storeEmbedding(id, text, embedding, source, sourceLine);
+    return id;
+  }
+
+  async semanticSearch(query: string, limit: number = 10): Promise<Array<{ id: string; text: string; source?: string; similarity: number }>> {
+    const semanticSearch = this.db.getSemanticSearch();
+    const queryEmbedding = await semanticSearch.generateEmbedding(query);
+    const results = semanticSearch.searchSimilar(queryEmbedding, limit);
+    return results.map(r => ({
+      id: r.id,
+      text: r.text,
+      source: r.source || undefined,
+      similarity: Math.round(r.similarity * 1000) / 1000
+    }));
+  }
+
+  async readMemoryFragment(path: string, fromLine?: number, lines?: number): Promise<string> {
+    const content = fs.readFileSync(path, 'utf-8');
+    if (fromLine !== undefined && lines !== undefined) {
+      const allLines = content.split('\n');
+      return allLines.slice(fromLine - 1, fromLine - 1 + lines).join('\n');
+    }
+    return content;
+  }
+
   // ========== Utility ==========
 
   setSessionId(sessionId: string): void {
@@ -373,5 +402,9 @@ export class MemoryService {
 
   getSessionId(): string {
     return this.db.getSessionId();
+  }
+
+  private generateId(): string {
+    return `${Date.now()}-${Math.random().toString(36).slice(2, 11)}`;
   }
 }

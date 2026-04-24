@@ -21,6 +21,8 @@ user-invocable: true
 | 任务追踪 | ❌ 无 | ✅ task_create/set_state |
 | 上下文压缩 | ❌ 无 | ✅ context_rewrite |
 | 工作记忆链 | ❌ 无 | ✅ working_memory_chain |
+| **语义搜索** | **❌ 无** | **✅ memory_search** |
+| **记忆文件读取** | **❌ 无** | **✅ memory_get** |
 | 自动触发 | ✅ 自动索引检索 | ❌ LLM 可选调用 |
 
 ## 核心概念
@@ -146,6 +148,59 @@ AI 会执行：
 **参数：**
 - `session_id`: 会话 ID（必需）
 - `from_node_id`: 起始节点 ID（可选，默认最新）
+
+### 12. memory_search - 语义搜索
+
+基于 embedding 的语义向量搜索，查找与查询语义相似的文本片段。
+
+**参数：**
+- `query`: 搜索查询（必需）
+- `limit`: 返回结果数量（可选，默认 10，最大 50）
+- `corpus`: 搜索范围（可选，默认 'memory'）
+
+**示例：**
+```
+搜索关于 OpenClaw 的记忆
+```
+
+AI 会执行：
+```json
+{
+  "action": "memory_search",
+  "params": {
+    "query": "OpenClaw",
+    "limit": 5
+  }
+}
+```
+
+返回结果包含相似度分数（0-1），按相关度排序。
+
+### 13. memory_get - 精确读取记忆文件
+
+按路径精确读取记忆文件的内容片段，支持行号范围。
+
+**参数：**
+- `path`: 文件路径（必需）
+- `fromLine`: 起始行号（可选，1-based）
+- `lines`: 读取行数（可选，默认全部，最大 500）
+
+**示例：**
+```
+读取 MEMORY.md 第 1-20 行
+```
+
+AI 会执行：
+```json
+{
+  "action": "memory_get",
+  "params": {
+    "path": "MEMORY.md",
+    "fromLine": 1,
+    "lines": 20
+  }
+}
+```
 
 ## 使用原则
 

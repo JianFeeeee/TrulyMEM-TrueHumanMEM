@@ -1,4 +1,7 @@
 import Database from 'better-sqlite3';
+import {
+  SemanticSearchEngine
+} from './semantic_search.js';
 import type {
   Entity, Relation, RecallParams, CommitParams, PurgeParams,
   RecallResult, CommitResult, PurgeResult, MemoryStats
@@ -7,12 +10,18 @@ import type {
 export class GraphDatabase {
   private db: Database.Database;
   private sessionId: string;
+  private semanticSearch: SemanticSearchEngine;
 
   constructor(dbPath?: string, sessionId?: string) {
     this.db = new Database(dbPath || 'graph_memory.db');
     this.sessionId = sessionId || `session-${Date.now()}`;
     this.db.pragma('journal_mode = WAL');
+    this.semanticSearch = new SemanticSearchEngine(this.db);
     this.initialize();
+  }
+
+  getSemanticSearch(): SemanticSearchEngine {
+    return this.semanticSearch;
   }
 
   private initialize(): void {

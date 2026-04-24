@@ -12,7 +12,8 @@ export const GraphMemoryToolSchema = Type.Object({
       'persona_update', 'persona_clear',
       'task_create', 'task_set_state', 'task_delete', 'task_link_info',
       'context_rewrite', 'working_memory_chain',
-      'task_node_create', 'task_node_get_recent', 'task_node_get_chain'
+      'task_node_create', 'task_node_get_recent', 'task_node_get_chain',
+      'memory_search', 'memory_get'
     ]
   }),
   params: Type.Object({
@@ -70,7 +71,15 @@ export const GraphMemoryToolSchema = Type.Object({
     key_facts: Type.Optional(Type.Array(Type.String({ description: '关键事实' }), { description: '关键事实数组' })),
     raw_context: Type.Optional(Type.String({ description: '原始上下文（存档用）' })),
     limit: Type.Optional(Type.Number({ description: '限制数量' })),
-    from_node_id: Type.Optional(Type.Number({ description: '起始节点ID' }))
+    from_node_id: Type.Optional(Type.Number({ description: '起始节点ID' })),
+    query: Type.Optional(Type.String({ description: '语义搜索查询' })),
+    corpus: Type.Optional(Type.String({
+      enum: ['memory', 'wiki', 'all'],
+      description: '搜索语料范围'
+    })),
+    path: Type.Optional(Type.String({ description: '记忆文件路径' })),
+    fromLine: Type.Optional(Type.Number({ description: '起始行号' })),
+    lines: Type.Optional(Type.Number({ description: '读取行数' }))
   }, { description: '操作参数' })
 });
 
@@ -93,9 +102,8 @@ const GRAPH_MEMORY_TOOL_DESCRIPTION = `图记忆工具 - 让 AI 拥有真正的�
 - task_link_info: 关联信息（必需参数: task_id, info_node）
 - context_rewrite: 压缩上下文为关键记忆（必需参数: context; 可选: maxEntities, summary）
 - working_memory_chain: 获取工作记忆链（可选参数: maxDepth, recentOnly）
-- task_node_create: 创建任务节点并链接到链（必需参数: session_id, turn_id, summary, key_facts; 可选: raw_context）
-- task_node_get_recent: 获取最近N个任务节点（必需参数: session_id; 可选: limit）
-- task_node_get_chain: 获取完整任务链（必需参数: session_id; 可选: from_node_id）`;
+- memory_search: 语义向量搜索（必需参数: query; 可选: limit, corpus）
+- memory_get: 精确读取记忆文件片段（必需参数: path; 可选: fromLine, lines）`;
 
 // ==================== 参数验证 ====================
 
@@ -321,6 +329,35 @@ function validatePersonaClearParams(params: Record<string, unknown>): Validation
   return errors;
 }
 
+function validateMemorySearchParams(params: Record<string, unknown>): ValidationError[] {
+  const errors: ValidationError[] = [];
+
+  if (!params.query || typeof params.query !== 'string' || params.query.trim() === '') {
+    errors.push({ field: 'query', message: 'memory_search 操作必需提供 query 字符串' });
+  }
+  if (params.limit !== undefined && (typeof params.limit !== 'number' || params.limit < 1 || params.limit > 50)) {
+    errors.push({ field: 'limit', message: 'limit 必须在 1-50 之间' });
+  }
+
+  return errors;
+}
+
+function validateMemoryGetParams(params: Record<string, unknown>): ValidationError[] {
+  const errors: ValidationError[] = [];
+
+  if (!params.path || typeof params.path !== 'string' || params.path.trim() === '') {
+    errors.push({ field: 'path', message: 'memory_get 操作必需提供 path 字符串' });
+  }
+  if (params.fromLine !== undefined && (typeof params.fromLine !== 'number' || params.fromLine < 1)) {
+    errors.push({ field: 'fromLine', message: 'fromLine 必须是正整数' });
+  }
+  if (params.lines !== undefined && (typeof params.lines !== 'number' || params.lines < 1 || params.lines > 500)) {
+    errors.push({ field: 'lines', message: 'lines 必须在 1-500 之间' });
+  }
+
+  return errors;
+}
+
 function validateParams(action: string, params: Record<string, unknown>): ValidationError[] {
   switch (action) {
     case 'recall': return validateRecallParams(params);
@@ -337,6 +374,8 @@ function validateParams(action: string, params: Record<string, unknown>): Valida
     case 'task_node_create': return validateTaskNodeCreateParams(params);
     case 'task_node_get_recent': return validateTaskNodeGetRecentParams(params);
     case 'task_node_get_chain': return validateTaskNodeGetChainParams(params);
+    case 'memory_search': return validateMemorySearchParams(params);
+    case 'memory_get': return validateMemoryGetParams(params);
     default: return [];
   }
 }
@@ -517,6 +556,23 @@ export function createGraphMemoryTool(dbPath?: string, sessionId?: string) {
           params.session_id as string,
           params.from_node_id as number | undefined
         );
+
+      case 'memory_search': {
+        const results = await service.semanticSearch(
+          params.query as string,
+          params.limit as number | undefined
+        );
+        return { results, count: results.length };
+      }
+
+      case 'memory_get': {
+        const content = await service.readMemoryFragment(
+          params.path as string,
+          params.fromLine as number | undefined,
+          params.lines as number | undefined
+        );
+        return { content, path: params.path };
+      }
 
       case 'archive':
         return service.archive(params.days as number | undefined);
