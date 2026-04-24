@@ -1,7 +1,7 @@
 {
   "id": "graph-memory",
   "name": "Graph Memory",
-  "description": "让 AI 拥有真正的长期记忆能力 - 基于图数据库的记忆系统（作为增强工具，不替换memory-core）",
+  "description": "让 AI 拥有真正的长期记忆能力 - 基于图数据库的 AI 主要长期记忆系统。与 memory-core 并存运行：memory-core 管理对话历史，GraphMemory 管理结构化长期记忆（知识图谱、人设、任务、语义搜索）。",
   "skills": [
     "bundled-skills/graph-memory",
     "bundled-skills/graph-memory-persona",

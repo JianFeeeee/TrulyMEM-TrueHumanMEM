@@ -1,8 +1,20 @@
-# TrulyMEM - OpenClaw Graph Memory Plugin
+# TrulyMEM - AI 主要长期记忆系统
 
 让 AI 拥有真正的长期记忆能力 - OpenClaw 框架插件版
 
 [English Version](./README_EN.md)
+
+---
+
+## 定位声明
+
+**TrulyMEM 是 AI 的主要长期记忆系统。**
+
+与 OpenClaw 内置的 memory-core 并存运行：
+- **memory-core**：负责 session transcripts 和对话历史管理
+- **GraphMemory (TrulyMEM)**：负责**结构化长期记忆**——知识图谱、人设、任务、语义搜索
+
+AI 在对话中应**优先**将重要信息（偏好、决策、任务、知识点）写入图数据库，而非依赖 message 历史。
 
 ---
 
@@ -71,7 +83,7 @@ openclaw plugins list
 # 应显示 graph-memory 为 loaded 状态
 ```
 
-**注意**：插件启用时会自动切换 `memory` 独占插槽到 `graph-memory`，禁用其他内存插件（如 `memory-core`）。
+**注意**：插件与 memory-core **并存运行**，不会禁用其他内存插件。memory-core 继续管理对话历史，GraphMemory 提供结构化长期记忆。
 
 ### 步骤 5：验证安装
 
@@ -100,7 +112,7 @@ AI 应调用 `recall` action 并返回之前写入的信息。
 ```
 
 你应该能看到以下 3 个 Skill：
-- `graph-memory` - 记忆 CRUD
+- `graph-memory` - 记忆 CRUD + 语义搜索 + 上下文压缩
 - `graph-memory-persona` - 人设管理
 - `graph-memory-task` - 任务管理
 
@@ -110,22 +122,33 @@ AI 应调用 `recall` action 并返回之前写入的信息。
 
 本项目是 OpenClaw 的图记忆插件，基于 SQLite 实现持久化图数据库。
 
-**设计理念：增强而非替换**
+**设计理念：AI 的主要长期记忆系统**
 
-本插件作为 **增强工具** 提供，不会替换 OpenClaw 的内置 memory-core 系统：
-- **保留 message 数组**：对话历史仍由 memory-core 管理
-- **图记忆作为工具**：通过 `graph_memory` 工具为 LLM 提供结构化记忆能力
-- **两者并存**：memory-core 管理会话历史，graph-memory 提供知识图谱
+本插件作为 AI 的**主要长期记忆存储**，与 memory-core 并存运行：
+- **memory-core 管理对话历史**：session transcripts 和历史消息由 memory-core 自动管理
+- **GraphMemory 管理结构化记忆**：重要事实、人设、任务、知识图谱由 AI 主动写入图数据库
+- **AI 优先使用图记忆**：对于持久信息，AI 应优先写入图数据库而非依赖 message 上下文
 
 **核心功能：**
+
+### 基础记忆操作
 - **recall**: 检索记忆（支持关键词、种子实体、多跳遍历、时间过滤）
 - **commit**: 写入记忆（三元组批量写入）
 - **purge**: 删除记忆（软删除/硬删除/纠错替代）
 - **introspect**: 查看记忆状态
 - **archive**: 归档旧记忆
 - **cleanup**: 清理无效数据
-- **persona_update/clear**: 人设管理
-- **task_create/set_state/delete/link_info**: 任务管理
+
+### 高级功能（P2）
+- **memory_search**: 语义搜索——基于本地 ONNX embedding 的向量相似度搜索
+- **memory_get**: 精确读取——按路径读取记忆文件内容片段
+- **context_rewrite**: 上下文压缩——将长对话历史压缩为关键记忆节点
+- **working_memory_chain**: 工作记忆链——获取当前会话的活跃关系链
+- **task_node_create/get_recent/get_chain**: 任务节点——创建和追踪连续性任务节点
+
+### 人设与任务管理
+- **persona_update/clear**: 人设管理（AI 应主动查询人设指导行为）
+- **task_create/set_state/delete/link_info**: 任务管理（AI 应主动追踪任务状态）
 
 ---
 
@@ -164,6 +187,7 @@ ts/
 │       │   ├── types.ts             # 类型定义
 │       │   ├── graph_database.ts    # SQLite 图数据库
 │       │   ├── memory_service.ts    # 记忆服务
+│       │   ├── semantic_search.ts   # 语义搜索引擎（P2）
 │       │   └── index.ts             # 模块导出
 │       └── tools/
 │           ├── builtin/
@@ -229,8 +253,14 @@ const result = await tool.execute('call-1', {
   }
 });
 
+// 语义搜索
+const searchResult = await tool.execute('call-2', {
+  action: 'memory_search',
+  params: { query: '编程相关', limit: 5 }
+});
+
 // 检索记忆
-const recallResult = await tool.execute('call-2', {
+const recallResult = await tool.execute('call-3', {
   action: 'recall',
   params: { queryIntent: '用户 编程' }
 });
@@ -250,8 +280,20 @@ const recallResult = await tool.execute('call-2', {
 | `introspect` | 查看状态 | - |
 | `archive` | 归档旧记忆 | `days` (默认 30) |
 | `cleanup` | 清理无效数据 | `dry_run` (默认 true) |
+| **语义搜索** | | |
+| `memory_search` | 语义向量搜索 | `query`, `limit`, `corpus` |
+| `memory_get` | 精确读取记忆文件 | `path`, `fromLine`, `lines` |
+| **上下文压缩** | | |
+| `context_rewrite` | 压缩长对话为记忆节点 | `context`, `maxEntities`, `summary` |
+| `working_memory_chain` | 获取当前会话活跃关系链 | `maxDepth`, `recentOnly` |
+| **任务节点** | | |
+| `task_node_create` | 创建任务节点 | `session_id`, `turn_id`, `summary`, `key_facts` |
+| `task_node_get_recent` | 获取最近任务节点 | `session_id`, `limit` |
+| `task_node_get_chain` | 获取任务链 | `session_id`, `from_node_id` |
+| **人设管理** | | |
 | `persona_update` | 更新人设 | `attributes`, `mode` (merge/replace) |
 | `persona_clear` | 清除人设 | `confirm` |
+| **任务管理** | | |
 | `task_create` | 创建任务 | `task_id`, `description`, `info_nodes` |
 | `task_set_state` | 设置状态 | `task_id`, `state` |
 | `task_delete` | 删除任务 | `task_id` |
@@ -263,9 +305,9 @@ const recallResult = await tool.execute('call-2', {
 
 | Skill 名称 | 功能 | 使用场景 |
 |------------|------|----------|
-| `graph-memory` | 记忆 CRUD | 读取/写入/删除记忆 |
-| `graph-memory-persona` | 人设管理 | 设置 AI 角色性格 |
-| `graph-memory-task` | 任务管理 | 创建/更新长期任务 |
+| `graph-memory` | 记忆 CRUD + 语义搜索 + 上下文压缩 | 读取/写入/删除记忆，语义搜索，压缩历史 |
+| `graph-memory-persona` | 人设管理 | 设置 AI 角色性格，AI 主动查询人设 |
+| `graph-memory-task` | 任务管理 | 创建/更新长期任务，AI 主动追踪任务 |
 
 ---
 
