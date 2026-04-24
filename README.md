@@ -110,6 +110,13 @@ AI 应调用 `recall` action 并返回之前写入的信息。
 
 本项目是 OpenClaw 的图记忆插件，基于 SQLite 实现持久化图数据库。
 
+**设计理念：增强而非替换**
+
+本插件作为 **增强工具** 提供，不会替换 OpenClaw 的内置 memory-core 系统：
+- **保留 message 数组**：对话历史仍由 memory-core 管理
+- **图记忆作为工具**：通过 `graph_memory` 工具为 LLM 提供结构化记忆能力
+- **两者并存**：memory-core 管理会话历史，graph-memory 提供知识图谱
+
 **核心功能：**
 - **recall**: 检索记忆（支持关键词、种子实体、多跳遍历、时间过滤）
 - **commit**: 写入记忆（三元组批量写入）
