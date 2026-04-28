@@ -695,8 +695,8 @@ def get_graph_highlight():
             if row:
                 highlight_ids.append(row['id'])
         
-        # 检查是否有新创建或 recall 的节点，用于拉镜头
-        if record.get('action') in ('create', 'recall', 'commit', 'anchor') and entity_name:
+        # 除删除外，所有操作都拉镜头（create/recall/query/update/archive 等）
+        if record.get('action') != 'delete' and entity_name:
             cursor = graph_db.conn.cursor()
             cursor.execute("SELECT id FROM entities WHERE name = ?", (entity_name,))
             row = cursor.fetchone()
