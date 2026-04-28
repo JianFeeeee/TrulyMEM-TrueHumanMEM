@@ -26,6 +26,10 @@ def execute_tool(graph: Any, tool_name: str, arguments: dict) -> str:
                 time_range=arguments.get("time_range"),
                 session_filter=arguments.get("session_filter")
             )
+            # 记录召回结果中的实体名，供 WebUI 高亮+拉镜头用
+            for e in result.get("entities", []):
+                if e and isinstance(e, dict) and e.get("name"):
+                    recorder.record("query", tool_name + "_found", e["name"])
             return format_recall_result(result)
         
         elif tool_name == "memory_commit":
@@ -118,6 +122,10 @@ def execute_tool(graph: Any, tool_name: str, arguments: dict) -> str:
         elif tool_name == "task_query":
             recorder.record("query", tool_name, "")
             result = execute_task_query(graph, arguments)
+            # 记录查询到的任务描述，供 WebUI 高亮
+            for t in result.get("tasks", []):
+                if t and isinstance(t, dict) and t.get("description"):
+                    recorder.record("query", tool_name + "_found", t["description"])
             return json.dumps(result, ensure_ascii=False, default=str)
         
         return f"未知工具: {tool_name}"
