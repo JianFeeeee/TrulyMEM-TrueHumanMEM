@@ -111,6 +111,15 @@ class EmbeddedGraphDB:
         if 'role' not in columns:
             cursor.execute("ALTER TABLE web_users ADD COLUMN role TEXT NOT NULL DEFAULT 'user'")
 
+        # 确保至少有一个 admin（当 role 列刚添加时，已有用户都是 user）
+        cursor.execute("SELECT COUNT(*) as cnt FROM web_users WHERE role = 'admin'")
+        has_admin = cursor.fetchone()[0] > 0
+        if not has_admin:
+            cursor.execute("SELECT id, username FROM web_users ORDER BY created_at ASC LIMIT 1")
+            first_user = cursor.fetchone()
+            if first_user:
+                cursor.execute("UPDATE web_users SET role = 'admin' WHERE id = ?", (first_user[0],))
+
         self.conn.commit()
     
     def ensure_constraints(self):
