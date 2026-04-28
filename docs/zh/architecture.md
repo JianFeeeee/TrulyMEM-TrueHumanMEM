@@ -8,6 +8,72 @@
 - TUI 与后端分离，多线程通信
 - **一切皆图**，AI 推理全部在后端
 
+## 部署方式
+
+### 开发环境（从 Git 仓库直接运行）
+
+```bash
+cd TrulyMEM-TrueHumanMEM
+python3 trulymem_entry.py --web --port 4096
+```
+
+### 生产环境（Systemd + 独立部署目录）
+
+```bash
+# 将代码复制到独立目录
+cp -r TrulyMEM-TrueHumanMEM /home/trulymem
+
+# 创建 Systemd 服务
+cat > /etc/systemd/system/trulymem-web.service << 'EOF'
+[Unit]
+Description=TrulyMEM - True Human Memory (Web Mode)
+After=network.target
+
+[Service]
+Type=simple
+User=root
+WorkingDirectory=/home/trulymem
+ExecStart=/usr/bin/python3 /home/trulymem/trulymem_entry.py --web --port 4096
+Restart=always
+RestartSec=5
+StandardOutput=journal
+StandardError=journal
+
+[Install]
+WantedBy=multi-user.target
+EOF
+
+systemctl daemon-reload
+systemctl enable trulymem-web.service
+systemctl start trulymem-web.service
+
+# 查看状态
+systemctl status trulymem-web.service
+```
+
+> **注意**: 不要直接从 Git 仓库启动服务，以免日志文件、数据库等运行时产物污染仓库。
+
+### Web 访问
+
+服务默认运行在 `http://localhost:4096`，首次访问需设置管理员账号并登录。
+
+### 更新部署
+
+```bash
+# 拉取最新代码
+cd TrulyMEM-TrueHumanMEM
+git pull
+
+# 同步到部署目录
+cp -r * /home/trulymem/
+
+# 重启服务
+systemctl restart trulymem-web.service
+```
+
+---
+
+## 原始架构说明
 ## 项目结构
 
 ```
@@ -24,8 +90,8 @@ TrulyMEM-TrueHumanMEM/
 │   ├── web_api.py      # Web API 服务（登录 + RESTful API）
 │   ├── tools/          # 工具定义
 │   │   └── memory_tools.py
-│   └── prompts/        # 提示词管理
-├── ui/                 # TUI 显示层（仅显示，无 AI 逻辑）
+│   └── prompts/        # 提示词管理（PromptManager + system_prompt.md）
+├── ui/                 # TUI 显示层 + Web 前端
 │   ├── __init__.py     # 导出 GraphMemoryApp
 │   ├── app.py          # GraphMemoryApp (通过 BackendClient 通信)
 │   ├── widgets/        # TUI 组件
@@ -33,15 +99,28 @@ TrulyMEM-TrueHumanMEM/
 │   ├── services/       # 服务层（仅配置管理）
 │   ├── handlers/      # 事件处理
 │   ├── styles/         # 样式文件
-│   ├── static/         # Web 前端静态文件（星图可视化）
-│   │   ├── graph.html
-│   │   └── index.html
-│   └── templates/         # 页面模板
-│       ├── login.html
-│       ├── setup.html
-│       └── settings.html
-│   ├── web_config.json         # Web 服务配置文件（敏感信息，不提交）
+│   ├── static/         # Web 前端静态文件
+│   │   ├── graph.html   # 星图可视化（Three.js）
+│   │   └── index.html   # Web 聊天界面
+│   ├── templates/      # 页面模板
+│   │   ├── login.html
+│   │   ├── setup.html
+│   │   └── settings.html
+│   ├── web_config.json         # Web 服务配置文件
 │   └── web_config.example.json  # Web 配置模板
+├── tests/              # 测试套件
+│   ├── test_core/      # 核心逻辑测试
+│   ├── test_ui/        # UI 层测试
+│   └── test_integration/ # 集成测试
+├── docs/               # 文档
+│   ├── zh/             # 中文文档
+│   └── en/             # 英文文档
+└── build/              # 打包脚本
+    ├── build_linux.sh
+    ├── build_macos.sh
+    ├── build_windows.bat
+    ├── build_appimage.sh
+    └── trulymem.spec
 ```
 
 ## 架构图

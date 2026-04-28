@@ -8,6 +8,66 @@
 - TUI & backend separation, multi-threaded communication
 - **Everything is a graph**, AI reasoning runs entirely in backend
 
+## Deployment
+
+### Development (Run directly from Git repo)
+
+```bash
+cd TrulyMEM-TrueHumanMEM
+python3 trulymem_entry.py --web --port 4096
+```
+
+### Production (Systemd + standalone directory)
+
+```bash
+# Copy code to standalone deployment directory
+cp -r TrulyMEM-TrueHumanMEM /home/trulymem
+
+# Create Systemd service
+cat > /etc/systemd/system/trulymem-web.service << 'EOF'
+[Unit]
+Description=TrulyMEM - True Human Memory (Web Mode)
+After=network.target
+
+[Service]
+Type=simple
+User=root
+WorkingDirectory=/home/trulymem
+ExecStart=/usr/bin/python3 /home/trulymem/trulymem_entry.py --web --port 4096
+Restart=always
+RestartSec=5
+StandardOutput=journal
+StandardError=journal
+
+[Install]
+WantedBy=multi-user.target
+EOF
+
+systemctl daemon-reload
+systemctl enable trulymem-web.service
+systemctl start trulymem-web.service
+
+# Check status
+systemctl status trulymem-web.service
+```
+
+> **Note**: Do not run the service directly from the Git repository to avoid polluting it with runtime artifacts (logs, databases, etc.).
+
+### Web Access
+
+The service runs at `http://localhost:4096`. On first visit, you'll need to set up an admin account and log in.
+
+### Updating Deployment
+
+```bash
+cd TrulyMEM-TrueHumanMEM
+git pull
+cp -r * /home/trulymem/
+systemctl restart trulymem-web.service
+```
+
+---
+
 ## Project Structure
 
 ```
@@ -24,8 +84,8 @@ TrulyMEM-TrueHumanMEM/
 │   ├── web_api.py      # Web API service (login + RESTful API)
 │   ├── tools/          # Tool definitions
 │   │   └── memory_tools.py
-│   └── prompts/        # Prompt management
-├── ui/                 # TUI display layer (display only, no AI logic)
+│   └── prompts/        # Prompt management (PromptManager + system_prompt.md)
+├── ui/                 # TUI display layer + Web frontend
 │   ├── __init__.py     # Export GraphMemoryApp
 │   ├── app.py          # GraphMemoryApp (communicates via BackendClient)
 │   ├── widgets/        # TUI components
@@ -33,15 +93,28 @@ TrulyMEM-TrueHumanMEM/
 │   ├── services/       # Service layer (config only)
 │   ├── handlers/      # Event handlers
 │   ├── styles/         # Style files
-│   ├── static/         # Web frontend static files (star map visualization)
-│   │   ├── graph.html
-│   │   └── index.html
-│   └── templates/         # Page templates
-│       ├── login.html
-│       ├── setup.html
-│       └── settings.html
-│   ├── web_config.json         # Web service config file (sensitive, not committed)
+│   ├── static/         # Web frontend static files
+│   │   ├── graph.html   # Star map visualization (Three.js)
+│   │   └── index.html   # Web chat interface
+│   ├── templates/      # Page templates
+│   │   ├── login.html
+│   │   ├── setup.html
+│   │   └── settings.html
+│   ├── web_config.json         # Web service config file
 │   └── web_config.example.json  # Web config template
+├── tests/              # Test suite
+│   ├── test_core/      # Core logic tests
+│   ├── test_ui/        # UI layer tests
+│   └── test_integration/ # Integration tests
+├── docs/               # Documentation
+│   ├── zh/             # Chinese docs
+│   └── en/             # English docs
+└── build/              # Build scripts
+    ├── build_linux.sh
+    ├── build_macos.sh
+    ├── build_windows.bat
+    ├── build_appimage.sh
+    └── trulymem.spec
 ```
 
 ## Architecture Diagram

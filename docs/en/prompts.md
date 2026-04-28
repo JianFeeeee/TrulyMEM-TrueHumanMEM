@@ -53,7 +53,8 @@ The system prompt contains:
 Step 1: Query persona graph (highest priority)
 Step 2: Query working memory chain
 Step 3: Process conversation
-Step 4: Update working memory chain
+Step 4: memory_commit (write key info) → Persist user-explicit important information to the graph database
+Step 5: Update working memory chain
 ```
 
 ### 5. Tool System
