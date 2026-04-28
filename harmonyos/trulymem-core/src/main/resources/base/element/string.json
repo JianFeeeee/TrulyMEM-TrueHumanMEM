@@ -1,0 +1,12 @@
+{
+  "string": [
+    {
+      "name": "page_show",
+      "value": "page from package"
+    },
+    {
+      "name": "permmsion_for_tcp",
+      "value": "to connect with rcon port opened in game servers"
+    }
+  ]
+}

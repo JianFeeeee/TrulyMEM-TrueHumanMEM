@@ -59,6 +59,17 @@ First run → TUI login screen → create/sign in → press **F2** for API Key �
 
 ---
 
+## Special Thanks
+
+- [Prof. Meiting Wang](https://www.xxmu.edu.cn/yxgcxy/info/1260/4252.htm) — Academic guidance
+- [逝水秋生白](https://atomgit.com/cenber) — Architecture support
+- anzhitinglan — Testing resource support
+- 崔莉萍老师 — Theoretical guidance
+- Annie — Professional guidance
+- 王梓沣、马悦华、隆梦婷 — Neuroscience theory support
+
+---
+
 ## License
 
 GNU General Public License v3.0 (GPLv3)

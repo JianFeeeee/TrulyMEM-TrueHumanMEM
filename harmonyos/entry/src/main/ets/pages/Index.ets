@@ -1,6 +1,5 @@
-import GraphPage from './GraphPage';
-import ChatPage from './ChatPage';
-import SettingsPage from './SettingsPage';
+import { MainPage } from './MainPage';
+import { SettingsPage } from './SettingsPage';
 import { GraphDatabase } from '../model/GraphDatabase';
 
 @Entry
@@ -17,14 +16,9 @@ struct Index {
         Column() {
             Tabs({ index: this.currentIndex, barPosition: BarPosition.End }) {
                 TabContent() {
-                    GraphPage({ db: this.db })
+                    MainPage({ db: this.db })
                 }
-                .tabBar('🌌 星图')
-
-                TabContent() {
-                    ChatPage({ db: this.db })
-                }
-                .tabBar('💬 聊天')
+                .tabBar('🌌 TrulyMEM')
 
                 TabContent() {
                     SettingsPage()
@@ -33,9 +27,7 @@ struct Index {
             }
             .width('100%')
             .height('100%')
-            .onChange((index: number) => {
-                this.currentIndex = index;
-            })
+            .onChange((index: number) => { this.currentIndex = index; })
         }
         .width('100%')
         .height('100%')

@@ -2,9 +2,9 @@
   "app": {
     "bundleName": "com.trulymem.app",
     "vendor": "trulymem",
-    "versionCode": 1000000,
+    "versionCode": 1000001,
     "versionName": "1.0.0",
-    "icon": ":layered_image",
-    "label": ":app_name"
+    "icon": "$media:layered_image",
+    "label": "$string:app_name"
   }
 }

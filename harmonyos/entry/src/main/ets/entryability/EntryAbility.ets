@@ -1,6 +1,6 @@
 import AbilityConstant from '@ohos.app.ability.AbilityConstant';
 import UIAbility from '@ohos.app.ability.UIAbility';
-import Window from '@ohos.app.ability.Window';
+import Window from '@ohos.window';
 import Want from '@ohos.app.ability.Want';
 
 export default class EntryAbility extends UIAbility {

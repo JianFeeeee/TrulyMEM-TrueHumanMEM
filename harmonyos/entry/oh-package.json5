@@ -1,0 +1,11 @@
+{
+  "name": "entry",
+  "version": "1.0.0",
+  "description": "TrulyMEM - A personal memory and knowledge graph application.",
+  "main": "",
+  "author": "",
+  "license": "",
+  "dependencies": {
+    "trulymem-core": "file:../trulymem-core"
+  }
+}

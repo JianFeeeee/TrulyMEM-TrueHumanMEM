@@ -1,0 +1,13 @@
+{
+  "module": {
+    "name": "librcon",
+    "type": "har",
+    "requestPermissions": [
+    ],
+    "deviceTypes": [
+      "default",
+      "tablet",
+      "2in1"
+    ]
+  }
+}

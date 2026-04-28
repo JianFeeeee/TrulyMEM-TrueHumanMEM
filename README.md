@@ -59,6 +59,17 @@ python trulymem_entry.py    # 从源码
 
 ---
 
+## 特别鸣谢
+
+- [Prof. Meiting Wang](https://www.xxmu.edu.cn/yxgcxy/info/1260/4252.htm) — 学术指导
+- [逝水秋生白](https://atomgit.com/cenber) — 架构支持
+- anzhitinglan — 测试资源支持
+- 崔莉萍老师 — 理论指导
+- Annie — 专业指导
+- 王梓沣、马悦华、隆梦婷 — 神经科学理论支持
+
+---
+
 ## 许可证
 
 GNU General Public License v3.0 (GPLv3)

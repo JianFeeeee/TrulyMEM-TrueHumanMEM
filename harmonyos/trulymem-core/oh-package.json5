@@ -1,0 +1,9 @@
+{
+  "name": "trulymem-core",
+  "version": "1.0.0",
+  "description": "TrulyMEM core library - graph database and memory management.",
+  "main": "Index.ets",
+  "author": "",
+  "license": "Apache-2.0",
+  "dependencies": {}
+}
