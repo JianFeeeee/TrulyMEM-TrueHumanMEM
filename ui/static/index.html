@@ -514,7 +514,24 @@ body {
     white-space: pre-wrap;
     font-size: 0.9em;
 }
+
+.message-content h1,.message-content h2,.message-content h3{color:#e94560;margin:8px 0 4px}
+.message-content p{margin:4px 0}
+.message-content ul,.message-content ol{margin:4px 0 4px 20px}
+.message-content code{background:#12121f;color:#ffd700;padding:1px 4px;border-radius:3px;font-size:0.9em}
+.message-content pre{background:#12121f;padding:8px;border-radius:4px;overflow-x:auto;margin:8px 0;border-left:3px solid #e94560}
+.message-content pre code{background:none;color:#eee;padding:0}
+.message-content blockquote{border-left:3px solid #0f3460;padding-left:8px;margin:8px 0;color:#888}
+.message-content a{color:#4169e1;text-decoration:none}
+.message-content a:hover{text-decoration:underline}
+.message-content table{border-collapse:collapse;margin:8px 0;width:100%}
+.message-content th,.message-content td{border:1px solid #0f3460;padding:4px 8px}
+.message-content th{background:#12121f;color:#e94560}
+.message-content img{max-width:100%;border-radius:4px}
+.message-content hr{border:none;border-top:1px solid #0f3460;margin:8px 0}
 </style>
+<script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/dompurify/3.0.6/purify.min.js"></script>
 </head>
 <body>
 
@@ -654,6 +671,15 @@ async function init() {
     addWelcomeMessage();
 }
 
+// Markdown Rendering
+function renderMarkdown(text) {
+    if (typeof marked !== 'undefined' && typeof DOMPurify !== 'undefined') {
+        marked.setOptions({ breaks: true, gfm: true });
+        return DOMPurify.sanitize(marked.parse(text));
+    }
+    return text.replace(/\n/g, '<br>');
+}
+
 // API Functions
 async function apiRequest(endpoint, method = 'GET', data = null) {
     const options = {
@@ -739,7 +765,7 @@ function addMessageToUI(role, content, toolCalls = null) {
 
     const contentEl = document.createElement('div');
     contentEl.className = 'message-content';
-    contentEl.textContent = content;
+            contentEl.innerHTML = marked.parse(content);
 
     widget.appendChild(header);
     widget.appendChild(contentEl);
@@ -790,7 +816,7 @@ function updateLatestMessage(content, toolCalls = null) {
         const latest = widgets[widgets.length - 1];
         const contentEl = latest.querySelector('.message-content');
         if (contentEl) {
-            contentEl.textContent = content;
+    contentEl.innerHTML = marked.parse(content);
         }
 
         // Add tool calls if present

@@ -1,0 +1,30 @@
+{
+	"app": {
+		"bundleName": "com.example.blockmanager",
+		"debug": true,
+		"versionCode": 1000001,
+		"versionName": "1.0.1",
+		"minAPIVersion": 60100023,
+		"targetAPIVersion": 60100023,
+		"apiReleaseType": "Release",
+		"targetMinorAPIVersion": 0,
+		"targetPatchAPIVersion": 0,
+		"compileSdkVersion": "6.1.0.105",
+		"compileSdkType": "HarmonyOS",
+		"appEnvironments": [],
+		"bundleType": "app",
+		"buildMode": "debug"
+	},
+	"module": {
+		"name": "librcon",
+		"type": "har",
+		"requestPermissions": [],
+		"deviceTypes": [
+			"default",
+			"tablet",
+			"2in1"
+		],
+		"packageName": "librcon",
+		"installationFree": false
+	}
+}

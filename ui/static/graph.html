@@ -300,7 +300,23 @@
     }
 }
 
+.chat-msg .markdown-content p { margin: 4px 0; }
+.chat-msg .markdown-content code { background: rgba(255,255,255,0.1); padding: 1px 4px; border-radius: 3px; font-size: 12px; }
+.chat-msg .markdown-content pre { background: rgba(0,0,0,0.3); padding: 8px; border-radius: 4px; overflow-x: auto; margin: 6px 0; }
+.chat-msg .markdown-content pre code { background: none; padding: 0; }
+.chat-msg .markdown-content ul, .chat-msg .markdown-content ol { padding-left: 20px; margin: 4px 0; }
+.chat-msg .markdown-content h1, .chat-msg .markdown-content h2, .chat-msg .markdown-content h3, .chat-msg .markdown-content h4 { margin: 8px 0 4px; color: #aaccff; }
+.chat-msg .markdown-content blockquote { border-left: 3px solid #4488ff; padding-left: 10px; margin: 4px 0; color: #8899bb; }
+.chat-msg .markdown-content a { color: #4488ff; text-decoration: underline; }
+.chat-msg .markdown-content strong { color: #fff; }
+.chat-msg .markdown-content table { border-collapse: collapse; margin: 6px 0; width: 100%; }
+.chat-msg .markdown-content th, .chat-msg .markdown-content td { border: 1px solid rgba(100,100,255,0.3); padding: 4px 8px; text-align: left; }
+.chat-msg .markdown-content th { background: rgba(68,136,255,0.2); }
+.chat-msg .markdown-content hr { border: none; border-top: 1px solid rgba(100,100,255,0.2); margin: 8px 0; }
+
 </style>
+<script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/dompurify/3.0.6/purify.min.js"></script>
 </head>
 <body>
     <div id="app-container">
@@ -312,6 +328,14 @@
             <p>节点: <span id="node-count">0</span></p>
             <p>边: <span id="edge-count">0</span></p>
             <p>状态: <span id="status">初始化中...</span></p>
+            <p style="margin-top:8px;display:flex;align-items:center;gap:6px">
+                <span style="color:#8888aa;font-size:12px">自动视角</span>
+                <label style="position:relative;width:36px;height:20px;cursor:pointer;flex-shrink:0">
+                    <input type="checkbox" id="autoViewToggle" checked style="display:none">
+                    <span style="position:absolute;inset:0;background:rgba(60,60,80,0.8);border-radius:10px;transition:all 0.3s;border:1px solid rgba(100,100,255,0.2)"></span>
+                    <span style="position:absolute;width:16px;height:16px;left:2px;bottom:2px;background:#6666aa;border-radius:50%;transition:all 0.3s" class="auto-slider"></span>
+                </label>
+            </p>
         </div>
         <div id="node-info">
             <h3 id="info-name"></h3>
@@ -348,6 +372,17 @@
     <script>
         // Check authentication
         fetch('/api/check-auth').then(r=>r.json()).then(d=>{if(!d.authenticated)window.location.href='/login'}).catch(()=>window.location.href='/login')
+
+        function renderMarkdown(text) {
+            if (!text) return '';
+            try {
+                const html = marked.parse(text);
+                return DOMPurify.sanitize(html);
+            } catch(e) {
+                return text;
+            }
+        }
+
         // 全局变量
         let scene, camera, renderer, controls;
         let nodes = [], edges = [];
@@ -356,6 +391,7 @@
         let raycaster, mouse;
         let hoveredNode = null, selectedNode = null;
         let animationId;
+        let autoViewEnabled = true;
         let highlightPulse = 0;
         let lastHighlightCheck = 0;
         let currentHighlightIds = [];
@@ -450,6 +486,12 @@ function init() {
         }
 
         // 创建星空背景
+
+        // 自动视角开关事件
+        document.getElementById("autoViewToggle").addEventListener("change", function() {
+            autoViewEnabled = this.checked;
+        });
+        
         function createStarField() {
             const starCount = 3000;
             const positions = new Float32Array(starCount * 3);
@@ -847,7 +889,14 @@ function init() {
                 });
                 // 相机距离：节点范围加 20u 余量，但不超过 120u，不低于 25u
                 const targetDist = Math.min(Math.max(maxDist + 15, 25), 120);
-                camera.position.set(targetDist * 0.9, targetDist * 0.6, targetDist * 0.9);
+                // 如果有待聚焦节点且自动视角开启，飞过去；否则全局定位
+                if (_pendingFocusNodeId) {
+                    const focusId = _pendingFocusNodeId;
+                    _pendingFocusNodeId = null;
+                    setTimeout(() => flyToNode(focusId, 800), 100);
+                } else {
+                    camera.position.set(targetDist * 0.9, targetDist * 0.6, targetDist * 0.9);
+                }
                 controls.target.set(0, 0, 0);
                 controls.update();
             }
@@ -972,6 +1021,7 @@ function init() {
         }
 
         // 已消费的高亮变更ID（防止重复触发）
+        let _pendingFocusNodeId = null;
         let _consumedHighlightIds = new Set();
 
         // 平滑重新定位剩余的节点
@@ -1082,6 +1132,20 @@ function smoothReposition() {
         // 自适应相机
         function fitCameraToGraph() {
             if (nodeMeshes.length === 0) return;
+            if (!autoViewEnabled) {
+                // 关闭自动视角时直接跳转
+                let maxDist = 0;
+                nodeMeshes.forEach(m => {
+                    const d = m.position.length();
+                    if (d > maxDist) maxDist = d;
+                });
+                if (maxDist < 1) maxDist = 30;
+                const targetDist = Math.min(Math.max(maxDist + 15, 25), 120);
+                camera.position.set(targetDist * 0.9, targetDist * 0.6, targetDist * 0.9);
+                controls.target.set(0, 0, 0);
+                controls.update();
+                return;
+            }
             let maxDist = 0;
             nodeMeshes.forEach(m => {
                 const d = m.position.length();
@@ -1103,6 +1167,28 @@ function smoothReposition() {
                 if (t < 1) requestAnimationFrame(lerpCamera);
             }
             lerpCamera();
+        }
+
+        // 飞向指定节点（自动视角）
+        function flyToNode(nodeId, duration = 600) {
+            if (!autoViewEnabled) return;
+            const mesh = nodeMeshes.find(m => m.userData.nodeId === nodeId);
+            if (!mesh) return;
+            const targetPos = mesh.position.clone();
+            const startPos = camera.position.clone();
+            const startTarget = controls.target.clone();
+            const distance = targetPos.length() + 25;
+            const endCamPos = new THREE.Vector3(targetPos.x, targetPos.y + distance * 0.4, targetPos.z + distance * 0.8);
+            const startTime = Date.now();
+            function lerp() {
+                const elapsed = Date.now() - startTime;
+                const t = Math.min(elapsed / duration, 1);
+                const ease = 1 - Math.pow(1 - t, 3);
+                camera.position.lerpVectors(startPos, endCamPos, ease);
+                controls.target.lerpVectors(startTarget, targetPos, ease);
+                if (t < 1) requestAnimationFrame(lerp);
+            }
+            lerp();
         }
 
         // 检查高亮 — 增量更新，不再全量 reload
@@ -1132,6 +1218,7 @@ function smoothReposition() {
                 if (data.new_node_id && !_consumedHighlightIds.has('new:' + data.new_node_id)) {
                     _consumedHighlightIds.add('new:' + data.new_node_id);
                     // 新节点不在当前场景中，重新加载完整图
+                    _pendingFocusNodeId = data.new_node_id;
                     loadGraphData();
                     setTimeout(showDebugInfo, 500);
                     return;
@@ -1573,7 +1660,10 @@ function smoothReposition() {
                 if (parsed.content) displayText = parsed.content;
             } catch(e) {}
 
-            div.textContent = displayText;
+            const contentDiv = document.createElement('div');
+            contentDiv.className = 'markdown-content';
+            contentDiv.innerHTML = renderMarkdown(displayText);
+            div.appendChild(contentDiv);
             const time = document.createElement('div');
             time.className = 'chat-msg-time';
             time.textContent = new Date().toLocaleTimeString();
@@ -1620,7 +1710,7 @@ function smoothReposition() {
                 });
                 const data = await res.json();
                 if (data.success) {
-                    const reply = data.data?.content || '(无回复)';
+                    const reply = data.content || data.data?.content || '(无回复)';
                     addChatMessage('assistant', reply);
                     chatStatus.textContent = '🟢 已连接';
                     chatStatus.className = 'chat-status';

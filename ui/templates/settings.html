@@ -189,6 +189,25 @@
     <div class="settings-container">
         <h1 class="settings-title"><i class="fas fa-cog"></i> 设置</h1>
 
+        <!-- API 配置 -->
+        <div class="section-title"><i class="fas fa-plug"></i> API 配置</div>
+        <form id="apiConfigForm">
+            <div class="form-group">
+                <label for="settings_api_key">API Key</label>
+                <input type="password" id="settings_api_key" placeholder="输入 API Key">
+            </div>
+            <div class="form-group">
+                <label for="settings_base_url">Base URL</label>
+                <input type="text" id="settings_base_url" placeholder="https://api.deepseek.com">
+            </div>
+            <div class="form-group">
+                <label for="settings_model">Model</label>
+                <input type="text" id="settings_model" placeholder="deepseek-chat">
+            </div>
+            <button type="submit" class="btn" id="saveApiConfigBtn">保 存 API 配 置</button>
+        </form>
+        <div id="apiConfigStatus" style="text-align:center;font-size:12px;color:#666688;margin-top:5px;"></div>
+
         <!-- 修改密码 -->
         <div class="section-title"><i class="fas fa-key"></i> 修改密码</div>
         <form id="passwordForm">
@@ -450,6 +469,65 @@
         }
 
         init();
+
+        // API 配置加载与保存
+        async function loadApiConfig() {
+            try {
+                const resp = await fetch('/api/settings');
+                const data = await resp.json();
+                if (data.success && data.data) {
+                    const cfg = data.data.api_config || {};
+                    document.getElementById('settings_api_key').value = cfg.api_key || '';
+                    document.getElementById('settings_base_url').value = cfg.base_url || 'https://api.deepseek.com';
+                    document.getElementById('settings_model').value = cfg.model || 'deepseek-chat';
+                    document.getElementById('apiConfigStatus').textContent = '✅ 配置已加载';
+                }
+            } catch (e) {
+                document.getElementById('apiConfigStatus').textContent = '⚠️ 无法加载配置';
+            }
+        }
+
+        document.getElementById('apiConfigForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const btn = document.getElementById('saveApiConfigBtn');
+            btn.disabled = true;
+            btn.textContent = '保存中...';
+            const statusEl = document.getElementById('apiConfigStatus');
+            statusEl.textContent = '🔄 保存中...';
+
+            try {
+                const resp = await fetch('/api/settings', {
+                    method: 'PUT',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        api_config: {
+                            api_key: document.getElementById('settings_api_key').value,
+                            base_url: document.getElementById('settings_base_url').value,
+                            model: document.getElementById('settings_model').value
+                        }
+                    })
+                });
+                const data = await resp.json();
+                if (data.success) {
+                    statusEl.textContent = '✅ API 配置已保存并生效';
+                    setTimeout(() => { statusEl.textContent = ''; }, 3000);
+                } else {
+                    statusEl.textContent = '⚠️ 保存失败: ' + (data.error || '未知错误');
+                }
+            } catch (e) {
+                statusEl.textContent = '⚠️ 网络错误';
+            } finally {
+                btn.disabled = false;
+                btn.textContent = '保 存 API 配 置';
+            }
+        });
+
+        // 补充 loadConfig 中调用 loadApiConfig
+        const origLoadConfig = loadConfig;
+        loadConfig = function() {
+            origLoadConfig();
+            loadApiConfig();
+        };
 
         // TUI 开关
         document.getElementById('enableTuiToggle').addEventListener('change', async function() {
