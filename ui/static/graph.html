@@ -404,7 +404,14 @@
                         <span class="toggle-knob on" id="autoKnob"></span>
                     </label>
                 </span>
-                <button class="toggle-btn on" id="activityToggle"><i class="fas fa-chart-line" style="font-size:11px"></i> 活动</button>
+                <span style="display:flex;align-items:center;gap:6px">
+                    <span class="label-text">活动记录</span>
+                    <label class="toggle-switch" id="activityLabel">
+                        <input type="checkbox" id="activityCheck" checked style="display:none">
+                        <span class="toggle-track on" id="activityTrack"></span>
+                        <span class="toggle-knob on" id="activityKnob"></span>
+                    </label>
+                </span>
             </div>
         </div>
         <div id="node-info">
@@ -560,8 +567,6 @@ function init() {
         var autoViewToggle = document.getElementById("autoViewToggle");
         var autoTrack = document.getElementById("autoTrack");
         var autoKnob = document.getElementById("autoKnob");
-        var activityToggle = document.getElementById("activityToggle");
-
         function updateAutoViewUI() {
             if (autoViewToggle.checked) {
                 autoTrack.className = "toggle-track on";
@@ -571,9 +576,26 @@ function init() {
                 autoKnob.className = "toggle-knob";
             }
         }
+        var activityCheck = document.getElementById("activityCheck");
+        var activityTrack = document.getElementById("activityTrack");
+        var activityKnob = document.getElementById("activityKnob");
+
         function updateActivityUI() {
-            activityToggle.classList.toggle("on");
+            if (activityCheck.checked) {
+                activityTrack.className = "toggle-track on";
+                activityKnob.className = "toggle-knob on";
+            } else {
+                activityTrack.className = "toggle-track";
+                activityKnob.className = "toggle-knob";
+            }
         }
+        activityCheck.addEventListener("change", function() {
+            updateActivityUI();
+        });
+        document.getElementById("activityLabel").addEventListener("click", function(e) {
+            activityCheck.checked = !activityCheck.checked;
+            updateActivityUI();
+        });
 
         autoViewToggle.addEventListener("change", function() {
             autoViewEnabled = this.checked;
@@ -583,11 +605,7 @@ function init() {
             autoViewToggle.checked = !autoViewToggle.checked;
             autoViewToggle.dispatchEvent(new Event('change'));
         });
-        activityToggle.addEventListener("click", function() {
-            updateActivityUI();
-            // 活动切换逻辑（默认由后端处理）
-            this.blur();
-        });
+
         
         function createStarField() {
             const starCount = 3000;
