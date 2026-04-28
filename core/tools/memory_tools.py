@@ -570,6 +570,27 @@ AI操作步骤:
     {
         "type": "function",
         "function": {
+            "name": "task_archive",
+            "description": "归档已完成/过期的任务。将任务状态设为 archived，同时写入完成摘要到图数据库。\n\n【使用场景】\n1. 话题转变时归档旧任务\n2. 已完成的任务及时归档\n3. 长时间无更新的任务归档\n\n【注意】优先使用 task_archive 替代 task_set_state(state=archived)，因为它会自动写入完成摘要。",
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "task_id": {
+                        "type": "string",
+                        "description": "要归档的任务ID"
+                    },
+                    "summary": {
+                        "type": "string",
+                        "description": "归档摘要，简述完成了什么或为什么归档。如果不填则自动生成。"
+                    }
+                },
+                "required": ["task_id"]
+            }
+        }
+    },
+    {
+        "type": "function",
+        "function": {
             "name": "task_query",
             "description": "查询最近的任务列表。按更新时间倒序排列。新对话开始时优先使用此工具获取所有进展中的任务，避免重复创建。",
             "parameters": {

@@ -110,6 +110,11 @@ def execute_tool(graph: Any, tool_name: str, arguments: dict) -> str:
             result = execute_task_link_info(graph, arguments)
             return json.dumps(result, ensure_ascii=False, default=str)
         
+        elif tool_name == "task_archive":
+            recorder.record("update", tool_name, arguments.get("task_id", ""))
+            result = execute_task_archive(graph, arguments)
+            return json.dumps(result, ensure_ascii=False, default=str)
+
         elif tool_name == "task_query":
             recorder.record("query", tool_name, "")
             result = execute_task_query(graph, arguments)
@@ -396,6 +401,42 @@ def execute_task_link_info(graph: Any, arguments: dict) -> dict:
         "linked_nodes": info_node_names,
         "details": result
     }
+
+def execute_task_archive(graph: Any, arguments: dict) -> dict:
+    """归档任务"""
+    task_id = arguments.get("task_id")
+    summary = arguments.get("summary", "")
+    
+    if not task_id:
+        return {"status": "error", "message": "请指定要归档的任务ID"}
+    
+    # 1. 设置任务状态为 archived
+    triplets_state = [
+        {"subject": task_id, "relation": "HAS_STATE", "object": "State_归档"}
+    ]
+    graph.commit(triplets=triplets_state)
+    
+    # 2. 如果有摘要，写入完成记录
+    if summary:
+        summary_triplets = [
+            {"subject": task_id, "relation": "归档摘要", "object": summary}
+        ]
+        graph.commit(triplets=summary_triplets)
+    
+    # 3. 尝试更新 description 标记为已归档
+    archive_triplet = [
+        {"subject": task_id, "relation": "has_description", "object": f"[已归档] {summary or '任务已完成'}"}
+    ]
+    graph.commit(triplets=archive_triplet)
+    
+    return {
+        "status": "success",
+        "task_id": task_id,
+        "archived": True,
+        "summary": summary or "无摘要",
+        "message": f"任务「{task_id}」已归档" + (f"，摘要：{summary}" if summary else "")
+    }
+
 
 def execute_task_query(graph: Any, arguments: dict) -> dict:
     """查询最近的任务列表"""

@@ -42,7 +42,7 @@ class ToolLimiter:
         if tool_name in ('persona_update', 'persona_remove', 'persona_clear'):
             return ('persona', 'update')
 
-        if tool_name in ('task_create', 'task_set_state', 'task_delete', 'task_link_info'):
+        if tool_name in ('task_create', 'task_set_state', 'task_delete', 'task_link_info', 'task_archive'):
             return ('task', 'update')
 
         if tool_name == 'task_query':
