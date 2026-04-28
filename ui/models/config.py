@@ -11,7 +11,7 @@ from typing import Optional
 class AppConfig:
     """应用配置"""
     api_key: str = ""
-    model: str = "deepseek-chat"
+    model: str = "deepseek-v4-flash"
     base_url: str = "https://api.deepseek.com"
     persona_update_max: int = 1
     task_update_max: int = 5
@@ -38,7 +38,7 @@ class AppConfig:
         
         return cls(
             api_key=os.getenv("DEEPSEEK_API_KEY", ""),
-            model=os.getenv("MODEL_NAME", "deepseek-chat"),
+            model=os.getenv("MODEL_NAME", "deepseek-v4-flash"),
             base_url=os.getenv("DEEPSEEK_BASE_URL", "https://api.deepseek.com"),
             persona_update_max=int(os.getenv("PERSONA_UPDATE_MAX", 1)),
             task_update_max=int(os.getenv("TASK_UPDATE_MAX", 5)),
@@ -61,7 +61,7 @@ class AppConfig:
 
         return cls(
             api_key=data.get("api_key", ""),
-            model=data.get("model", "deepseek-chat"),
+            model=data.get("model", "deepseek-v4-flash"),
             base_url=data.get("base_url", "https://api.deepseek.com"),
             persona_update_max=data.get("persona_update_max", 1),
             task_update_max=data.get("task_update_max", 5),

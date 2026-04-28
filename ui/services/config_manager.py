@@ -35,7 +35,7 @@ class ConfigManager:
             
             return AppConfig(
                 api_key=data.get("api_key", ""),
-                model=data.get("model", "deepseek-chat"),
+                model=data.get("model", "deepseek-v4-flash"),
                 base_url=data.get("base_url", "https://api.deepseek.com")
             )
         except Exception:

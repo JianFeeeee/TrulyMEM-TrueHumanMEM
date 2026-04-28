@@ -21,6 +21,7 @@ TrulyMEM-TrueHumanMEM/
 │   ├── graph_client.py # OpenAI/DeepSeek API client
 │   ├── tool_executor.py # Tool executor
 │   ├── tool_limiter.py # Tool call limiter
+│   ├── web_api.py      # Web API service (login + RESTful API)
 │   ├── tools/          # Tool definitions
 │   │   └── memory_tools.py
 │   └── prompts/        # Prompt management
@@ -31,12 +32,16 @@ TrulyMEM-TrueHumanMEM/
 │   ├── models/         # Data models
 │   ├── services/       # Service layer (config only)
 │   ├── handlers/      # Event handlers
-│   └── styles/         # Style files
-├── web_api.py             # Web API service (login + RESTful API)
-├── templates/login.html   # Login page template
-├── static/                # Web frontend static files (star map visualization)
-├── web_config.json        # Web service config file (sensitive, not committed)
-└── web_config.example.json # Web config template
+│   ├── styles/         # Style files
+│   ├── static/         # Web frontend static files (star map visualization)
+│   │   ├── graph.html
+│   │   └── index.html
+│   └── templates/         # Page templates
+│       ├── login.html
+│       ├── setup.html
+│       └── settings.html
+│   ├── web_config.json         # Web service config file (sensitive, not committed)
+│   └── web_config.example.json  # Web config template
 ```
 
 ## Architecture Diagram

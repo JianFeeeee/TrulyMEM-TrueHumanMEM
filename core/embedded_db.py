@@ -422,12 +422,25 @@ class EmbeddedGraphDB:
             """, params)
         
         deleted = cursor.rowcount
+        
+        # 删除孤立实体（没有任何关系的数据节点）
+        cursor.execute("""
+            DELETE FROM entities
+            WHERE id NOT IN (
+                SELECT DISTINCT source_id FROM relations
+                UNION
+                SELECT DISTINCT target_id FROM relations
+            )
+        """)
+        deleted_orphans = cursor.rowcount
+        
         self.conn.commit()
         
         return {
             "deleted": deleted,
+            "deleted_orphans": deleted_orphans,
             "mode": mode,
-            "message": f"删除了 {deleted} 条关系"
+            "message": f"删除了 {deleted} 条关系, {deleted_orphans} 个孤立实体"
         }
     
     def introspect(self, session_id: str = None) -> Dict:

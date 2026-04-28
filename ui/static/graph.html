@@ -4,6 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>记忆星图 - TrulyMEM</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
     <style>
         * {
             margin: 0;
@@ -307,7 +308,7 @@
         <div id="loading">正在加载星图数据...</div>
         <div id="debug-info" style="position:absolute;bottom:10px;left:10px;background:rgba(0,0,0,0.7);color:#0f0;padding:4px 8px;font-size:11px;z-index:300;border-radius:4px;"></div>
         <div id="stats">
-            <h3>🌌 记忆星图</h3>
+            <h3><i class="fas fa-star"></i> 记忆星图</h3>
             <p>节点: <span id="node-count">0</span></p>
             <p>边: <span id="edge-count">0</span></p>
             <p>状态: <span id="status">初始化中...</span></p>
@@ -319,15 +320,15 @@
             <p><span class="label">连接数:</span> <span id="info-links"></span></p>
         </div>
         <div id="nav">
-            <a href="/graph.html" class="nav-btn active">🌌 星图</a>
-            <a href="/#activity" class="nav-btn">📡 活动</a>
-            <a href="/settings" class="nav-btn">⚙ 设置</a>
+            <a href="/graph.html" class="nav-btn active"><i class="fas fa-star"></i> 星图</a>
+            <a href="/#activity" class="nav-btn"><i class="fas fa-chart-line"></i> 活动</a>
+            <a href="/settings" class="nav-btn"><i class="fas fa-cog"></i> 设置</a>
         </div>
     </div>
     <!-- 聊天面板 -->
     <div id="chat-panel">
         <div class="chat-header">
-            <span>💬 与 TrulyMEM 对话</span>
+            <span><i class="fas fa-comment-dots"></i> 与 TrulyMEM 对话</span>
             <button class="chat-close" id="chatCloseBtn" title="关闭聊天">✕</button>
         </div>
         <div class="chat-messages" id="chatMessages">
@@ -677,7 +678,7 @@ function init() {
             });
 
             // 简单力导向模拟（迭代几次）
-            for (let iter = 0; iter < 50; iter++) {
+            for (let iter = 0; iter < 30; iter++) {
                 // 斥力：节点之间互相排斥
                 Object.keys(positions).forEach(id1 => {
                     Object.keys(positions).forEach(id2 => {
@@ -690,7 +691,7 @@ function init() {
                         const dist = Math.sqrt(dx*dx + dy*dy + dz*dz) + 0.1;
 
                         if (dist < 10) {
-                            const force = 0.1 / dist;
+                            const force = 0.04 / Math.max(dist, 0.5);
                             const fx = (dx / dist) * force;
                             const fy = (dy / dist) * force;
                             const fz = (dz / dist) * force;
@@ -840,8 +841,11 @@ function init() {
                     const dist = Math.sqrt(pos.x*pos.x + pos.y*pos.y + pos.z*pos.z);
                     maxDist = Math.max(maxDist, dist);
                 });
-                camera.position.set(maxDist * 2.2, maxDist * 1.5, maxDist * 2.2);
+                // 相机距离：节点范围加 20u 余量，但不超过 120u，不低于 25u
+                const targetDist = Math.min(Math.max(maxDist + 15, 25), 120);
+                camera.position.set(targetDist * 0.9, targetDist * 0.6, targetDist * 0.9);
                 controls.target.set(0, 0, 0);
+                controls.update();
             }
         }
 
@@ -951,8 +955,8 @@ function init() {
                 hoveredNode.scale.set(pulse * 1.2, pulse * 1.2, pulse * 1.2);
             }
 
-            // 检查高亮（每2秒）
-            if (time - lastHighlightCheck > 2) {
+            // 检查高亮（每3秒）
+            if (time - lastHighlightCheck > 3) {
                 checkHighlight();
                 lastHighlightCheck = time;
             }
@@ -963,7 +967,134 @@ function init() {
             renderer.render(scene, camera);
         }
 
-        // 检查高亮
+        // 已消费的高亮变更ID（防止重复触发）
+        let _consumedHighlightIds = new Set();
+
+        // 平滑重新定位剩余的节点
+        function smoothReposition() {
+            if (nodeMeshes.length < 2) return;
+
+            // 从当前节点位置计算新布局
+            const currentPositions = {};
+            nodeMeshes.forEach(m => {
+                const nid = m.userData.nodeId;
+                currentPositions[nid] = {
+                    x: m.position.x,
+                    y: m.position.y,
+                    z: m.position.z
+                };
+            });
+
+            // 用力导向模拟迭代 30 次平滑
+            for (let iter = 0; iter < 30; iter++) {
+                // 斥力
+                const ids = Object.keys(currentPositions);
+                for (let i = 0; i < ids.length; i++) {
+                    for (let j = i + 1; j < ids.length; j++) {
+                        const a = currentPositions[ids[i]];
+                        const b = currentPositions[ids[j]];
+                        const dx = a.x - b.x;
+                        const dy = a.y - b.y;
+                        const dz = a.z - b.z;
+                        const dist = Math.sqrt(dx*dx + dy*dy + dz*dz) + 0.1;
+                        if (dist < 12) {
+                            const force = 0.08 / Math.max(dist, 0.5);
+                            a.x += (dx/dist) * force;
+                            a.y += (dy/dist) * force;
+                            a.z += (dz/dist) * force;
+                            b.x -= (dx/dist) * force;
+                            b.y -= (dy/dist) * force;
+                            b.z -= (dz/dist) * force;
+                        }
+                    }
+                }
+                // 引力
+                edges.forEach(e => {
+                    const p1 = currentPositions[e.source];
+                    const p2 = currentPositions[e.target];
+                    if (!p1 || !p2) return;
+                    const dx = p2.x - p1.x;
+                    const dy = p2.y - p1.y;
+                    const dz = p2.z - p1.z;
+                    const dist = Math.sqrt(dx*dx + dy*dy + dz*dz) + 0.1;
+                    if (dist > 8) {
+                        const force = 0.03;
+                        p1.x += (dx/dist) * force;
+                        p1.y += (dy/dist) * force;
+                        p1.z += (dz/dist) * force;
+                        p2.x -= (dx/dist) * force;
+                        p2.y -= (dy/dist) * force;
+                        p2.z -= (dz/dist) * force;
+                    }
+                });
+            }
+
+            // 平滑移动到新位置
+            nodeMeshes.forEach(m => {
+                const nid = m.userData.nodeId;
+                const target = currentPositions[nid];
+                if (!target) return;
+
+                // 使用简单插值动画从当前位置到目标
+                const startPos = m.position.clone();
+                const endPos = new THREE.Vector3(target.x, target.y, target.z);
+                const duration = 600;
+                const startTime = Date.now();
+
+                function lerpPosition() {
+                    const elapsed = Date.now() - startTime;
+                    const t = Math.min(elapsed / duration, 1);
+                    // ease-out cubic
+                    const ease = 1 - Math.pow(1 - t, 3);
+                    m.position.lerpVectors(startPos, endPos, ease);
+                    if (t < 1) requestAnimationFrame(lerpPosition);
+                }
+                lerpPosition();
+            });
+
+            // 更新边的几何
+            edgeLines.forEach(line => {
+                const e = line.userData.edgeData;
+                const p1 = currentPositions[e.source];
+                const p2 = currentPositions[e.target];
+                if (!p1 || !p2) return;
+                line.geometry.setFromPoints([
+                    new THREE.Vector3(p1.x, p1.y, p1.z),
+                    new THREE.Vector3(p2.x, p2.y, p2.z)
+                ]);
+            });
+
+            // 更新相机
+            fitCameraToGraph();
+        }
+
+        // 自适应相机
+        function fitCameraToGraph() {
+            if (nodeMeshes.length === 0) return;
+            let maxDist = 0;
+            nodeMeshes.forEach(m => {
+                const d = m.position.length();
+                if (d > maxDist) maxDist = d;
+            });
+            if (maxDist < 1) maxDist = 30;
+            const targetDist = Math.min(Math.max(maxDist + 15, 25), 120);
+            // 平滑移动相机
+            const startPos = camera.position.clone();
+            const endPos = new THREE.Vector3(targetDist * 0.9, targetDist * 0.6, targetDist * 0.9);
+            const duration = 400;
+            const startTime = Date.now();
+            function lerpCamera() {
+                const elapsed = Date.now() - startTime;
+                const t = Math.min(elapsed / duration, 1);
+                const ease = 1 - Math.pow(1 - t, 3);
+                camera.position.lerpVectors(startPos, endPos, ease);
+                controls.target.set(0, 0, 0);
+                if (t < 1) requestAnimationFrame(lerpCamera);
+            }
+            lerpCamera();
+        }
+
+        // 检查高亮 — 增量更新，不再全量 reload
         async function checkHighlight() {
             try {
                 const response = await fetch('/api/graph/highlight');
@@ -982,28 +1113,41 @@ function init() {
                             }
                         });
                     });
+                }
 
-            // 处理新节点
-            if (data.new_node_id) {
-                flashNewNode(data.new_node_id);
-            }
+                if (!data.success) return;
 
-            // 处理删除的节点
-            if (data.deleted_node_ids && data.deleted_node_ids.length > 0) {
-                data.deleted_node_ids.forEach(nodeId => {
-                    deleteNodeAnimation(nodeId);
-                });
-                // 延迟刷新图数据，等待动画完成
-                setTimeout(() => {
+                // 处理新节点
+                if (data.new_node_id && !_consumedHighlightIds.has('new:' + data.new_node_id)) {
+                    _consumedHighlightIds.add('new:' + data.new_node_id);
+                    // 新节点不在当前场景中，重新加载完整图
                     loadGraphData();
-        setTimeout(showDebugInfo, 500);
-                }, 1000);
+                    setTimeout(showDebugInfo, 500);
+                    return;
+                }
+
+                // 处理删除的节点 — 增量更新，不要全量 reload
+                if (data.deleted_node_ids && data.deleted_node_ids.length > 0) {
+                    const pending = data.deleted_node_ids.filter(id => !_consumedHighlightIds.has('del:' + id));
+                    if (pending.length > 0) {
+                        pending.forEach(id => _consumedHighlightIds.add('del:' + id));
+                        pending.forEach(nodeId => deleteNodeAnimation(nodeId));
+                        // 动画完成后平滑重新布局
+                        setTimeout(() => {
+                            // 从 edges 和 nodes 中移除已删除的
+                            nodes = nodes.filter(n => !pending.includes(n.id));
+                            edges = edges.filter(e => !pending.includes(e.source) && !pending.includes(e.target));
+                            smoothReposition();
+                            // 更新统计
+                            document.getElementById('node-count').textContent = nodes.length;
+                            document.getElementById('edge-count').textContent = edges.length;
+                        }, 1000);
+                    }
+                }
+            } catch (error) {
+                // 忽略错误
             }
         }
-    } catch (error) {
-        // 忽略错误
-    }
-}
 
         // 更新高亮效果
         function updateHighlight() {

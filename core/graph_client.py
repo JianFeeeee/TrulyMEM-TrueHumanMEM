@@ -17,7 +17,7 @@ from .prompts.prompt_manager import PromptManager
 # 环境配置
 DEEPSEEK_API_KEY = os.environ.get("DEEPSEEK_API_KEY", "")
 DEEPSEEK_BASE_URL = os.environ.get("DEEPSEEK_BASE_URL", "https://api.deepseek.com")
-MODEL_NAME = os.environ.get("MODEL_NAME", "deepseek-chat")
+MODEL_NAME = os.environ.get("MODEL_NAME", "deepseek-v4-flash")
 
 NEO4J_URI = os.environ.get("NEO4J_URI", "bolt://localhost:7687")
 NEO4J_USER = os.environ.get("NEO4J_USER", "neo4j")
@@ -215,7 +215,16 @@ class Neo4jGraph:
                 """, params)
                 count = result.single()["deleted"]
                 
-                return {"deleted_count": count, "mode": "soft"}
+                # 删除孤立节点（没有任何关系的实体）
+                orphan_result = session.run("""
+                MATCH (e:Entity)
+                WHERE NOT (e)-[:RELATES]-()
+                DELETE e
+                RETURN count(e) as orphans
+                """)
+                orphan_count = orphan_result.single()["orphans"]
+                
+                return {"deleted_count": count, "orphan_count": orphan_count, "mode": "soft"}
     
     def introspect(self, session_id: str = None) -> dict:
         """查看记忆状态"""
@@ -303,7 +312,7 @@ class Neo4jGraph:
 class GraphMemoryClient:
     """图记忆客户端"""
     
-    def __init__(self, api_key: str, base_url: str, graph, model: str = "deepseek-chat"):
+    def __init__(self, api_key: str, base_url: str, graph, model: str = "deepseek-v4-flash"):
         # 清理可能存在的错误代理环境变量
         import os
         proxy_vars = ['http_proxy', 'https_proxy', 'HTTP_PROXY', 'HTTPS_PROXY', 'all_proxy', 'ALL_PROXY']

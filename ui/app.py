@@ -1,6 +1,6 @@
 import asyncio
 import sys
-import subprocess
+import threading
 import signal
 from pathlib import Path
 from textual.app import App, ComposeResult
@@ -31,7 +31,6 @@ class GraphMemoryApp(App):
         self._backend_server = backend_server
         self._backend_client = BackendClient(backend_server) if backend_server else None
         self._api_configured = False
-        self._web_process: subprocess.Popen | None = None
         self._web_running = False
         self.login_user = None  # 当前登录用户
         self.login_user_info = None  # 当前登录用户信息
@@ -51,7 +50,7 @@ class GraphMemoryApp(App):
             api_config = settings_data.get("api_config", {})
             initial_config.api_key = api_config.get("api_key", "")
             initial_config.base_url = api_config.get("base_url", "https://api.deepseek.com")
-            initial_config.model = api_config.get("model", "deepseek-chat")
+            initial_config.model = api_config.get("model", "deepseek-v4-flash")
             
             tool_limits = settings_data.get("tool_limits", {})
             initial_config.persona_update_max = tool_limits.get("persona_update_max", 1)
@@ -138,46 +137,14 @@ class GraphMemoryApp(App):
         history.add_message(welcome)
 
     def _start_web_server(self, port: int = 4096) -> None:
-        """启动 Web 服务器子进程（支持打包和开发模式）"""
-        if self._web_process and self._web_process.poll() is None:
+        """在当前进程通过线程启动 Web 服务（无需子进程）"""
+        if self._web_running:
             self.notify("Web 服务已在运行", title="提示")
             return
 
-        def _find_web_binary() -> str:
-            """查找 Web 二进制或脚本路径"""
-            # 1. PyInstaller 打包环境下查找同目录的 trulymem-web 二进制
-            if getattr(sys, 'frozen', False):
-                base = Path(sys._MEIPASS).parent
-                for name in ['trulymem-web', 'trulymem-web.exe']:
-                    candidate = base / name
-                    if candidate.exists():
-                        return str(candidate)
-            # 2. 开发模式：同目录下的 web_api.py
-            web_script = Path(__file__).parent.parent / "web_api.py"
-            if web_script.exists():
-                return str(web_script)
-            # 3. 打包环境回退：从 MEIPASS 读取 web_api.py 数据文件
-            if getattr(sys, 'frozen', False):
-                bundled = Path(sys._MEIPASS) / "web_api.py"
-                if bundled.exists():
-                    return str(bundled)
-            return ""
-
-        target = _find_web_binary()
-        if not target:
-            self.notify("找不到 Web 服务文件（web_api.py）", severity="error")
-            return
-
         try:
-            if target.endswith('.py'):
-                cmd = [sys.executable, target, "--port", str(port)]
-            else:
-                cmd = [target, "--port", str(port)]
-            self._web_process = subprocess.Popen(
-                cmd,
-                stdout=subprocess.DEVNULL,
-                stderr=subprocess.DEVNULL
-            )
+            from web_api import run_web_server
+            run_web_server(port=port)
             self._web_running = True
             if self._backend_client:
                 self._backend_client.report_web_status(True, port)
@@ -186,17 +153,13 @@ class GraphMemoryApp(App):
             self.notify(f"启动 Web 服务失败: {e}", severity="error")
 
     def _stop_web_server(self) -> None:
-        """停止 Web 服务器子进程"""
-        if self._web_process:
+        """停止 Web 服务线程"""
+        if self._web_running:
             try:
-                self._web_process.terminate()
-                self._web_process.wait(timeout=5)
-            except:
-                try:
-                    self._web_process.kill()
-                except:
-                    pass
-            self._web_process = None
+                from web_api import stop_web_server
+                stop_web_server()
+            except Exception:
+                pass
             self._web_running = False
             if self._backend_client:
                 self._backend_client.report_web_status(False, 0)
@@ -332,7 +295,7 @@ class GraphMemoryApp(App):
         api_config = {
             "api_key": config.api_key,
             "base_url": config.base_url,
-            "model": getattr(config, 'model', 'deepseek-chat')
+            "model": getattr(config, 'model', 'deepseek-v4-flash')
         }
         
         tool_limits = {
@@ -378,7 +341,7 @@ class GraphMemoryApp(App):
                     config_section.set_config(AppConfig(
                         api_key=api_cfg.get("api_key", ""),
                         base_url=api_cfg.get("base_url", "https://api.deepseek.com"),
-                        model=api_cfg.get("model", "deepseek-chat"),
+                        model=api_cfg.get("model", "deepseek-v4-flash"),
                         persona_update_max=tool_lmts.get("persona_update_max", 1),
                         task_update_max=tool_lmts.get("task_update_max", 5),
                         memory_query_max=tool_lmts.get("memory_query_max", 20),

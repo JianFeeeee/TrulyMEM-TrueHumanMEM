@@ -1,123 +1,176 @@
 # TrulyMEM Quick Start Guide
 
-## Running Methods
+> **Version**: Multi-user (v2) — TUI login, user isolation, embedded Web server
 
-### Run from Source
+---
+
+## Running
+
+### Quick Start
 
 ```bash
-git clone <repo-url>
-cd TrulyMEM-TrueHumanMEM
-
-pip install -r requirements.txt
-
+# From source
 python trulymem_entry.py
+
+# Packaged binary
+./dist/TrulyMEM
 ```
 
-### Run After Build
+### First Run — Login Flow
 
-After building, an executable will be generated:
+On first launch, TrulyMEM checks for legacy data and presents a **login screen**:
+
+1. **Clean install** → Enter username/password (first user becomes admin)
+2. **Legacy upgrade** → Detects `~/.trulymem/config.json`, guides migration setup
+3. **Returning user** → Login directly
+
+> 💡 All user data is isolated: `~/.trulymem/{username}/`
+
+### Chat Configuration
+
+After login, press **F2** to open the right-side configuration panel:
+
+1. **API Key** — Required (DeepSeek, OpenAI, etc.)
+2. **Model** — Optional
+3. **Base URL** — Optional
+
+Config saves automatically.
+
+---
+
+## Web Visualization
+
+The Web service now runs **embedded in the main process** (no separate subprocess needed).
+
+### Start via TUI (Admin only)
+
+Admin users: press F2 → check "Enable Web Service".
+
+### Start Manually
 
 ```bash
-# Linux/macOS
-chmod +x TrulyMEM
-./TrulyMEM
-
-# Windows
-TrulyMEM.exe
+python -m core.web_api --port 4096
+# Visit http://localhost:4096
 ```
 
-## System Requirements
+### First Visit Flow
 
-- **Python 3.8+**
-- **API Key** (DeepSeek, OpenAI, or other compatible APIs)
+1. Open `http://localhost:4096` in browser
+2. **No users** → Auto-redirect to setup page, create admin account
+3. **Has users** → Login page
+4. After login → Star map visualization
 
-## First-Time Configuration
+### Web Features
 
-1. Run the application
-2. Press **F2** to expand sidebar
-3. Enter **API Key**, **Model**, **Base URL**
-4. Press **Enter** to save
+| Page | Access | Feature |
+|------|--------|---------|
+| 🌟 Star Map | All logged-in | Browse knowledge graph |
+| ⚙ Settings | All logged-in | Change password |
+| 🧑‍💼 User Management | **Admin only** | Add/delete users |
 
-Config will be automatically saved to `~/.trulymem/config.json` and loaded on next startup.
+---
 
-### Web Visualization (Optional)
+## Multi-User System
 
-TrulyMEM provides a Web star-map visualization interface for browsing the knowledge graph in real-time:
+### Directory Layout
 
-```bash
-# Start Web service
-python web_api.py --port 4096
+```
+~/.trulymem/
+├── trulymem.db          # Global user database (web_users table)
+├── .migrated            # Migration flag
+├── admin/
+│   ├── config.json      # Admin config
+│   └── admin_graph.db   # Admin knowledge graph
+└── user2/
+    ├── config.json      # user2 config
+    └── user2_graph.db   # user2 knowledge graph
 ```
 
-Then open `http://localhost:4096` in your browser.
+### Role Matrix
 
-**Login Setup:**
-1. Copy `web_config.example.json` to `web_config.json`
-2. Set login password (using SHA256) and secret key
-3. Web service will automatically read the config
+| Feature | User | Admin |
+|---------|------|-------|
+| Change password | ✅ | ✅ |
+| Configure API Key / Model | ✅ | ✅ |
+| Web service toggle (TUI) | ❌ | ✅ |
+| Web login credentials | ❌ | ✅ |
+| View user list | ❌ | ✅ |
+| Add/delete users | ❌ | ✅ |
 
-Default port is 4096, change with `--port` flag.
+> ⚠️ First registered user becomes admin automatically. Add users via Web settings page.
 
 ---
 
 ## Keyboard Shortcuts
 
-| Key | Function |
-|-----|-----------|
+| Key | Action |
+|-----|--------|
 | F1 | Help |
-| F2 | Toggle sidebar |
+| F2 | Toggle sidebar (config panel) |
 | F3 | Tool details |
 | F5 | Clear screen |
-| F6 | Exit |
+| F6 | Quit |
 
-## Data Storage
+---
 
-### Source Mode
+## Building
 
-| Data | Location |
-|------|----------|
-| Graph database | Project directory `graph_memory.db` |
-| Config file | Project directory `config.json` (if exists) |
-| Database format | SQLite |
+```bash
+# Linux
+bash build/build_linux.sh
 
-### Packaged Mode
+# macOS
+bash build/build_macos.sh
 
-| Data | Location |
-|------|----------|
-| Graph database | `~/.trulymem/graph_memory.db` |
-| Config file | `~/.trulymem/config.json` |
-| Database format | SQLite |
+# Windows
+build\build_windows.bat
 
-> **Note**: Backend manages config uniformly. Frontend only displays messages; config modifications are persisted to filesystem through the backend.
+# AppImage
+bash build/build_appimage.sh
+```
 
-## Architecture Explanation
+Output: `dist/TrulyMEM` (single binary — TUI and Web server embedded)
 
-### Communication Protocol
+> 📦 Since v2, the Web server runs as a thread inside the main process. No need for a separate `trulymem-web` binary.
 
-UI and backend communicate via **Packet Protocol**:
+---
+
+## Architecture
+
+### Communication
 
 ```
-UI (Textual TUI)
-    ↓ BackendClient
-Packet → queue.Queue → BackendServer (independent thread)
-    ↓
-Process request → Return response
+TUI (Textual)  ←→  BackendClient  ←→  queue.Queue  ←→  BackendServer (thread)
 ```
 
 ### Config Management
 
-- **Storage location**: `~/.trulymem/config.json`
-- **Auto-load**: Load config from file at startup
-- **Dynamic update**: Config changes take effect immediately at runtime
-- **Persistence**: Auto-save to file after modification
+- **Per-user**: `~/.trulymem/{username}/config.json`
+- **Web config**: `~/.trulymem/trulymem.db` (web_users table)
+- **Auto-load**: reads config for logged-in user on startup
+- **Persistent**: saves automatically on change
 
-## Common Issues
+### Web Service Architecture
 
-### Python Not Found
+```
+┌──────────────────────┐
+│   TrulyMEM Process   │
+│  ┌──────┐ ┌────────┐ │
+│  │ TUI  │ │ Flask  │ │  ← Same process, different threads
+│  │      │ │ Thread │ │
+│  └──────┘ └────────┘ │
+└──────────────────────┘
+```
+
+---
+
+## FAQ
+
+### Python not found
 
 Install Python 3.8+: https://www.python.org/downloads/
 
-### Dependency Installation Failed
+### Dependency installation fails
 
 ```bash
 python -m venv venv
@@ -128,18 +181,22 @@ pip install -r requirements.txt
 
 ### Invalid API Key
 
-Check API Key format, ensure no extra spaces.
+Check format and whitespace. Reconfigure in TUI sidebar.
 
-## Development Commands
+### Lost admin account
+
+The first registered user is always admin. If all users lost admin, delete `trulymem.db` from the user directory and re-register.
+
+### Legacy data migration
+
+When old `~/.trulymem/config.json` and `graph_memory.db` are detected, TUI auto-enters migration flow. Legacy files are preserved.
+
+---
+
+## Dev Commands
 
 ```bash
-# Install dependencies
 pip install -r requirements.txt
-
-# Run tests
 pytest tests/
-
-# Build
-bash build/build_windows.bat   # Windows
-bash build/build_linux.sh       # Linux
+bash build/build_linux.sh
 ```

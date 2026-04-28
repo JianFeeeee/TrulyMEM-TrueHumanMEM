@@ -42,7 +42,7 @@ class ConfigSection(Vertical):
         
         yield Input(
             value=self._config.model,
-            placeholder="deepseek-chat",
+            placeholder="deepseek-v4-flash",
             id="model-input"
         )
         

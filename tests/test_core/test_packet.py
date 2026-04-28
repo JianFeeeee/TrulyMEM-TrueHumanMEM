@@ -157,7 +157,7 @@ class TestBackendClientAPI:
         client = BackendClient(server)
         
         result = client.update_settings(
-            api_config={"api_key": "new-key", "base_url": "https://api.deepseek.com", "model": "deepseek-chat"},
+            api_config={"api_key": "new-key", "base_url": "https://api.deepseek.com", "model": "deepseek-v4-flash"},
             tool_limits={"persona_update_max": 2}
         )
         assert result.get("success") is True

@@ -1,55 +1,46 @@
 #!/bin/bash
 set -e
-echo "===== Building TrulyMEM AppImage for Linux ====="
+
+echo "===== Building TrulyMEM AppImage ====="
+
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 PROJECT_ROOT="$(dirname "$SCRIPT_DIR")"
 cd "$PROJECT_ROOT"
-if ! command -v python3 &> /dev/null; then
-    echo "Error: python3 not found"
-    exit 1
-fi
-APPDIR="$PROJECT_ROOT/TrulyMEM.AppDir"
-rm -rf "$APPDIR"
-mkdir -p "$APPDIR/usr/bin"
-mkdir -p "$APPDIR/usr/share/trulymem"
-mkdir -p "$APPDIR/usr/share/trulymem-web"
+echo "Project root: $PROJECT_ROOT"
 
-echo "===== Step 1: Build binaries with PyInstaller ====="
-VENV_DIR="$PROJECT_ROOT/.venv_appimage"
-rm -rf "$VENV_DIR"
+# ── 检查依赖 ──────────────────────────────────────────────────────────────
+if ! command -v python3 &> /dev/null; then
+    echo "Error: python3 not found"; exit 1
+fi
+
+APPIMAGE_TOOL="${APPIMAGE_TOOL:-appimagetool}"
+if ! command -v "$APPIMAGE_TOOL" &> /dev/null && [ ! -f "$APPIMAGE_TOOL" ]; then
+    echo "Warning: $APPIMAGE_TOOL not found, will try to create AppDir only"
+    SKIP_APPIMAGE=1
+fi
+
+# ── 虚拟环境 ──────────────────────────────────────────────────────────────
+VENV_DIR="$PROJECT_ROOT/.venv_build"
+echo "Creating virtual environment: $VENV_DIR"
 python3 -m venv "$VENV_DIR"
 source "$VENV_DIR/bin/activate"
 pip install --upgrade pip
 pip install -r requirements.txt
-pip install pyinstaller
-rm -rf "$PROJECT_ROOT/build/pyinstaller_build" "$PROJECT_ROOT/dist"
 
-CORE_HIDDEN=(
-    --hidden-import core
-    --hidden-import core.embedded_db
-    --hidden-import core.graph_client
-    --hidden-import core.tool_executor
-    --hidden-import core.tool_limiter
-    --hidden-import core.tools
-    --hidden-import core.tools.memory_tools
-    --hidden-import core.prompts
-    --hidden-import core.prompts.prompt_manager
-    --hidden-import core.server
-    --hidden-import core.client
-    --hidden-import core.migrate
-    --hidden-import core.activity_recorder
-)
+echo "Cleaning previous builds..."
+rm -rf build/dist build/__pycache__ 2>/dev/null || true
 
-echo "Running PyInstaller for TUI..."
-pyinstaller trulymem_entry.py \
+# ── 打包 ──────────────────────────────────────────────────────────────────
+echo "================================"
+echo "Building TrulyMEM (TUI + Web embedded)"
+echo "================================"
+python -m PyInstaller trulymem_entry.py \
     --clean --onefile --console --name TrulyMEM \
-    --distpath "$PROJECT_ROOT/dist" \
-    --workpath "$PROJECT_ROOT/build/pyinstaller_build/tui" \
     --add-data "ui/styles:ui/styles" \
     --add-data "core/prompts/templates:core/prompts/templates" \
     --add-data "static:static" \
     --add-data "templates:templates" \
-    --add-data "web_api.py:." \
+    --add-data "core/web_api.py:core/" \
     --hidden-import textual \
     --hidden-import textual.app \
     --hidden-import textual.widgets \
@@ -58,7 +49,19 @@ pyinstaller trulymem_entry.py \
     --hidden-import openai._client \
     --hidden-import neo4j \
     --hidden-import sqlite3 \
-    "${CORE_HIDDEN[@]}" \
+    --hidden-import core \
+    --hidden-import core.embedded_db \
+    --hidden-import core.graph_client \
+    --hidden-import core.tool_executor \
+    --hidden-import core.tool_limiter \
+    --hidden-import core.tools \
+    --hidden-import core.tools.memory_tools \
+    --hidden-import core.prompts \
+    --hidden-import core.prompts.prompt_manager \
+    --hidden-import core.server \
+    --hidden-import core.client \
+    --hidden-import core.migrate \
+    --hidden-import core.activity_recorder \
     --hidden-import ui \
     --hidden-import ui.app \
     --hidden-import ui.login_screen \
@@ -71,91 +74,68 @@ pyinstaller trulymem_entry.py \
     --hidden-import ui.services \
     --hidden-import ui.services.config_manager \
     --hidden-import ui.services.config_service \
-    --hidden-import web_api \
+    --hidden-import core.web_api \
     --hidden-import flask \
     --hidden-import flask_cors \
+    --hidden-import werkzeug \
     --collect-all textual \
     --noconfirm
 
-echo "Running PyInstaller for Web..."
-pyinstaller web_api.py \
-    --clean --onefile --console --name trulymem-web \
-    --distpath "$PROJECT_ROOT/dist" \
-    --workpath "$PROJECT_ROOT/build/pyinstaller_build/web" \
-    --add-data "templates:templates" \
-    --add-data "static:static" \
-    --hidden-import flask \
-    --hidden-import flask_cors \
-    "${CORE_HIDDEN[@]}" \
-    --noconfirm
+# ── 创建 AppDir ───────────────────────────────────────────────────────────
+APP_NAME="TrulyMEM"
+APP_DIR="$PROJECT_ROOT/build/${APP_NAME}.AppDir"
+mkdir -p "$APP_DIR/usr/bin"
+cp "dist/TrulyMEM" "$APP_DIR/usr/bin/TrulyMEM"
 
-cp "$PROJECT_ROOT/dist/TrulyMEM" "$APPDIR/usr/bin/"
-cp "$PROJECT_ROOT/dist/trulymem-web" "$APPDIR/usr/bin/"
-cp "$PROJECT_ROOT/trulymem_entry.py" "$APPDIR/usr/share/trulymem/"
-
-echo "===== Step 2: Create AppImage structure ====="
-cat > "$APPDIR/AppRun" << 'EOF'
-#!/bin/bash
-set -e
-SELF=$(readlink -f "$0")
-APPDIR=$(dirname "$SELF")
-export PATH="$APPDIR/usr/bin:$PATH"
-exec "$APPDIR/usr/bin/TrulyMEM" "$@"
-EOF
-chmod +x "$APPDIR/AppRun"
-
-cat > "$APPDIR/trulymem.desktop" << 'EOF'
+# Desktop 文件
+cat > "$APP_DIR/${APP_NAME}.desktop" << EOF
 [Desktop Entry]
 Name=TrulyMEM
-Comment=AI Memory System with Long-term Memory
-Exec=TrulyMEM %U
-Icon=trulymem
+Comment=TrueHumanMEM - AI Memory System
+Exec=TrulyMEM
+Icon=${APP_NAME}
 Terminal=true
 Type=Application
-Categories=Utility;X-AI;
+Categories=Utility;AI;
 EOF
 
-# Copy icon
-if [ -f "$PROJECT_ROOT/pic/TrulyMEM.png" ]; then
-    cp "$PROJECT_ROOT/pic/TrulyMEM.png" "$APPDIR/trulymem.png"
-elif [ -f "$PROJECT_ROOT/pic/TrulyMEM.iconset/icon_256x256.png" ]; then
-    cp "$PROJECT_ROOT/pic/TrulyMEM.iconset/icon_256x256.png" "$APPDIR/trulymem.png"
-elif [ -f "$PROJECT_ROOT/pic/TrulyMEM.iconset/icon_128x128.png" ]; then
-    cp "$PROJECT_ROOT/pic/TrulyMEM.iconset/icon_128x128.png" "$APPDIR/trulymem.png"
+# 图标
+mkdir -p "$APP_DIR/usr/share/icons/hicolor/256x256/apps"
+# 如果有图标文件就复制，否则创建占位
+if [ -f "pic/image.png" ]; then
+    cp "pic/image.png" "$APP_DIR/usr/share/icons/hicolor/256x256/apps/${APP_NAME}.png"
+    cp "pic/image.png" "$APP_DIR/${APP_NAME}.png"
 else
-    echo "Warning: No icon file found"
+    # 创建最小占位图标（1x1 透明 PNG）
+    echo -n "" > "$APP_DIR/${APP_NAME}.png"
 fi
 
-APPIMAGE="$PROJECT_ROOT/TrulyMEM.AppImage"
-rm -f "$APPIMAGE"
+# AppRun
+cat > "$APP_DIR/AppRun" << 'APPRUN'
+#!/bin/bash
+HERE="$(dirname "$(readlink -f "${0}")")"
+export PATH="${HERE}/usr/bin:${PATH}"
+exec "${HERE}/usr/bin/TrulyMEM" "$@"
+APPRUN
+chmod +x "$APP_DIR/AppRun"
 
-echo "===== Step 3: Package as AppImage ====="
-cd /tmp
-if ! command -v appimagetool &> /dev/null; then
-    echo "Downloading appimagetool..."
-    wget -q https://github.com/AppImage/AppImageKit/releases/download/continuous/appimagetool-x86_64.AppImage -O appimagetool 2>/dev/null || \
-    curl -sL https://github.com/AppImage/AppImageKit/releases/download/continuous/appimagetool-x86_64.AppImage -o appimagetool
-    chmod +x appimagetool 2>/dev/null || true
-fi
-cd "$PROJECT_ROOT"
-if [ -x /tmp/appimagetool ]; then
-    /tmp/appimagetool "$APPDIR" "$APPIMAGE" || echo "appimagetool failed, keeping AppDir"
-elif command -v appimagetool &> /dev/null; then
-    appimagetool "$APPDIR" "$APPIMAGE"
+# ── 构建 AppImage ────────────────────────────────────────────────────────
+if [ "$SKIP_APPIMAGE" != "1" ]; then
+    echo "================================"
+    echo "Building AppImage"
+    echo "================================"
+    # 支持 ARCH 环境变量
+    ARCH="${ARCH:-$(uname -m)}" "$APPIMAGE_TOOL" "$APP_DIR" "dist/TrulyMEM-${ARCH}.AppImage"
+    echo "AppImage: dist/TrulyMEM-${ARCH}.AppImage"
 else
-    echo "Warning: appimagetool not available, AppDir at: $APPDIR"
+    echo "(Skipped AppImage packaging, AppDir ready at $APP_DIR)"
 fi
 
+echo "================================"
 echo "===== Build Complete ====="
-[ -f "$APPIMAGE" ] && echo "AppImage: $APPIMAGE" && ls -la "$APPIMAGE"
-[ -d "$APPDIR" ] && echo "AppDir: $APPDIR"
+echo "Binary: dist/TrulyMEM"
+ls -la dist/
 
-echo "===== Cleanup ====="
 deactivate
 rm -rf "$VENV_DIR"
-rm -rf "$PROJECT_ROOT/build/pyinstaller_build"
-rm -f /tmp/appimagetool
-if [ -f "$APPIMAGE" ]; then
-    rm -rf "$APPDIR"
-fi
-echo "Done!"
+echo "Build finished successfully!"

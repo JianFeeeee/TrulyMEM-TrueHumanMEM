@@ -40,7 +40,7 @@ class TestAppConfig:
         from ui.models.config import AppConfig
         config = AppConfig()
         assert config.api_key == ""
-        assert config.model == "deepseek-chat"
+        assert config.model == "deepseek-v4-flash"
         assert config.base_url == "https://api.deepseek.com"
 
     def test_config_from_env(self):
@@ -185,7 +185,7 @@ class TestUIWithBackendClient:
             assert status.get("success") is True
 
             result = client.update_settings(
-                api_config={"api_key": "sk-test", "base_url": "https://api.deepseek.com", "model": "deepseek-chat"},
+                api_config={"api_key": "sk-test", "base_url": "https://api.deepseek.com", "model": "deepseek-v4-flash"},
                 tool_limits={"persona_update_max": 1}
             )
             assert result.get("success") is True

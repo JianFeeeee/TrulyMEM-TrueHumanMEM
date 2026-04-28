@@ -34,8 +34,8 @@ def load_secret_key():
 
 WEB_CONFIG = load_secret_key()
 
-
-app = Flask(__name__, static_folder='static', static_url_path='', template_folder='templates')
+_ui_dir = os.path.join(os.path.dirname(__file__), '..', 'ui')
+app = Flask(__name__, static_folder=os.path.join(_ui_dir, 'static'), static_url_path='', template_folder=os.path.join(_ui_dir, 'templates'))
 app.secret_key = WEB_CONFIG["SECRET_KEY"]
 app.permanent_session_lifetime = timedelta(days=7)
 CORS(app, supports_credentials=True)  # 启用跨域支持，支持 session cookies
@@ -729,6 +729,52 @@ def get_graph_highlight():
         "new_edge": new_edge,
         "deleted_node_ids": deleted_node_ids
     })
+
+
+# ── 可被 TUI 作为线程启动 ──────────────────────────────────────────────────
+
+_web_thread: threading.Thread | None = None
+_http_server = None  # werkzeug.serving.BaseWSGIServer 引用，用于优雅停止
+
+
+def run_web_server(port: int = 4096, host: str = '0.0.0.0') -> None:
+    """在后台线程启动 Flask，供 TUI 或入口脚本在进程中直接调用"""
+    global backend_server, backend_client, _web_thread, _http_server
+
+    if _http_server is not None:
+        return  # 已在运行
+
+    # 自动初始化后端（如果还没初始化的话）
+    if backend_server is None:
+        create_server()
+
+    def _start():
+        global _http_server
+        try:
+            from werkzeug.serving import make_server
+            _http_server = make_server(host, port, app, threaded=True)
+            print(f"Web API 服务启动在 http://{host}:{port}")
+            _http_server.serve_forever()
+        except Exception as e:
+            print(f"Web 服务启动失败: {e}")
+            _http_server = None
+        finally:
+            _http_server = None
+
+    _web_thread = threading.Thread(target=_start, daemon=True)
+    _web_thread.start()
+
+
+def stop_web_server() -> None:
+    """停止 Web 服务线程"""
+    global _http_server, _web_thread
+    if _http_server:
+        try:
+            _http_server.shutdown()
+        except Exception:
+            pass
+        _http_server = None
+    _web_thread = None
 
 
 if __name__ == '__main__':

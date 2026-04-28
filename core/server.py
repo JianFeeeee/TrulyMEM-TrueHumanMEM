@@ -64,7 +64,7 @@ class BackendServer:
         self._thread: Optional[threading.Thread] = None
         
         self._lock = threading.Lock()
-        self._config = {"api_key": "", "base_url": "https://api.deepseek.com", "model": "deepseek-chat"}
+        self._config = {"api_key": "", "base_url": "https://api.deepseek.com", "model": "deepseek-v4-flash"}
         self._tool_limits = {
             "persona_update_max": 1,
             "task_update_max": 5,
@@ -73,7 +73,7 @@ class BackendServer:
         }
         self._message_history: list = []
 
-    def start(self, api_key: str = "", base_url: str = "https://api.deepseek.com", model: str = "deepseek-chat") -> None:
+    def start(self, api_key: str = "", base_url: str = "https://api.deepseek.com", model: str = "deepseek-v4-flash") -> None:
         if self._running:
             return
         
@@ -94,7 +94,7 @@ class BackendServer:
             self._client = GraphMemoryClient(
                 api_key=self._config["api_key"],
                 base_url=self._config["base_url"],
-                model=self._config.get("model", "deepseek-chat"),
+                model=self._config.get("model", "deepseek-v4-flash"),
                 graph=self._graph
             )
         
@@ -296,6 +296,10 @@ class BackendServer:
                     } for tc in message.tool_calls
                 ]
             }
+            # 保留 DeepSeek thinking 模式的 reasoning_content
+            reasoning_content = getattr(message, 'reasoning_content', None)
+            if reasoning_content:
+                assistant_msg["reasoning_content"] = reasoning_content
             messages_history.append(assistant_msg)
             
             current_tool_results = []
@@ -422,7 +426,7 @@ class BackendServer:
         
         api_key = api_config.get("api_key", "")
         base_url = api_config.get("base_url", "https://api.deepseek.com")
-        model = api_config.get("model", "deepseek-chat")
+        model = api_config.get("model", "deepseek-v4-flash")
         
         self.update_config(api_key, base_url, model)
         
@@ -509,7 +513,7 @@ class BackendServer:
         response = self.send(packet)
         return response.body
 
-    def update_config(self, api_key: str, base_url: str = "https://api.deepseek.com", model: str = "deepseek-chat") -> None:
+    def update_config(self, api_key: str, base_url: str = "https://api.deepseek.com", model: str = "deepseek-v4-flash") -> None:
         with self._lock:
             self._config["api_key"] = api_key
             self._config["base_url"] = base_url
