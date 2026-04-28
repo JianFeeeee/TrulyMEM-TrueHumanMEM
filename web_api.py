@@ -731,6 +731,48 @@ def get_graph_highlight():
     })
 
 
+# ── 可被 TUI 作为线程启动 ──────────────────────────────────────────────────
+
+_web_thread: threading.Thread | None = None
+_http_server = None  # werkzeug.serving.BaseWSGIServer 引用，用于优雅停止
+
+
+def run_web_server(port: int = 4096, host: str = '0.0.0.0') -> None:
+    """在后台线程启动 Flask，供 TUI 在进程中直接调用"""
+    global _web_thread, _http_server
+
+    if _http_server is not None:
+        return  # 已在运行
+
+    def _start():
+        global _http_server
+        try:
+            from werkzeug.serving import make_server
+            _http_server = make_server(host, port, app, threaded=True)
+            print(f"Web API 服务启动在 http://{host}:{port}")
+            _http_server.serve_forever()
+        except Exception as e:
+            print(f"Web 服务启动失败: {e}")
+            _http_server = None
+        finally:
+            _http_server = None
+
+    _web_thread = threading.Thread(target=_start, daemon=True)
+    _web_thread.start()
+
+
+def stop_web_server() -> None:
+    """停止 Web 服务线程"""
+    global _http_server, _web_thread
+    if _http_server:
+        try:
+            _http_server.shutdown()
+        except Exception:
+            pass
+        _http_server = None
+    _web_thread = None
+
+
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='TrulyMEM Web API 服务')
     parser.add_argument('--port', type=int, default=5000, help='服务端口 (默认: 5000)')

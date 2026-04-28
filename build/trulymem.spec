@@ -69,7 +69,7 @@ a = Analysis(
         'ui.handlers',
         'ui.services', 'ui.services.config_manager', 'ui.services.config_service',
         'web_api',
-        'flask', 'flask_cors',
+        'flask', 'flask_cors', 'werkzeug',
     ],
     hookspath=[],
     hooksconfig={},
@@ -100,46 +100,4 @@ exe = EXE(
     entitlements_file=None,
 )
 
-# ——— Web 服务二进制（trulymem-web）———
-web_a = Analysis(
-    ['web_api.py'],
-    pathex=[project_root],
-    binaries=[],
-    datas=[
-        (os.path.join(project_root, 'templates'), 'templates'),
-        (os.path.join(project_root, 'static'), 'static'),
-    ],
-    hiddenimports=[
-        'flask', 'flask_cors',
-        'core', 'core.server', 'core.client',
-        'core.embedded_db', 'core.activity_recorder',
-        'core.migrate',
-    ],
-    hookspath=[],
-    hooksconfig={},
-    runtime_hooks=[],
-    excludes=[],
-    noarchive=False,
-    optimize=0,
-)
-web_pyz = PYZ(web_a.pure, block_cipher)
-web_exe = EXE(
-    web_pyz,
-    web_a.scripts,
-    web_a.binaries,
-    web_a.datas,
-    [],
-    name='trulymem-web',
-    debug=False,
-    bootloader_ignore_signals=False,
-    strip=False,
-    upx=True,
-    upx_exclude=[],
-    runtime_tmpdir=None,
-    console=False,
-    disable_windowed_traceback=False,
-    argv_emulation=False,
-    target_arch=None,
-    codesign_identity=None,
-    entitlements_file=None,
-)
+

@@ -22,25 +22,8 @@ pip install -r requirements.txt
 echo "Cleaning previous builds..."
 rm -rf build/dist build/__pycache__ 2>/dev/null || true
 
-# 共用 hidden imports（TUI + Web 都需要的核心库）
-CORE_HIDDEN=(
-    --hidden-import core
-    --hidden-import core.embedded_db
-    --hidden-import core.graph_client
-    --hidden-import core.tool_executor
-    --hidden-import core.tool_limiter
-    --hidden-import core.tools
-    --hidden-import core.tools.memory_tools
-    --hidden-import core.prompts
-    --hidden-import core.prompts.prompt_manager
-    --hidden-import core.server
-    --hidden-import core.client
-    --hidden-import core.migrate
-    --hidden-import core.activity_recorder
-)
-
 echo "================================"
-echo "1️⃣  Build TUI: TrulyMEM"
+echo "Building TrulyMEM (TUI + Web embedded)"
 echo "================================"
 python -m PyInstaller trulymem_entry.py \
     --clean --onefile --console --name TrulyMEM \
@@ -57,7 +40,19 @@ python -m PyInstaller trulymem_entry.py \
     --hidden-import openai._client \
     --hidden-import neo4j \
     --hidden-import sqlite3 \
-    "${CORE_HIDDEN[@]}" \
+    --hidden-import core \
+    --hidden-import core.embedded_db \
+    --hidden-import core.graph_client \
+    --hidden-import core.tool_executor \
+    --hidden-import core.tool_limiter \
+    --hidden-import core.tools \
+    --hidden-import core.tools.memory_tools \
+    --hidden-import core.prompts \
+    --hidden-import core.prompts.prompt_manager \
+    --hidden-import core.server \
+    --hidden-import core.client \
+    --hidden-import core.migrate \
+    --hidden-import core.activity_recorder \
     --hidden-import ui \
     --hidden-import ui.app \
     --hidden-import ui.login_screen \
@@ -73,25 +68,13 @@ python -m PyInstaller trulymem_entry.py \
     --hidden-import web_api \
     --hidden-import flask \
     --hidden-import flask_cors \
+    --hidden-import werkzeug \
     --collect-all textual \
-    --noconfirm
-
-echo "================================"
-echo "2️⃣  Build Web: trulymem-web"
-echo "================================"
-python -m PyInstaller web_api.py \
-    --clean --onefile --console --name trulymem-web \
-    --add-data "templates:templates" \
-    --add-data "static:static" \
-    --hidden-import flask \
-    --hidden-import flask_cors \
-    "${CORE_HIDDEN[@]}" \
     --noconfirm
 
 echo "================================"
 echo "===== Build Complete ====="
 echo "Binary: dist/TrulyMEM"
-echo "Binary: dist/trulymem-web"
 ls -la dist/
 
 deactivate
