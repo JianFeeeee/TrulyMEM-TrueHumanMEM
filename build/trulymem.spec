@@ -4,41 +4,37 @@ import sys
 
 block_cipher = None
 
-project_root = os.path.dirname(os.path.abspath(SPEC))
+project_root = os.path.dirname(os.path.dirname(os.path.abspath(SPEC)))
 sys.path.insert(0, project_root)
 
 datas = []
 # UI 样式
-if os.path.exists(os.path.join(project_root, 'ui', 'styles')):
-    for root, dirs, files in os.walk(os.path.join(project_root, 'ui', 'styles')):
+ui_styles_dir = os.path.join(project_root, 'ui', 'styles')
+if os.path.exists(ui_styles_dir):
+    for root, dirs, files in os.walk(ui_styles_dir):
         for f in files:
-            src = os.path.join(root, f)
-            dst = os.path.join('ui', 'styles', os.path.relpath(src, os.path.join(project_root, 'ui', 'styles')))
-            datas.append((src, dst))
+            datas.append((os.path.join(root, f), 'ui/styles'))
 
 # Prompt 模板
-if os.path.exists(os.path.join(project_root, 'core', 'prompts', 'templates')):
-    for root, dirs, files in os.walk(os.path.join(project_root, 'core', 'prompts', 'templates')):
+prompt_tmpl_dir = os.path.join(project_root, 'core', 'prompts', 'templates')
+if os.path.exists(prompt_tmpl_dir):
+    for root, dirs, files in os.walk(prompt_tmpl_dir):
         for f in files:
-            src = os.path.join(root, f)
-            dst = os.path.join('core', 'prompts', 'templates', os.path.relpath(src, os.path.join(project_root, 'core', 'prompts', 'templates')))
-            datas.append((src, dst))
+            datas.append((os.path.join(root, f), 'core/prompts/templates'))
 
 # Web 静态文件
-if os.path.exists(os.path.join(project_root, 'static')):
-    for root, dirs, files in os.walk(os.path.join(project_root, 'static')):
+static_dir = os.path.join(project_root, 'static')
+if os.path.exists(static_dir):
+    for root, dirs, files in os.walk(static_dir):
         for f in files:
-            src = os.path.join(root, f)
-            dst = os.path.join('static', os.path.relpath(src, os.path.join(project_root, 'static')))
-            datas.append((src, dst))
+            datas.append((os.path.join(root, f), 'static'))
 
 # Web 模板
-if os.path.exists(os.path.join(project_root, 'templates')):
-    for root, dirs, files in os.walk(os.path.join(project_root, 'templates')):
+templates_dir = os.path.join(project_root, 'templates')
+if os.path.exists(templates_dir):
+    for root, dirs, files in os.walk(templates_dir):
         for f in files:
-            src = os.path.join(root, f)
-            dst = os.path.join('templates', os.path.relpath(src, os.path.join(project_root, 'templates')))
-            datas.append((src, dst))
+            datas.append((os.path.join(root, f), 'templates'))
 
 # Web API 脚本（以便子进程模式回退使用）
 web_api_src = os.path.join(project_root, 'web_api.py')
@@ -47,8 +43,8 @@ if os.path.exists(web_api_src):
 
 # ——— TUI 主二进制 ———
 a = Analysis(
-    ['trulymem_entry.py'],
-    pathex=[project_root],
+    [os.path.join(project_root, 'trulymem_entry.py')],
+    pathex=[],
     binaries=[],
     datas=datas,
     hiddenimports=[
@@ -78,7 +74,8 @@ a = Analysis(
     noarchive=False,
     optimize=0,
 )
-pyz = PYZ(a.pure, block_cipher)
+pyz = PYZ(a.pure)
+
 exe = EXE(
     pyz,
     a.scripts,
@@ -99,5 +96,3 @@ exe = EXE(
     codesign_identity=None,
     entitlements_file=None,
 )
-
-
