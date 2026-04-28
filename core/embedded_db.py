@@ -292,7 +292,76 @@ class EmbeddedGraphDB:
             "relations": relations,
             "message": f"找到 {len(entities)} 个实体, {len(relations)} 条关系"
         }
-    
+
+    def get_recent_tasks(self, limit: int = 10, state_filter: str = None) -> Dict:
+        """
+        获取最近的任务节点
+
+        Args:
+            limit: 返回数量
+            state_filter: 可选状态过滤（如：进行中、已完成、已暂停、已取消、archived）
+
+        Returns:
+            {"tasks": [{"task_id": str, "description": str, "state": str,
+                         "info_count": int, "updated_at": str}, ...]}
+        """
+        cursor = self.conn.cursor()
+
+        # 查询所有 TaskNode 实体
+        cursor.execute("""
+            SELECT e.id, e.name, e.updated_at
+            FROM entities e
+            WHERE e.type = 'TaskNode'
+            ORDER BY e.updated_at DESC
+            LIMIT ?
+        """, (limit,))
+        rows = cursor.fetchall()
+
+        tasks = []
+        for row in rows:
+            entity_id, name, updated_at = row
+
+            # 查 description
+            cursor.execute("""
+                SELECT r.relation_type, t.name
+                FROM relations r
+                JOIN entities t ON r.target_id = t.id
+                WHERE r.source_id = ? AND r.status = 'active'
+                  AND r.relation_type IN ('has_description', 'HAS_STATE')
+            """, (entity_id,))
+            desc = ""
+            state = "未知"
+            for rtype, tname in cursor.fetchall():
+                if rtype == 'has_description':
+                    desc = tname
+                elif rtype == 'HAS_STATE':
+                    state = tname.replace('State_', '')
+
+            # 可选状态过滤
+            if state_filter and state != state_filter:
+                continue
+
+            # 查关联信息节点数量
+            cursor.execute("""
+                SELECT COUNT(*)
+                FROM relations
+                WHERE source_id = ? AND relation_type = 'CONTAINS_INFO' AND status = 'active'
+            """, (entity_id,))
+            info_count = cursor.fetchone()[0]
+
+            tasks.append({
+                "task_id": name,
+                "description": desc,
+                "state": state,
+                "info_count": info_count,
+                "updated_at": updated_at
+            })
+
+        return {
+            "tasks": tasks,
+            "total": len(tasks)
+        }
+
     def commit(self, triplets: List[Dict], entity_types: Dict = None,
                temporal_tag: str = None, session_id: str = None,
                turn_id: int = None) -> Dict:

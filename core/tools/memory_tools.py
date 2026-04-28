@@ -550,6 +550,26 @@ AI操作步骤:
                 "required": ["task_id", "info_node_names"]
             }
         }
+    },
+    {
+        "type": "function",
+        "function": {
+            "name": "task_query",
+            "description": "查询最近的任务列表。按更新时间倒序排列。新对话开始时优先使用此工具获取所有进展中的任务，避免重复创建。",
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "limit": {
+                        "type": "integer",
+                        "description": "返回的任务数量，默认10"
+                    },
+                    "state_filter": {
+                        "type": "string",
+                        "description": "按状态筛选：进行中、已完成、已暂停、已取消、archived"
+                    }
+                }
+            }
+        }
     }
 ]
 

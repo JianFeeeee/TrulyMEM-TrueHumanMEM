@@ -45,6 +45,9 @@ class ToolLimiter:
         if tool_name in ('task_create', 'task_set_state', 'task_delete', 'task_link_info'):
             return ('task', 'update')
 
+        if tool_name == 'task_query':
+            return ('task', 'query')
+
         if tool_name == 'memory_recall':
             # 尝试区分工作记忆链查询 vs 一般记忆查询
             query = (arguments.get('queryIntent', '') + ' ' + ' '.join(

@@ -105,6 +105,11 @@ def execute_tool(graph: Any, tool_name: str, arguments: dict) -> str:
             result = execute_task_link_info(graph, arguments)
             return json.dumps(result, ensure_ascii=False, default=str)
         
+        elif tool_name == "task_query":
+            recorder.record("query", tool_name, "")
+            result = execute_task_query(graph, arguments)
+            return json.dumps(result, ensure_ascii=False, default=str)
+        
         return f"未知工具: {tool_name}"
     
     except Exception as e:
@@ -351,4 +356,18 @@ def execute_task_link_info(graph: Any, arguments: dict) -> dict:
         "task_id": task_id,
         "linked_nodes": info_node_names,
         "details": result
+    }
+
+def execute_task_query(graph: Any, arguments: dict) -> dict:
+    """查询最近的任务列表"""
+    limit = arguments.get("limit", 10)
+    state_filter = arguments.get("state_filter")
+    
+    result = graph.get_recent_tasks(limit=limit, state_filter=state_filter)
+    
+    return {
+        "status": "success",
+        "tasks": result["tasks"],
+        "total": result["total"],
+        "message": f"找到 {result['total']} 个任务"
     }
