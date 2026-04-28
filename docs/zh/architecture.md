@@ -244,6 +244,7 @@ def main():
 - `context_rewrite` - 压缩单轮工具调用上下文
 
 ### 人设工具 (2个)
+| `persona_remove` | 删除单条人设属性 | 保留其他人设不变 |
 - `persona_update` - 更新人设
 - `persona_clear` - 清除人设
 

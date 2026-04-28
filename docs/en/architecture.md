@@ -238,6 +238,7 @@ def main():
 - `context_rewrite` - Compress single-turn tool call context
 
 ### Persona Tools (2)
+| `persona_remove` | Delete single persona attribute | Keep other attributes unchanged |
 - `persona_update` - Update persona
 - `persona_clear` - Clear persona
 
