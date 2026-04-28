@@ -947,6 +947,10 @@ function init() {
                 } else {
                     selectedNode = node;
                     showNodeInfo(node.userData.nodeData, true);
+                    // 自动视角：点击节点时飞向它
+                    if (autoViewEnabled) {
+                        flyToNode(node.userData.nodeId, 500);
+                    }
                 }
             }
         }
@@ -1210,6 +1214,31 @@ function smoothReposition() {
                             }
                         });
                     });
+
+                    // 自动视角：高亮节点被读取时，飞向它们的中心
+                    if (autoViewEnabled && currentHighlightIds.length > 0 && !data.new_node_id) {
+                        const meshes = nodeMeshes.filter(m => currentHighlightIds.includes(m.userData.nodeId));
+                        if (meshes.length > 0) {
+                            const avgPos = new THREE.Vector3(0, 0, 0);
+                            meshes.forEach(m => avgPos.add(m.position));
+                            avgPos.divideScalar(meshes.length);
+                            const distance = avgPos.length() + 25;
+                            const startPos = camera.position.clone();
+                            const endCamPos = new THREE.Vector3(avgPos.x, avgPos.y + distance * 0.4, avgPos.z + distance * 0.8);
+                            const startTarget = controls.target.clone();
+                            const duration = 600;
+                            const startTime = Date.now();
+                            function lerpHighlight() {
+                                const elapsed = Date.now() - startTime;
+                                const t = Math.min(elapsed / duration, 1);
+                                const ease = 1 - Math.pow(1 - t, 3);
+                                camera.position.lerpVectors(startPos, endCamPos, ease);
+                                controls.target.lerpVectors(startTarget, avgPos, ease);
+                                if (t < 1) requestAnimationFrame(lerpHighlight);
+                            }
+                            lerpHighlight();
+                        }
+                    }
                 }
 
                 if (!data.success) return;
