@@ -67,9 +67,10 @@ class BackendServer:
         self._config = {"api_key": "", "base_url": "https://api.deepseek.com", "model": "deepseek-v4-flash"}
         self._tool_limits = {
             "persona_update_max": 1,
-            "task_update_max": 5,
-            "memory_query_max": 20,
-            "memory_update_max": 10,
+            "task_update_max": 20,
+            "task_query_max": 30,
+            "memory_query_max": 30,
+            "memory_update_max": 15,
         }
         self._message_history: list = []
 
@@ -158,9 +159,10 @@ class BackendServer:
         from .tool_limiter import ToolLimiter, ToolLimits
         limits = ToolLimits(
             persona_update_max=self._tool_limits.get("persona_update_max", 1),
-            task_update_max=self._tool_limits.get("task_update_max", 5),
-            memory_query_max=self._tool_limits.get("memory_query_max", 20),
-            memory_update_max=self._tool_limits.get("memory_update_max", 10),
+            task_update_max=self._tool_limits.get("task_update_max", 20),
+            task_query_max=self._tool_limits.get("task_query_max", 30),
+            memory_query_max=self._tool_limits.get("memory_query_max", 30),
+            memory_update_max=self._tool_limits.get("memory_update_max", 15),
         )
         return ToolLimiter(limits)
 
