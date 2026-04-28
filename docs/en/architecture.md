@@ -32,7 +32,11 @@ TrulyMEM-TrueHumanMEM/
 │   ├── services/       # Service layer (config only)
 │   ├── handlers/      # Event handlers
 │   └── styles/         # Style files
-└── tests/              # Tests (54 tests)
+├── web_api.py             # Web API service (login + RESTful API)
+├── templates/login.html   # Login page template
+├── static/                # Web frontend static files (star map visualization)
+├── web_config.json        # Web service config file (sensitive, not committed)
+└── web_config.example.json # Web config template
 ```
 
 ## Architecture Diagram

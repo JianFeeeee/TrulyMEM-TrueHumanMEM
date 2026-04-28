@@ -40,6 +40,26 @@ TrulyMEM.exe
 
 配置会自动保存到 `~/.trulymem/config.json`，下次启动自动加载。
 
+### Web 可视化界面（可选）
+
+TrulyMEM 提供 Web 星图可视化界面，支持实时浏览知识图谱：
+
+```bash
+# 启动 Web 服务
+python web_api.py --port 4096
+```
+
+然后打开浏览器访问 `http://localhost:4096`。
+
+**登录配置：**
+1. 复制 `web_config.example.json` 为 `web_config.json`
+2. 设置登录密码（使用 SHA256）和 secret key
+3. Web 服务会自动读取该配置
+
+默认端口 4096，可通过 `--port` 参数修改。
+
+---
+
 ## 快捷键
 
 | 按键 | 功能 |

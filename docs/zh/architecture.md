@@ -32,7 +32,11 @@ TrulyMEM-TrueHumanMEM/
 │   ├── services/       # 服务层（仅配置管理）
 │   ├── handlers/      # 事件处理
 │   └── styles/         # 样式文件
-└── tests/              # 测试 (54 tests)
+├── web_api.py             # Web API 服务（登录 + RESTful API）
+├── templates/login.html   # 登录页面模板
+├── static/                # Web 前端静态文件（星图可视化）
+├── web_config.json        # Web 服务配置文件（敏感信息，不提交）
+└── web_config.example.json # Web 配置模板
 ```
 
 ## 架构图

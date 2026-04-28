@@ -64,3 +64,6 @@ jimeng*.png
 
 # Test Cache
 .pytest_cache/
+
+# Web config (contains passwords, secret keys)
+web_config.json

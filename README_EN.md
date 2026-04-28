@@ -66,6 +66,26 @@ python trulymem_entry.py
 
 ---
 
+### Web Visualization (Optional)
+
+TrulyMEM provides a Web star-map visualization interface for browsing the knowledge graph in real-time:
+
+```bash
+# Start Web service
+python web_api.py --port 4096
+```
+
+Then open `http://localhost:4096` in your browser.
+
+**Login Setup:**
+1. Copy `web_config.example.json` to `web_config.json`
+2. Set login password (using SHA256) and secret key
+3. Web service will automatically read the config
+
+Default port is 4096, change with `--port` flag.
+
+---
+
 ## Documentation Index
 
 Detailed technical documentation in the [docs/en/](docs/en/) directory:

@@ -506,3 +506,24 @@ Common errors:
 | `API Key not configured` | API Key not set |
 | `timeout` | Request timeout |
 | `Tool call rejected: ...` | Tool call rate exceeded limit |
+
+## Web API Endpoints
+
+| Method | Path | Description |
+|--------|------|-------------|
+| GET | /api/check-auth | Check if current session is authenticated |
+| POST | /api/login | Login (JSON body: username, password) |
+| POST | /api/logout | Logout |
+| GET | /api/history | Get chat history |
+| POST | /api/message | Send message to AI |
+| POST | /api/tools/execute | Execute tool call |
+| GET | /api/status | Get system status |
+| GET | /api/settings | Get settings |
+| PUT | /api/settings | Update settings |
+| DELETE | /api/history | Clear history |
+| POST | /api/shutdown | Shutdown server |
+| GET | /api/activity | Get database operation records |
+| GET | /api/graph | Get knowledge graph data |
+| GET | /api/graph/highlight | Get highlighted nodes |
+
+All API endpoints (except /api/login and /api/check-auth) require authentication. Login uses Flask sessions with 7-day validity.

@@ -512,3 +512,24 @@ asyncio.run(main())
 | `API Key 未配置` | 未设置 API Key |
 | `timeout` | 请求超时 |
 | `工具调用被拒绝: ...` | 工具调用频率超限 |
+
+## Web API 端点
+
+| 方法 | 路径 | 说明 |
+|------|------|------|
+| GET | /api/check-auth | 检查当前会话是否已登录 |
+| POST | /api/login | 登录（JSON body: username, password） |
+| POST | /api/logout | 登出 |
+| GET | /api/history | 获取聊天历史 |
+| POST | /api/message | 发送消息给 AI |
+| POST | /api/tools/execute | 执行工具调用 |
+| GET | /api/status | 获取系统状态 |
+| GET | /api/settings | 获取设置 |
+| PUT | /api/settings | 更新设置 |
+| DELETE | /api/history | 清空历史 |
+| POST | /api/shutdown | 关闭服务器 |
+| GET | /api/activity | 获取数据库操作记录 |
+| GET | /api/graph | 获取知识图谱数据 |
+| GET | /api/graph/highlight | 获取高亮节点 |
+
+所有 API 端点（除 /api/login 和 /api/check-auth 外）需要登录认证。登录使用 Flask session，有效期 7 天。
