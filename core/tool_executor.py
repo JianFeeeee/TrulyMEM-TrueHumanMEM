@@ -4,6 +4,8 @@
 import json
 from typing import Any, Dict
 
+from .activity_recorder import get_recorder
+
 
 def execute_tool(graph: Any, tool_name: str, arguments: dict) -> str:
     """执行工具调用"""
@@ -11,8 +13,12 @@ def execute_tool(graph: Any, tool_name: str, arguments: dict) -> str:
     print(f"[参数] {json.dumps(arguments, ensure_ascii=False, indent=2)}")
     
     try:
+        recorder = get_recorder()
+        
         # 基础记忆工具
         if tool_name == "memory_recall":
+            entity = arguments.get("query_intent", "") or str(arguments.get("seed_entities", ""))
+            recorder.record("query", tool_name, entity)
             result = graph.recall(
                 query_intent=arguments.get("query_intent", ""),
                 seed_entities=arguments.get("seed_entities"),
@@ -23,30 +29,39 @@ def execute_tool(graph: Any, tool_name: str, arguments: dict) -> str:
             return format_recall_result(result)
         
         elif tool_name == "memory_commit":
+            triplets = arguments.get("triplets", [])
+            entity = triplets[0].get("subject", "") if triplets else ""
+            recorder.record("create", tool_name, entity, f"{len(triplets)} triplets")
             result = graph.commit(
-                triplets=arguments.get("triplets", []),
+                triplets=triplets,
                 entity_types=arguments.get("entity_types"),
                 temporal_tag=arguments.get("temporal_tag")
             )
             return json.dumps(result, ensure_ascii=False, default=str)
         
         elif tool_name == "memory_purge":
+            criteria = arguments.get("criteria", {})
+            entity = criteria.get("subject_contains", str(criteria))
+            recorder.record("delete", tool_name, entity)
             result = graph.purge(
-                criteria=arguments.get("criteria", {}),
+                criteria=criteria,
                 mode=arguments.get("mode", "soft"),
                 new_relation=arguments.get("new_relation")
             )
             return json.dumps(result, ensure_ascii=False, default=str)
         
         elif tool_name == "memory_introspect":
+            recorder.record("query", tool_name, "数据库统计")
             result = graph.introspect(session_id=arguments.get("session_id"))
             return json.dumps(result, ensure_ascii=False, default=str)
         
         elif tool_name == "memory_archive":
+            recorder.record("archive", tool_name, "旧记忆")
             result = graph.archive(days=arguments.get("days", 30))
             return json.dumps(result, ensure_ascii=False, default=str)
         
         elif tool_name == "memory_cleanup":
+            recorder.record("cleanup", tool_name, "已删除数据")
             result = graph.cleanup(dry_run=arguments.get("dry_run", True))
             return json.dumps(result, ensure_ascii=False, default=str)
         
@@ -56,27 +71,37 @@ def execute_tool(graph: Any, tool_name: str, arguments: dict) -> str:
         
         # 人设图管理工具
         elif tool_name == "persona_update":
+            recorder.record("update", tool_name, "人设属性")
             result = execute_persona_update(graph, arguments)
             return json.dumps(result, ensure_ascii=False, default=str)
         
         elif tool_name == "persona_clear":
+            recorder.record("delete", tool_name, "所有人设")
             result = execute_persona_clear(graph, arguments)
             return json.dumps(result, ensure_ascii=False, default=str)
         
         # 工作记忆链管理工具
         elif tool_name == "task_create":
+            desc = arguments.get("description", "")
+            recorder.record("create", tool_name, desc)
             result = execute_task_create(graph, arguments)
             return json.dumps(result, ensure_ascii=False, default=str)
         
         elif tool_name == "task_set_state":
+            desc = arguments.get("task_id", "")
+            recorder.record("update", tool_name, desc)
             result = execute_task_set_state(graph, arguments)
             return json.dumps(result, ensure_ascii=False, default=str)
         
         elif tool_name == "task_delete":
+            desc = arguments.get("task_id", "")
+            recorder.record("delete", tool_name, desc)
             result = execute_task_delete(graph, arguments)
             return json.dumps(result, ensure_ascii=False, default=str)
         
         elif tool_name == "task_link_info":
+            desc = arguments.get("task_id", "")
+            recorder.record("update", tool_name, desc)
             result = execute_task_link_info(graph, arguments)
             return json.dumps(result, ensure_ascii=False, default=str)
         

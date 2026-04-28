@@ -9,6 +9,7 @@ from dataclasses import dataclass, field
 from enum import Enum
 
 from .embedded_db import EmbeddedGraphDB
+from .activity_recorder import get_recorder
 
 
 class PacketType(Enum):
@@ -17,6 +18,10 @@ class PacketType(Enum):
     GET_STATUS = "get_status"
     GET_SETTINGS = "get_settings"      # 合并：获取 api_config + tool_limits
     SET_SETTINGS = "set_settings"     # 合并：设置 api_config + tool_limits
+    GET_WEB_USERS = "get_web_users"     # 获取 Web 用户列表
+    SET_WEB_USER = "set_web_user"       # 设置 Web 用户（用户名+密码）
+    GET_WEB_SERVICE_STATUS = "get_web_service_status"  # 获取 Web 服务运行状态
+    GET_CONFIG = "get_config"                           # 获取完整配置
     GET_HISTORY = "get_history"
     SAVE_HISTORY = "save_history"
     SHUTDOWN = "shutdown"
@@ -43,10 +48,11 @@ class BackendServer:
     
     DEFAULT_CONFIG_PATH = Path.home() / ".trulymem" / "config.json"
     
-    def __init__(self, db_path: str = "graph_memory.db", use_embedded_db: bool = True, config_file: str = None):
+    def __init__(self, db_path: str = "graph_memory.db", use_embedded_db: bool = True, config_file: str = None, username: str = ""):
         self._db_path = db_path
         self._use_embedded_db = use_embedded_db
         self._config_file = Path(config_file) if config_file else self.DEFAULT_CONFIG_PATH
+        self._username = username
         
         self._graph = None
         self._client = None
@@ -97,9 +103,26 @@ class BackendServer:
         self._thread.start()
 
     def _load_config(self) -> None:
-        if self._config_file.exists():
+        """加载配置。如果指定了用户名，从用户的 config_path 加载。"""
+        config_file = self._config_file
+        
+        # 如果指定了用户名，尝试从全局数据库获取用户的配置路径
+        if self._username:
             try:
-                with open(self._config_file, 'r') as f:
+                global_db_path = Path.home() / ".trulymem" / "trulymem.db"
+                if global_db_path.exists():
+                    from .embedded_db import EmbeddedGraphDB
+                    temp_db = EmbeddedGraphDB(db_path=str(global_db_path))
+                    user_info = temp_db.get_web_user(self._username)
+                    temp_db.close()
+                    if user_info and user_info.get('config_path'):
+                        config_file = Path(user_info['config_path'])
+            except Exception:
+                pass
+        
+        if config_file.exists():
+            try:
+                with open(config_file, 'r') as f:
                     saved = json.load(f)
                     self._config.update(saved)
                     for key in self._tool_limits:
@@ -109,9 +132,26 @@ class BackendServer:
                 pass
 
     def _save_config(self) -> None:
-        self._config_file.parent.mkdir(parents=True, exist_ok=True)
+        """保存配置。如果指定了用户名，保存到用户的 config_path。"""
+        config_file = self._config_file
+        
+        # 如果指定了用户名，尝试从全局数据库获取用户的配置路径
+        if self._username:
+            try:
+                global_db_path = Path.home() / ".trulymem" / "trulymem.db"
+                if global_db_path.exists():
+                    from .embedded_db import EmbeddedGraphDB
+                    temp_db = EmbeddedGraphDB(db_path=str(global_db_path))
+                    user_info = temp_db.get_web_user(self._username)
+                    temp_db.close()
+                    if user_info and user_info.get('config_path'):
+                        config_file = Path(user_info['config_path'])
+            except Exception:
+                pass
+        
+        config_file.parent.mkdir(parents=True, exist_ok=True)
         saved_data = {**self._config, **self._tool_limits}
-        with open(self._config_file, 'w') as f:
+        with open(config_file, 'w') as f:
             json.dump(saved_data, f, indent=2)
 
     def _create_tool_limiter(self):
@@ -125,8 +165,25 @@ class BackendServer:
         return ToolLimiter(limits)
 
     def _init_graph(self) -> None:
+        """初始化图数据库。如果指定了用户名，从全局数据库获取用户的 db_path。"""
+        db_path = self._db_path
+        
+        # 如果指定了用户名，尝试从全局数据库获取用户的数据库路径
+        if self._username:
+            try:
+                # 临时连接全局数据库获取用户信息
+                global_db_path = Path.home() / ".trulymem" / "trulymem.db"
+                if global_db_path.exists():
+                    temp_db = EmbeddedGraphDB(db_path=str(global_db_path))
+                    user_info = temp_db.get_web_user(self._username)
+                    temp_db.close()
+                    if user_info and user_info.get('db_path'):
+                        db_path = user_info['db_path']
+            except Exception:
+                pass  # 如果获取失败，使用默认路径
+        
         if self._use_embedded_db:
-            self._graph = EmbeddedGraphDB(db_path=self._db_path)
+            self._graph = EmbeddedGraphDB(db_path=db_path)
         else:
             from .graph_client import Neo4jGraph
             self._graph = Neo4jGraph(
@@ -158,6 +215,25 @@ class BackendServer:
                 response_body = self._handle_get_settings()
             elif packet.type == PacketType.SET_SETTINGS:
                 response_body = self._handle_set_settings(packet.body)
+            elif packet.type == PacketType.GET_WEB_USERS:
+                response_body = {"users": self._graph.get_web_users()}
+            elif packet.type == PacketType.SET_WEB_USER:
+                username = packet.body.get("username", "")
+                password = packet.body.get("password", "")
+                if not username or not password:
+                    response_body = {"success": False, "error": "用户名和密码不能为空"}
+                else:
+                    # 使用全局数据库（trulymem.db）来管理用户
+                    global_db_path = Path.home() / ".trulymem" / "trulymem.db"
+                    from .embedded_db import EmbeddedGraphDB
+                    global_db = EmbeddedGraphDB(db_path=str(global_db_path))
+                    response_body = global_db.set_web_user(username, password)
+                    global_db.close()
+            elif packet.type == PacketType.GET_WEB_SERVICE_STATUS:
+                body = packet.body
+                response_body = {"running": body.get("running", False), "port": body.get("port", 4096)}
+            elif packet.type == PacketType.GET_CONFIG:
+                response_body = self._get_full_config()
             elif packet.type == PacketType.GET_HISTORY:
                 response_body = self._handle_get_history()
             elif packet.type == PacketType.SAVE_HISTORY:
@@ -181,6 +257,8 @@ class BackendServer:
 
     def _handle_process_message(self, body: Dict) -> Dict:
         from .tool_executor import execute_tool
+        
+        get_recorder().clear()
         
         user_input = body.get("user_input", "")
         
@@ -330,6 +408,12 @@ class BackendServer:
         return {
             "api_config": self._config.copy(),
             "tool_limits": self._tool_limits.copy()
+        }
+
+    def _get_full_config(self) -> Dict:
+        return {
+            "api_config": self._config.copy(),
+            "tool_limits": self._tool_limits.copy(),
         }
 
     def _handle_set_settings(self, body: Dict) -> Dict:

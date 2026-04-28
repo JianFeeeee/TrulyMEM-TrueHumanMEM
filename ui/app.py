@@ -1,9 +1,13 @@
 import asyncio
+import sys
+import subprocess
+import signal
 from pathlib import Path
 from textual.app import App, ComposeResult
 from textual.binding import Binding
 
-from core import BackendServer, BackendClient
+from core import BackendServer
+from core.client import BackendClient
 from .models.message import Message
 
 
@@ -27,6 +31,10 @@ class GraphMemoryApp(App):
         self._backend_server = backend_server
         self._backend_client = BackendClient(backend_server) if backend_server else None
         self._api_configured = False
+        self._web_process: subprocess.Popen | None = None
+        self._web_running = False
+        self.login_user = None  # 当前登录用户
+        self.login_user_info = None  # 当前登录用户信息
 
     def compose(self) -> ComposeResult:
         from .widgets.left_panel import LeftPanel
@@ -58,15 +66,56 @@ class GraphMemoryApp(App):
     def on_mount(self) -> None:
         from .widgets.status_bar import StatusBar
         from .widgets.message_history import MessageHistory
+        from .login_screen import LoginScreen
+        from core.migrate import need_migration, is_migrated
+        
+        # 检查是否需要登录
+        migrated = is_migrated()
+        need_login = migrated or not need_migration()
+        
+        if need_login and not self.login_user:
+            # 显示登录界面
+            self.push_screen(LoginScreen())
+            return
+        
+        # 已登录或无需登录，继续初始化
+        self._init_after_login()
+    
+    def on_login_success(self, username: str, user_info: dict) -> None:
+        """登录成功后调用"""
+        self.login_user = username
+        self.login_user_info = user_info
+        # 更新 config section 的 admin 权限
+        from .widgets.config_section import ConfigSection
+        try:
+            is_admin = user_info.get('role') == 'admin'
+            config_section = self.query_one(ConfigSection)
+            config_section.set_admin(is_admin)
+        except Exception:
+            pass
+        # 重新初始化后端
+        self._init_after_login()
+    
+    def _init_after_login(self) -> None:
+        """登录后初始化"""
+        from .widgets.status_bar import StatusBar
+        from .widgets.message_history import MessageHistory
         status_bar = self.query_one(StatusBar)
         
         if not self._backend_server:
-            from .widgets.message_history import MessageHistory
             history = self.query_one(MessageHistory)
             error = Message(role="assistant", content="后端未初始化")
             history.add_message(error)
             status_bar.set_api_status(False)
             return
+        
+        # 如果已登录，重新初始化后端服务器以使用用户的数据库
+        if self.login_user:
+            from core.server import BackendServer
+            # 创建新的后端服务器（使用用户的数据库）
+            self._backend_server = BackendServer(username=self.login_user)
+            self._backend_client = BackendClient(self._backend_server)
+            self._backend_server.start()
         
         status = self._backend_client.get_status()
         data = status.get("data", {})
@@ -82,13 +131,80 @@ class GraphMemoryApp(App):
                     message = Message(role=msg["role"], content=msg["content"])
                     history.add_message(message)
         
-        welcome = Message(
-            role="assistant",
-            content=f"系统就绪\nAPI Key: {'已配置' if self._api_configured else '未配置'}\n\n输入消息开始对话"
-        )
+        role_label = "管理员" if self.login_user_info and self.login_user_info.get('role') == 'admin' else "用户"
+        welcome_msg = f"系统就绪\n用户: {self.login_user or '默认'} ({role_label})\n"
+        welcome_msg += f"API Key: {'已配置' if self._api_configured else '未配置'}\n\n输入消息开始对话"
+        welcome = Message(role="assistant", content=welcome_msg)
         history.add_message(welcome)
 
+    def _start_web_server(self, port: int = 4096) -> None:
+        """启动 Web 服务器子进程（支持打包和开发模式）"""
+        if self._web_process and self._web_process.poll() is None:
+            self.notify("Web 服务已在运行", title="提示")
+            return
+
+        def _find_web_binary() -> str:
+            """查找 Web 二进制或脚本路径"""
+            # 1. PyInstaller 打包环境下查找同目录的 trulymem-web 二进制
+            if getattr(sys, 'frozen', False):
+                base = Path(sys._MEIPASS).parent
+                for name in ['trulymem-web', 'trulymem-web.exe']:
+                    candidate = base / name
+                    if candidate.exists():
+                        return str(candidate)
+            # 2. 开发模式：同目录下的 web_api.py
+            web_script = Path(__file__).parent.parent / "web_api.py"
+            if web_script.exists():
+                return str(web_script)
+            # 3. 打包环境回退：从 MEIPASS 读取 web_api.py 数据文件
+            if getattr(sys, 'frozen', False):
+                bundled = Path(sys._MEIPASS) / "web_api.py"
+                if bundled.exists():
+                    return str(bundled)
+            return ""
+
+        target = _find_web_binary()
+        if not target:
+            self.notify("找不到 Web 服务文件（web_api.py）", severity="error")
+            return
+
+        try:
+            if target.endswith('.py'):
+                cmd = [sys.executable, target, "--port", str(port)]
+            else:
+                cmd = [target, "--port", str(port)]
+            self._web_process = subprocess.Popen(
+                cmd,
+                stdout=subprocess.DEVNULL,
+                stderr=subprocess.DEVNULL
+            )
+            self._web_running = True
+            if self._backend_client:
+                self._backend_client.report_web_status(True, port)
+            self.notify(f"Web 服务已启动 → http://0.0.0.0:{port}", title="Web 服务")
+        except Exception as e:
+            self.notify(f"启动 Web 服务失败: {e}", severity="error")
+
+    def _stop_web_server(self) -> None:
+        """停止 Web 服务器子进程"""
+        if self._web_process:
+            try:
+                self._web_process.terminate()
+                self._web_process.wait(timeout=5)
+            except:
+                try:
+                    self._web_process.kill()
+                except:
+                    pass
+            self._web_process = None
+            self._web_running = False
+            if self._backend_client:
+                self._backend_client.report_web_status(False, 0)
+            self.notify("Web 服务已停止", title="Web 服务")
+
     def on_unmount(self) -> None:
+        # 停止 Web 服务
+        self._stop_web_server()
         if self._backend_client:
             self._backend_client.shutdown()
 
@@ -226,6 +342,16 @@ class GraphMemoryApp(App):
             "memory_update_max": config.memory_update_max,
         }
         
+        # 保存 Web 用户（如果用户名和密码都不为空）
+        if config.web_username and config.web_password:
+            try:
+                await asyncio.get_event_loop().run_in_executor(
+                    None, self._backend_client.set_web_user,
+                    config.web_username, config.web_password
+                )
+            except Exception as e:
+                self.notify(f"保存 Web 用户失败: {e}", severity="warning")
+        
         try:
             result = await asyncio.get_event_loop().run_in_executor(
                 None,
@@ -234,17 +360,17 @@ class GraphMemoryApp(App):
                     tool_limits=tool_limits
                 )
             )
-            
+
             if result.get("success"):
                 self._api_configured = bool(config.api_key)
                 status_bar.set_api_status(self._api_configured)
-                
+
                 settings_result = await asyncio.get_event_loop().run_in_executor(
                     None,
                     lambda: self._backend_client.get_settings()
                 )
                 settings_data = settings_result.get("data", {})
-                
+
                 try:
                     config_section = self.query_one(ConfigSection)
                     api_cfg = settings_data.get("api_config", {})
@@ -257,10 +383,19 @@ class GraphMemoryApp(App):
                         task_update_max=tool_lmts.get("task_update_max", 5),
                         memory_query_max=tool_lmts.get("memory_query_max", 20),
                         memory_update_max=tool_lmts.get("memory_update_max", 10),
+                        enable_web=api_cfg.get("enable_web", False),
+                        web_port=api_cfg.get("web_port", 4096),
+                        enable_tui=api_cfg.get("enable_tui", True),
                     ))
                 except Exception:
                     pass
-                
+
+                # 管理 Web 服务
+                if config.enable_web:
+                    self._start_web_server(config.web_port)
+                else:
+                    self._stop_web_server()
+
                 self.notify("✅ 配置已保存并生效", title="配置成功", severity="information")
             else:
                 error = result.get("error", "未知错误")

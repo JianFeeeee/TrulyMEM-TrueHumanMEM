@@ -1,0 +1,1076 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>TrulyMEM - TrueHumanMEM</title>
+<style>
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+:root {
+    --surface: #1a1a2e;
+    --surface-lighten: #22223a;
+    --surface-darken: #12121f;
+    --panel: #16213e;
+    --primary: #0f3460;
+    --accent: #e94560;
+    --text: #eee;
+    --text-muted: #888;
+    --warning: #ffd700;
+    --success: #00ff88;
+    --orange: #ff8c00;
+    --blue: #4169e1;
+    --green: #00cc66;
+}
+
+body {
+    font-family: 'Consolas', 'Monaco', 'Courier New', monospace;
+    background: var(--surface);
+    color: var(--text);
+    height: 100vh;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+}
+
+/* Main Layout */
+.main-container {
+    display: flex;
+    flex: 1;
+    overflow: hidden;
+}
+
+/* Left Panel */
+.left-panel {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    min-width: 0;
+}
+
+/* Message History */
+.message-history {
+    flex: 1;
+    overflow-y: auto;
+    padding: 10px;
+    background: var(--surface);
+}
+
+.message-widget {
+    margin: 8px 0;
+    border-radius: 4px;
+    overflow: hidden;
+}
+
+.message-widget.user-message {
+    border: 1px solid var(--orange);
+    padding: 8px;
+}
+
+.message-widget.model-message {
+    border: 1px solid var(--blue);
+    padding: 8px;
+}
+
+.message-header {
+    color: var(--text-muted);
+    font-weight: bold;
+    margin-bottom: 4px;
+    font-size: 0.9em;
+}
+
+.message-content {
+    color: var(--text);
+    white-space: pre-wrap;
+    word-wrap: break-word;
+    margin-left: 8px;
+}
+
+.tool-indicator {
+    color: var(--warning);
+    font-weight: bold;
+    margin: 8px 0 4px 8px;
+    cursor: pointer;
+    user-select: none;
+}
+
+.tool-indicator:hover {
+    text-decoration: underline;
+}
+
+.tool-details {
+    background: var(--surface-darken);
+    margin: 4px 0 4px 16px;
+    padding: 8px;
+    border-radius: 4px;
+    display: none;
+    font-size: 0.9em;
+}
+
+.tool-details.expanded {
+    display: block;
+}
+
+.tool-name {
+    color: var(--accent);
+    font-weight: bold;
+}
+
+.tool-args {
+    color: var(--text-muted);
+    margin-left: 8px;
+    white-space: pre-wrap;
+}
+
+.tool-result {
+    color: var(--success);
+    margin-left: 8px;
+    white-space: pre-wrap;
+}
+
+/* Input Box */
+.input-box {
+    background: var(--surface);
+    padding: 8px 16px;
+    border-top: 1px solid var(--primary);
+}
+
+.input-area {
+    width: 100%;
+    min-height: 60px;
+    max-height: 120px;
+    background: var(--surface-lighten);
+    color: var(--text);
+    border: 1px solid var(--primary);
+    padding: 8px;
+    font-family: inherit;
+    font-size: 14px;
+    resize: vertical;
+    border-radius: 4px;
+}
+
+.input-area:focus {
+    outline: 2px solid var(--accent);
+    border-color: transparent;
+}
+
+.input-buttons {
+    margin-top: 8px;
+    display: flex;
+    gap: 8px;
+}
+
+.btn {
+    padding: 6px 16px;
+    background: var(--primary);
+    color: var(--text);
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+    font-family: inherit;
+    font-size: 13px;
+}
+
+.btn:hover {
+    background: var(--accent);
+}
+
+.btn:active {
+    transform: scale(0.98);
+}
+
+/* Right Panel */
+.right-panel {
+    width: 350px;
+    background: var(--panel);
+    display: flex;
+    flex-direction: column;
+    overflow-y: auto;
+    transition: width 0.3s, opacity 0.3s;
+}
+
+.right-panel.collapsed {
+    width: 0;
+    opacity: 0;
+    overflow: hidden;
+}
+
+.sidebar-title {
+    padding: 8px 12px;
+    background: var(--primary);
+    color: var(--text);
+    font-weight: bold;
+    font-size: 0.9em;
+    cursor: pointer;
+    user-select: none;
+}
+
+.sidebar-title:hover {
+    background: var(--accent);
+}
+
+/* Config Section */
+.config-section {
+    padding: 12px;
+    border-bottom: 1px solid var(--surface-lighten);
+}
+
+.config-title {
+    color: var(--primary);
+    font-weight: bold;
+    margin-bottom: 8px;
+}
+
+.config-label {
+    color: var(--text);
+    margin: 8px 0 4px 0;
+    font-size: 0.9em;
+}
+
+.config-hint {
+    color: var(--text-muted);
+    font-style: italic;
+    margin: 4px 0 8px 0;
+    font-size: 0.85em;
+}
+
+.config-input {
+    width: 100%;
+    height: 32px;
+    margin-bottom: 8px;
+    padding: 0 8px;
+    background: var(--surface-lighten);
+    color: var(--text);
+    border: 1px solid var(--primary);
+    border-radius: 4px;
+    font-family: inherit;
+    font-size: 13px;
+}
+
+.config-input:focus {
+    outline: 2px solid var(--accent);
+    border-color: transparent;
+}
+
+/* Operation Log */
+.operation-log {
+    flex: 1;
+    padding: 12px;
+    overflow-y: auto;
+    background: var(--surface-darken);
+    margin: 8px;
+    border-radius: 4px;
+    min-height: 200px;
+}
+
+.operation-log .log-title {
+    color: var(--primary);
+    font-weight: bold;
+    margin-bottom: 8px;
+}
+
+.operation-log .log-entry {
+    color: var(--text);
+    margin: 4px 0;
+    padding: 4px;
+    border-bottom: 1px solid var(--surface-lighten);
+    font-size: 0.85em;
+}
+
+.operation-log .log-empty {
+    color: var(--text-muted);
+    font-style: italic;
+}
+
+.log-timestamp {
+    color: var(--text-muted);
+    font-size: 0.8em;
+}
+
+.log-tool-name {
+    color: var(--accent);
+    font-weight: bold;
+}
+
+.log-args {
+    color: var(--text-muted);
+    margin-left: 8px;
+    white-space: pre-wrap;
+    font-size: 0.9em;
+}
+
+/* Status Bar */
+.status-bar {
+    height: 28px;
+    background: var(--primary);
+    color: var(--text);
+    display: flex;
+    align-items: center;
+    padding: 0 12px;
+    font-size: 0.85em;
+    border-top: 1px solid var(--surface-lighten);
+}
+
+.status-icon {
+    margin-right: 8px;
+}
+
+.status-processing {
+    color: var(--warning);
+    margin-left: 8px;
+}
+
+.shortcuts {
+    margin-left: auto;
+    color: var(--text-muted);
+}
+
+.status-buttons {
+    margin-left: auto;
+    display: flex;
+    gap: 4px;
+}
+
+.status-btn {
+    padding: 2px 8px;
+    background: var(--surface-lighten);
+    color: var(--text);
+    border: 1px solid var(--primary);
+    border-radius: 3px;
+    cursor: pointer;
+    font-family: inherit;
+    font-size: 14px;
+    line-height: 1;
+    transition: background 0.2s;
+}
+
+.status-btn:hover {
+    background: var(--accent);
+    border-color: var(--accent);
+}
+
+.status-btn:active {
+    transform: scale(0.95);
+}
+
+/* Modal Styles */
+.modal-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0, 0, 0, 0.7);
+    display: none;
+    justify-content: center;
+    align-items: center;
+    z-index: 1000;
+}
+
+.modal-overlay.active {
+    display: flex;
+}
+
+.modal-content {
+    background: var(--surface);
+    border: 1px solid var(--primary);
+    border-radius: 4px;
+    min-width: 400px;
+    max-width: 600px;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.5);
+}
+
+.modal-header {
+    background: var(--primary);
+    color: var(--text);
+    padding: 10px 16px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    font-weight: bold;
+    border-radius: 4px 4px 0 0;
+}
+
+.modal-close {
+    background: none;
+    border: none;
+    color: var(--text);
+    font-size: 1.4em;
+    cursor: pointer;
+    padding: 0 4px;
+    line-height: 1;
+}
+
+.modal-close:hover {
+    color: var(--accent);
+}
+
+.modal-body {
+    padding: 20px;
+    color: var(--text);
+    line-height: 1.6;
+}
+
+.modal-body ul {
+    margin-left: 20px;
+    margin-top: 8px;
+}
+
+.modal-body li {
+    margin: 4px 0;
+}
+
+/* Scrollbar Styles */
+::-webkit-scrollbar {
+    width: 8px;
+}
+
+::-webkit-scrollbar-track {
+    background: var(--surface-darken);
+}
+
+::-webkit-scrollbar-thumb {
+    background: var(--primary);
+    border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+    background: var(--accent);
+}
+
+/* Processing animation */
+@keyframes blink {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.5; }
+}
+
+.processing {
+    animation: blink 1s infinite;
+}
+
+/* Memory Activity */
+.memory-activity {
+    flex: 1;
+    padding: 12px;
+    overflow-y: auto;
+    background: var(--surface-darken);
+    margin: 8px;
+    border-radius: 4px;
+    min-height: 200px;
+}
+
+.memory-activity .activity-title {
+    color: var(--primary);
+    font-weight: bold;
+    margin-bottom: 8px;
+}
+
+.memory-activity .activity-empty {
+    color: var(--text-muted);
+    font-style: italic;
+}
+
+.activity-entry {
+    color: var(--text);
+    margin: 4px 0;
+    padding: 4px;
+    border-bottom: 1px solid var(--surface-lighten);
+    font-size: 0.85em;
+}
+
+.activity-entry .activity-timestamp {
+    color: var(--text-muted);
+    font-size: 0.8em;
+}
+
+.activity-entry .activity-operation {
+    font-weight: bold;
+    margin: 2px 0;
+}
+
+.activity-query {
+    color: var(--blue);
+}
+
+.activity-create {
+    color: var(--green);
+}
+
+.activity-delete {
+    color: var(--orange);
+}
+
+.activity-update {
+    color: var(--warning);
+}
+
+.activity-entry .activity-details {
+    color: var(--text-muted);
+    margin-left: 8px;
+    white-space: pre-wrap;
+    font-size: 0.9em;
+}
+</style>
+</head>
+<body>
+
+<div class="main-container">
+    <!-- Left Panel -->
+    <div class="left-panel">
+        <div class="message-history" id="messageHistory">
+            <div class="message-widget model-message">
+                <div class="message-header">[AI] 系统就绪</div>
+                <div class="message-content">正在连接...</div>
+            </div>
+        </div>
+
+        <div class="input-box">
+            <textarea class="input-area" id="messageInput" placeholder="输入消息，Enter 发送，Shift+Enter 换行..." rows="3"></textarea>
+            <div class="input-buttons">
+                <button class="btn" id="sendBtn">发送</button>
+                <button class="btn" id="clearBtn">清屏</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Right Panel -->
+    <div class="right-panel" id="rightPanel">
+        <div class="sidebar-title" id="toggleSidebar">📂 隐藏侧边栏</div>
+
+        <div class="config-section">
+            <div class="config-title">API 配置</div>
+
+            <div class="config-label">API Key</div>
+            <input type="password" class="config-input" id="apiKey" placeholder="输入 API Key">
+
+            <div class="config-label">Base URL</div>
+            <input type="text" class="config-input" id="baseUrl" placeholder="https://api.deepseek.com">
+
+            <div class="config-label">Model</div>
+            <input type="text" class="config-input" id="model" placeholder="deepseek-chat">
+
+            <div class="config-hint">修改后自动保存</div>
+        </div>
+
+        <div class="operation-log" id="operationLog">
+            <div class="log-title">操作日志</div>
+            <div class="log-empty">暂无操作记录</div>
+        </div>
+
+        <div class="memory-activity" id="memoryActivity" style="display: none;">
+            <div class="activity-title">记忆活动</div>
+            <div class="activity-empty">暂无活动记录</div>
+        </div>
+    </div>
+</div>
+
+<!-- Status Bar -->
+<div class="status-bar">
+    <span class="status-icon" id="statusIcon">○</span>
+    <span>API: <span id="apiStatus">未配置</span></span>
+    <span class="status-processing" id="processingIndicator"></span>
+    <div class="status-buttons">
+        <button class="status-btn" id="btnSidebar" title="侧边栏">📂</button>
+        <button class="status-btn" id="btnToolDetails" title="工具详情">🔧</button>
+        <button class="status-btn" id="btnClear" title="清屏">🗑️</button>
+        <button class="status-btn" id="btnHelp" title="帮助">ℹ️</button>
+        <button class="status-btn" id="btnActivity" title="记忆活动">🧠</button>
+    </div>
+</div>
+
+<!-- Help Modal -->
+<div class="modal-overlay" id="helpModal">
+    <div class="modal-content">
+        <div class="modal-header">
+            <span>ℹ️ 帮助 / 关于</span>
+            <button class="modal-close" id="closeHelp">&times;</button>
+        </div>
+        <div class="modal-body">
+            <p><strong>TrulyMEM - TrueHumanMEM</strong></p>
+            <p>一个基于 Web 的 AI 对话界面，支持工具调用和实时操作日志。</p>
+            <hr style="border-color: var(--primary); margin: 12px 0;">
+            <p><strong>操作说明：</strong></p>
+            <ul>
+                <li>📂 <strong>侧边栏</strong>：显示/隐藏右侧配置面板</li>
+                <li>🔧 <strong>工具详情</strong>：展开/折叠所有工具调用详情</li>
+                <li>🗑️ <strong>清屏</strong>：清空聊天记录（AI 记忆保持不变）</li>
+                <li>ℹ️ <strong>帮助</strong>：显示此帮助信息</li>
+            </ul>
+            <hr style="border-color: var(--primary); margin: 12px 0;">
+            <p><strong>API 地址：</strong> http://localhost:5555</p>
+        </div>
+    </div>
+</div>
+
+<script>
+const API_BASE = 'http://localhost:5555';
+
+let toolDetailsVisible = false;
+let rightPanelCollapsed = false;
+let messageHistory = [];
+let operationLogs = [];
+
+// DOM Elements
+const messageHistoryEl = document.getElementById('messageHistory');
+const messageInputEl = document.getElementById('messageInput');
+const sendBtn = document.getElementById('sendBtn');
+const clearBtn = document.getElementById('clearBtn');
+const rightPanelEl = document.getElementById('rightPanel');
+const toggleSidebarEl = document.getElementById('toggleSidebar');
+const operationLogEl = document.getElementById('operationLog');
+const statusIconEl = document.getElementById('statusIcon');
+const apiStatusEl = document.getElementById('apiStatus');
+const processingIndicatorEl = document.getElementById('processingIndicator');
+
+// Status bar buttons
+const btnSidebar = document.getElementById('btnSidebar');
+const btnToolDetails = document.getElementById('btnToolDetails');
+const btnClear = document.getElementById('btnClear');
+const btnHelp = document.getElementById('btnHelp');
+const btnActivity = document.getElementById('btnActivity');
+
+// Memory Activity
+const memoryActivityEl = document.getElementById('memoryActivity');
+let activityVisible = false;
+
+// Help modal
+const helpModal = document.getElementById('helpModal');
+const closeHelpBtn = document.getElementById('closeHelp');
+
+// Config inputs
+const apiKeyEl = document.getElementById('apiKey');
+const baseUrlEl = document.getElementById('baseUrl');
+const modelEl = document.getElementById('model');
+
+// Initialize
+async function init() {
+    await loadSettings();
+    await loadHistory();
+    await updateStatus();
+    addWelcomeMessage();
+}
+
+// API Functions
+async function apiRequest(endpoint, method = 'GET', data = null) {
+    const options = {
+        method,
+        headers: { 'Content-Type': 'application/json' }
+    };
+    if (data) options.body = JSON.stringify(data);
+
+    try {
+        const response = await fetch(`${API_BASE}${endpoint}`, options);
+        return await response.json();
+    } catch (error) {
+        console.error('API Error:', error);
+        return { success: false, error: error.message };
+    }
+}
+
+async function loadSettings() {
+    const result = await apiRequest('/api/settings');
+    if (result.success && result.data) {
+        const apiConfig = result.data.api_config || {};
+        const toolLimits = result.data.tool_limits || {};
+
+        apiKeyEl.value = apiConfig.api_key || '';
+        baseUrlEl.value = apiConfig.base_url || 'https://api.deepseek.com';
+        modelEl.value = apiConfig.model || 'deepseek-chat';
+    }
+}
+
+async function saveSettings() {
+    const result = await apiRequest('/api/settings', 'PUT', {
+        api_config: {
+            api_key: apiKeyEl.value,
+            base_url: baseUrlEl.value,
+            model: modelEl.value
+        }
+    });
+
+    if (result.success) {
+        updateStatus();
+    }
+}
+
+async function loadHistory() {
+    const result = await apiRequest('/api/history');
+    if (result.success && result.history) {
+        messageHistory = result.history;
+        renderHistory();
+    }
+}
+
+async function updateStatus() {
+    const result = await apiRequest('/api/status');
+    if (result.success && result.data) {
+        const configured = result.data.config && result.data.config.api_key !== '';
+        apiStatusEl.textContent = configured ? '已配置' : '未配置';
+        statusIconEl.textContent = configured ? '●' : '○';
+        statusIconEl.style.color = configured ? '#00ff88' : '#888';
+    }
+}
+
+function addWelcomeMessage() {
+    const welcomeDiv = messageHistoryEl.querySelector('.message-content');
+    if (welcomeDiv && welcomeDiv.textContent === '正在连接...') {
+        const status = apiStatusEl.textContent;
+        welcomeDiv.innerHTML = `系统就绪\nAPI Key: ${status}\n\n输入消息开始对话`;
+    }
+}
+
+// Message Rendering
+function renderHistory() {
+    messageHistoryEl.innerHTML = '';
+    messageHistory.forEach(msg => addMessageToUI(msg.role, msg.content));
+}
+
+function addMessageToUI(role, content, toolCalls = null) {
+    const widget = document.createElement('div');
+    widget.className = `message-widget ${role === 'user' ? 'user-message' : 'model-message'}`;
+
+    const header = document.createElement('div');
+    header.className = 'message-header';
+    header.textContent = role === 'user' ? '[用户]' : '[AI]';
+
+    const contentEl = document.createElement('div');
+    contentEl.className = 'message-content';
+    contentEl.textContent = content;
+
+    widget.appendChild(header);
+    widget.appendChild(contentEl);
+
+    // Add tool calls if present
+    if (toolCalls && toolCalls.length > 0) {
+        const indicator = document.createElement('div');
+        indicator.className = 'tool-indicator';
+        indicator.textContent = `🔧 ${toolCalls.length} 个工具调用 (点击${toolDetailsVisible ? '隐藏' : '展开'})`;
+        indicator.onclick = () => toggleToolDetails(widget);
+
+        const details = document.createElement('div');
+        details.className = `tool-details ${toolDetailsVisible ? 'expanded' : ''}`;
+
+        toolCalls.forEach(tool => {
+            const toolDiv = document.createElement('div');
+            toolDiv.style.marginBottom = '8px';
+
+            const nameEl = document.createElement('div');
+            nameEl.className = 'tool-name';
+            nameEl.textContent = `工具: ${tool.name || 'unknown'}`;
+
+            const argsEl = document.createElement('div');
+            argsEl.className = 'tool-args';
+            argsEl.textContent = `参数: ${JSON.stringify(tool.arguments || {}, null, 2)}`;
+
+            const resultEl = document.createElement('div');
+            resultEl.className = 'tool-result';
+            resultEl.textContent = `结果: ${tool.result || ''}`;
+
+            toolDiv.appendChild(nameEl);
+            toolDiv.appendChild(argsEl);
+            if (tool.result) toolDiv.appendChild(resultEl);
+            details.appendChild(toolDiv);
+        });
+
+        widget.appendChild(indicator);
+        widget.appendChild(details);
+    }
+
+    messageHistoryEl.appendChild(widget);
+    scrollToBottom();
+}
+
+function updateLatestMessage(content, toolCalls = null) {
+    const widgets = messageHistoryEl.querySelectorAll('.message-widget');
+    if (widgets.length > 0) {
+        const latest = widgets[widgets.length - 1];
+        const contentEl = latest.querySelector('.message-content');
+        if (contentEl) {
+            contentEl.textContent = content;
+        }
+
+        // Add tool calls if present
+        if (toolCalls && toolCalls.length > 0) {
+            // Remove existing tool details if any
+            const existingIndicator = latest.querySelector('.tool-indicator');
+            const existingDetails = latest.querySelector('.tool-details');
+            if (existingIndicator) existingIndicator.remove();
+            if (existingDetails) existingDetails.remove();
+
+            const indicator = document.createElement('div');
+            indicator.className = 'tool-indicator';
+            indicator.textContent = `🔧 ${toolCalls.length} 个工具调用 (点击${toolDetailsVisible ? '隐藏' : '展开'})`;
+            indicator.onclick = () => toggleToolDetails(latest);
+
+            const details = document.createElement('div');
+            details.className = `tool-details ${toolDetailsVisible ? 'expanded' : ''}`;
+
+            toolCalls.forEach(tool => {
+                const toolDiv = document.createElement('div');
+                toolDiv.style.marginBottom = '8px';
+
+                const nameEl = document.createElement('div');
+                nameEl.className = 'tool-name';
+                nameEl.textContent = `工具: ${tool.name || 'unknown'}`;
+
+                const argsEl = document.createElement('div');
+                argsEl.className = 'tool-args';
+                argsEl.textContent = `参数: ${JSON.stringify(tool.arguments || {}, null, 2)}`;
+
+                const resultEl = document.createElement('div');
+                resultEl.className = 'tool-result';
+                resultEl.textContent = `结果: ${tool.result || ''}`;
+
+                toolDiv.appendChild(nameEl);
+                toolDiv.appendChild(argsEl);
+                if (tool.result) toolDiv.appendChild(resultEl);
+                details.appendChild(toolDiv);
+            });
+
+            latest.appendChild(indicator);
+            latest.appendChild(details);
+        }
+
+        scrollToBottom();
+    }
+}
+
+function toggleToolDetails(widget) {
+    const details = widget.querySelector('.tool-details');
+    const indicator = widget.querySelector('.tool-indicator');
+    if (details && indicator) {
+        details.classList.toggle('expanded');
+        const isExpanded = details.classList.contains('expanded');
+        const count = widget.querySelectorAll('.tool-name').length;
+        indicator.textContent = `🔧 ${count} 个工具调用 (点击${isExpanded ? '隐藏' : '展开'})`;
+    }
+}
+
+function toggleAllToolDetails() {
+    toolDetailsVisible = !toolDetailsVisible;
+    const allDetails = messageHistoryEl.querySelectorAll('.tool-details');
+    const allIndicators = messageHistoryEl.querySelectorAll('.tool-indicator');
+
+    allDetails.forEach(d => {
+        d.classList.toggle('expanded', toolDetailsVisible);
+    });
+
+    allIndicators.forEach(ind => {
+        const count = ind.parentElement.querySelectorAll('.tool-name').length;
+        ind.textContent = `🔧 ${count} 个工具调用 (点击${toolDetailsVisible ? '隐藏' : '展开'})`;
+    });
+}
+
+function scrollToBottom() {
+    messageHistoryEl.scrollTop = messageHistoryEl.scrollHeight;
+}
+
+// Operation Log
+function addOperationLog(toolName, arguments_, result) {
+    const emptyMsg = operationLogEl.querySelector('.log-empty');
+    if (emptyMsg) emptyMsg.remove();
+
+    const entry = document.createElement('div');
+    entry.className = 'log-entry';
+
+    const now = new Date();
+    const timeStr = now.toLocaleTimeString('zh-CN', { hour12: false });
+
+    entry.innerHTML = `
+        <div class="log-timestamp">${timeStr}</div>
+        <div class="log-tool-name">${toolName}</div>
+        <div class="log-args">${JSON.stringify(arguments_, null, 2)}</div>
+    `;
+
+    operationLogEl.appendChild(entry);
+    operationLogEl.scrollTop = operationLogEl.scrollHeight;
+}
+
+function clearOperationLog() {
+    operationLogEl.innerHTML = '<div class="log-title">操作日志</div><div class="log-empty">暂无操作记录</div>';
+}
+
+// Send Message
+async function sendMessage() {
+    const message = messageInputEl.value.trim();
+    if (!message) return;
+
+    // Check if API is configured
+    if (apiStatusEl.textContent === '未配置') {
+        alert('请先配置 API Key (点击状态栏 📂 按钮打开侧边栏)');
+        return;
+    }
+
+    // Add user message to UI
+    addMessageToUI('user', message);
+    messageInputEl.value = '';
+
+    // Add processing message
+    addMessageToUI('assistant', '⏳ 正在处理...');
+    setProcessing(true);
+
+    // Send to API
+    const result = await apiRequest('/api/message', 'POST', { message });
+
+    if (result.success) {
+        const data = result.data || {};
+        const content = data.content || '(无回复)';
+        const toolCalls = data.tool_calls || [];
+
+        updateLatestMessage(content, toolCalls);
+
+        // Update operation log
+        toolCalls.forEach(tool => {
+            addOperationLog(
+                tool.name || 'unknown',
+                tool.arguments || {},
+                tool.result || ''
+            );
+        });
+    } else {
+        updateLatestMessage(`❌ 错误: ${result.error || '未知错误'}`);
+    }
+
+    setProcessing(false);
+
+    // Refresh activity after a delay to let backend process
+    setTimeout(refreshActivity, 2000);
+}
+
+function setProcessing(processing) {
+    if (processing) {
+        processingIndicatorEl.textContent = ' [处理中...]';
+        processingIndicatorEl.classList.add('processing');
+    } else {
+        processingIndicatorEl.textContent = '';
+        processingIndicatorEl.classList.remove('processing');
+    }
+}
+
+// Toggle Memory Activity
+function toggleActivity() {
+    activityVisible = !activityVisible;
+    memoryActivityEl.style.display = activityVisible ? 'block' : 'none';
+    btnActivity.style.background = activityVisible ? 'var(--accent)' : 'var(--surface-lighten)';
+
+    if (activityVisible) {
+        refreshActivity();
+    }
+}
+
+// Refresh Activity
+async function refreshActivity() {
+    const result = await apiRequest('/api/activity');
+
+    if (result.success && result.data) {
+        const activities = result.data;
+        const emptyMsg = memoryActivityEl.querySelector('.activity-empty');
+        if (emptyMsg) emptyMsg.remove();
+
+        memoryActivityEl.innerHTML = '<div class="activity-title">记忆活动</div>';
+
+        if (activities.length === 0) {
+            memoryActivityEl.innerHTML += '<div class="activity-empty">暂无活动记录</div>';
+        } else {
+            activities.forEach(activity => {
+                const entry = document.createElement('div');
+                entry.className = 'activity-entry';
+
+                const operationClass = `activity-${activity.operation || 'query'}`;
+                const now = new Date(activity.timestamp * 1000);
+                const timeStr = now.toLocaleTimeString('zh-CN', { hour12: false });
+
+                entry.innerHTML = `
+                    <div class="activity-timestamp">${timeStr}</div>
+                    <div class="activity-operation ${operationClass}">${activity.operation || 'query'}</div>
+                    <div class="activity-details">${JSON.stringify(activity.details || {}, null, 2)}</div>
+                `;
+
+                memoryActivityEl.appendChild(entry);
+            });
+        }
+
+        memoryActivityEl.scrollTop = memoryActivityEl.scrollHeight;
+    }
+}
+
+// Clear History
+async function clearHistory() {
+    if (!confirm('确定要清空聊天记录吗？AI 记忆将保持不变。')) return;
+
+    await apiRequest('/api/history', 'DELETE');
+    messageHistoryEl.innerHTML = '';
+    addMessageToUI('assistant', '聊天记录已清空，AI 记忆保持不变');
+    clearOperationLog();
+}
+
+// Toggle Sidebar
+function toggleSidebar() {
+    rightPanelCollapsed = !rightPanelCollapsed;
+    rightPanelEl.classList.toggle('collapsed', rightPanelCollapsed);
+    toggleSidebarEl.textContent = rightPanelCollapsed ? '📂 显示侧边栏' : '📂 隐藏侧边栏';
+    btnSidebar.textContent = rightPanelCollapsed ? '📂' : '📂';
+}
+
+// Event Listeners
+sendBtn.addEventListener('click', sendMessage);
+clearBtn.addEventListener('click', clearHistory);
+toggleSidebarEl.addEventListener('click', toggleSidebar);
+
+// Status bar buttons
+btnSidebar.addEventListener('click', toggleSidebar);
+btnToolDetails.addEventListener('click', toggleAllToolDetails);
+btnClear.addEventListener('click', clearHistory);
+btnHelp.addEventListener('click', () => {
+    helpModal.classList.add('active');
+});
+btnActivity.addEventListener('click', toggleActivity);
+
+// Close help modal
+closeHelpBtn.addEventListener('click', () => {
+    helpModal.classList.remove('active');
+});
+
+helpModal.addEventListener('click', (e) => {
+    if (e.target === helpModal) {
+        helpModal.classList.remove('active');
+    }
+});
+
+messageInputEl.addEventListener('keydown', (e) => {
+    if (e.key === 'Enter' && !e.shiftKey) {
+        e.preventDefault();
+        sendMessage();
+    }
+});
+
+// Auto-save settings on change
+let saveTimeout;
+[apiKeyEl, baseUrlEl, modelEl].forEach(el => {
+    el.addEventListener('input', () => {
+        clearTimeout(saveTimeout);
+        saveTimeout = setTimeout(() => {
+            saveSettings();
+        }, 1000);
+    });
+});
+
+// Initialize on load
+window.addEventListener('load', () => {
+    init();
+
+    // Auto-refresh activity every 5 seconds if visible
+    setInterval(() => {
+        if (activityVisible) {
+            refreshActivity();
+        }
+    }, 5000);
+});
+</script>
+
+</body>
+</html>

@@ -4,6 +4,7 @@
 """
 
 import sqlite3
+import hashlib
 import json
 from datetime import datetime
 from pathlib import Path
@@ -86,6 +87,30 @@ class EmbeddedGraphDB:
             """)
             cursor.execute("CREATE INDEX idx_chat_created ON chat_records(created_at)")
         
+        # 创建 Web 用户表（支持多用户隔离）
+        cursor.execute("""
+            CREATE TABLE IF NOT EXISTS web_users (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                username TEXT UNIQUE NOT NULL,
+                password_hash TEXT NOT NULL,
+                role TEXT NOT NULL DEFAULT 'user',
+                config_path TEXT,
+                db_path TEXT,
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+            )
+        """)
+        
+        # 检查并添加新字段（用于旧数据库迁移）
+        cursor.execute("PRAGMA table_info(web_users)")
+        columns = [row[1] for row in cursor.fetchall()]
+        if 'config_path' not in columns:
+            cursor.execute("ALTER TABLE web_users ADD COLUMN config_path TEXT")
+        if 'db_path' not in columns:
+            cursor.execute("ALTER TABLE web_users ADD COLUMN db_path TEXT")
+        if 'role' not in columns:
+            cursor.execute("ALTER TABLE web_users ADD COLUMN role TEXT NOT NULL DEFAULT 'user'")
+
         self.conn.commit()
     
     def ensure_constraints(self):
@@ -519,6 +544,122 @@ class EmbeddedGraphDB:
         cursor.execute("DELETE FROM chat_records")
         self.conn.commit()
         return {"cleared": True}
+
+    def set_web_user(self, username: str, password: str, base_dir: str = None, role: str = 'user') -> Dict:
+        """设置或更新 Web 登录用户。password 是明文，自动哈希存储。
+        自动创建用户目录并设置 config_path 和 db_path。
+        role: 'admin' 或 'user'，默认 'user'"""
+        if not username or not password:
+            return {"success": False, "error": "用户名和密码不能为空"}
+        if role not in ('admin', 'user'):
+            return {"success": False, "error": "角色无效 (admin/user)"}
+        
+        import hashlib
+        from pathlib import Path
+        
+        password_hash = hashlib.sha256(password.encode()).hexdigest()
+        
+        # 确定基础目录
+        if base_dir is None:
+            base_dir = Path.home() / ".trulymem"
+        else:
+            base_dir = Path(base_dir)
+        
+        # 创建用户目录
+        user_dir = base_dir / username
+        user_dir.mkdir(parents=True, exist_ok=True)
+        
+        # 设置用户文件路径
+        config_path = str(user_dir / "config.json")
+        db_path = str(user_dir / f"{username}_graph.db")
+        
+        cursor = self.conn.cursor()
+        # 如果是第一个用户，强制设为 admin
+        if self.get_web_users_count() == 0:
+            role = 'admin'
+        cursor.execute("""
+            INSERT INTO web_users (username, password_hash, role, config_path, db_path)
+            VALUES (?, ?, ?, ?, ?)
+            ON CONFLICT(username) DO UPDATE SET
+                password_hash = excluded.password_hash,
+                role = CASE WHEN web_users.role = 'admin' THEN 'admin' ELSE excluded.role END,
+                config_path = COALESCE(web_users.config_path, excluded.config_path),
+                db_path = COALESCE(web_users.db_path, excluded.db_path),
+                updated_at = CURRENT_TIMESTAMP
+        """, (username, password_hash, role, config_path, db_path))
+        self.conn.commit()
+        return {"success": True, "username": username, "role": role, "config_path": config_path, "db_path": db_path}
+
+    def get_web_users(self) -> List[Dict]:
+        """获取所有 Web 用户列表"""
+        cursor = self.conn.cursor()
+        cursor.execute("SELECT id, username, role, config_path, db_path, created_at, updated_at FROM web_users ORDER BY created_at ASC")
+        users = []
+        for row in cursor.fetchall():
+            users.append({
+                "id": row['id'],
+                "username": row['username'],
+                "role": row['role'],
+                "config_path": row['config_path'],
+                "db_path": row['db_path'],
+                "created_at": row['created_at'],
+                "updated_at": row['updated_at']
+            })
+        return users
+    
+    def get_web_user(self, username: str) -> Optional[Dict]:
+        """获取单个 Web 用户信息"""
+        cursor = self.conn.cursor()
+        cursor.execute("""
+            SELECT id, username, role, config_path, db_path, created_at, updated_at
+            FROM web_users WHERE username = ?
+        """, (username,))
+        row = cursor.fetchone()
+        if row:
+            return {
+                "id": row['id'],
+                "username": row['username'],
+                "role": row['role'],
+                "config_path": row['config_path'],
+                "db_path": row['db_path'],
+                "created_at": row['created_at'],
+                "updated_at": row['updated_at']
+            }
+        return None
+    
+    def is_admin(self, username: str) -> bool:
+        """检查用户是否为管理员"""
+        user = self.get_web_user(username)
+        return user is not None and user.get('role') == 'admin'
+    
+    def delete_web_user(self, username: str) -> Dict:
+        """删除 Web 用户（同时保留文件目录）"""
+        if not username:
+            return {"success": False, "error": "用户名不能为空"}
+        cursor = self.conn.cursor()
+        cursor.execute("DELETE FROM web_users WHERE username = ?", (username,))
+        self.conn.commit()
+        if cursor.rowcount > 0:
+            return {"success": True, "username": username}
+        return {"success": False, "error": "用户不存在"}
+
+    def get_web_users_count(self) -> int:
+        """获取 Web 用户数量 (用于判断是否需要首次设置)"""
+        cursor = self.conn.cursor()
+        cursor.execute("SELECT COUNT(*) as cnt FROM web_users")
+        row = cursor.fetchone()
+        return row['cnt'] if row else 0
+
+    def verify_web_user(self, username: str, password: str) -> bool:
+        """验证 Web 用户登录"""
+        import hashlib
+        password_hash = hashlib.sha256(password.encode()).hexdigest()
+        cursor = self.conn.cursor()
+        cursor.execute("""
+            SELECT id FROM web_users
+            WHERE username = ? AND password_hash = ?
+        """, (username, password_hash))
+        return cursor.fetchone() is not None
     
     def close(self):
         """关闭数据库连接"""

@@ -67,3 +67,11 @@ jimeng*.png
 
 # Web config (contains passwords, secret keys)
 web_config.json
+
+# Node.js
+node_modules/
+
+# Test artifacts
+/session_*/
+task_archive/
+ts/
