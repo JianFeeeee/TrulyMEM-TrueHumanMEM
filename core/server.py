@@ -64,7 +64,7 @@ class BackendServer:
         self._thread: Optional[threading.Thread] = None
         
         self._lock = threading.Lock()
-        self._config = {"api_key": "", "base_url": "https://api.deepseek.com", "model": "deepseek-v4-flash"}
+        self._config = {}
         self._tool_limits: Dict[str, int] = {}
         self._message_history: list = []
 
@@ -106,6 +106,12 @@ class BackendServer:
         "memory_query_max": 30,
         "memory_update_max": 15,
     }
+    _DEFAULT_CONFIG = {
+        "api_key": "",
+        "base_url": "https://api.deepseek.com",
+        "model": "deepseek-v4-flash",
+        "message_timeout": 600,  # 消息处理超时（秒），默认10分钟
+    }
 
     def _load_config(self) -> None:
         """加载配置。如果指定了用户名，从用户的 config_path 加载。
@@ -133,21 +139,28 @@ class BackendServer:
             try:
                 with open(config_file, 'r') as f:
                     saved = json.load(f)
-                    # API 配置
-                    self._config.update(saved)
-                    # 工具限制：从配置文件读取（覆盖代码默认值）
+                    # 通用配置（含 api_key, base_url, model, message_timeout 等）
+                    for key in self._DEFAULT_CONFIG:
+                        if key in saved:
+                            self._config[key] = saved[key]
+                        else:
+                            self._config[key] = self._DEFAULT_CONFIG[key]
+                    # 工具限制
                     for key in limit_keys:
                         if key in saved:
                             self._tool_limits[key] = int(saved[key])
                         else:
-                            # 配置文件中缺失的字段也写入文件（后续 _save_config 会补全）
                             self._tool_limits[key] = self._DEFAULT_LIMITS[key]
             except Exception:
                 # 读取失败时使用默认值
+                for key in self._DEFAULT_CONFIG:
+                    self._config[key] = self._DEFAULT_CONFIG[key]
                 for key in limit_keys:
                     self._tool_limits[key] = self._DEFAULT_LIMITS[key]
         else:
             # 首次启动，用默认值写入配置文件
+            for key in self._DEFAULT_CONFIG:
+                self._config[key] = self._DEFAULT_CONFIG[key]
             self._tool_limits = dict(self._DEFAULT_LIMITS)
             self._save_config()
 
@@ -170,9 +183,11 @@ class BackendServer:
                 pass
         
         config_file.parent.mkdir(parents=True, exist_ok=True)
-        saved_data = {**self._config, **self._tool_limits}
+        # 合并通用配置和工具限制（过滤掉内部字段如 _history 等）
+        save_cfg = {k: self._config[k] for k in self._DEFAULT_CONFIG if k in self._config}
+        saved_data = {**save_cfg, **self._tool_limits}
         with open(config_file, 'w') as f:
-            json.dump(saved_data, f, indent=2)
+            json.dump(saved_data, f, indent=2, ensure_ascii=False)
 
     def _create_tool_limiter(self):
         from .tool_limiter import ToolLimiter, ToolLimits
@@ -453,6 +468,11 @@ class BackendServer:
         
         self.update_config(api_key, base_url, model)
         
+        # 通用配置字段（如 message_timeout）
+        for key in ["message_timeout"]:
+            if key in api_config:
+                self._config[key] = int(api_config[key])
+        
         limits_keys = [
             "persona_update_max",
             "task_update_max",
@@ -498,7 +518,8 @@ class BackendServer:
         self._input_queue.put(packet)
         
         try:
-            response = resp_q.get(timeout=300.0)
+            timeout = self._config.get("message_timeout", 600)
+            response = resp_q.get(timeout=timeout)
             return Packet(
                 id=response.id,
                 type=packet.type,
