@@ -75,6 +75,11 @@ def execute_tool(graph: Any, tool_name: str, arguments: dict) -> str:
             result = execute_persona_update(graph, arguments)
             return json.dumps(result, ensure_ascii=False, default=str)
         
+        elif tool_name == "persona_remove":
+            recorder.record("delete", tool_name, arguments.get("attribute", ""))
+            result = execute_persona_remove(graph, arguments)
+            return json.dumps(result, ensure_ascii=False, default=str)
+
         elif tool_name == "persona_clear":
             recorder.record("delete", tool_name, "所有人设")
             result = execute_persona_clear(graph, arguments)
@@ -203,40 +208,74 @@ def execute_persona_update(graph: Any, arguments: dict) -> dict:
     }
 
 
+def execute_persona_remove(graph: Any, arguments: dict) -> dict:
+    """删除单条人设属性"""
+    attribute = arguments.get("attribute")
+    if not attribute:
+        return {"status": "error", "message": "请指定要删除的属性名"}
+
+    # 查询当前AI的所有人设关系，找到匹配属性名的
+    recall_result = graph.recall(query_intent="AI,人设,角色", depth=1)
+    found = False
+    deleted_count = 0
+
+    for rel in recall_result.get("relations", []):
+        if rel.get("source") == "AI" and rel.get("type") == attribute:
+            result = graph.purge(
+                criteria={"subject_contains": "AI", "relation_type": attribute},
+                mode="soft"
+            )
+            deleted_count += result.get("deleted_count", 0)
+            found = True
+
+    if not found:
+        # 也许属性名不完全匹配，尝试直接用这个类型删除
+        result = graph.purge(
+            criteria={"subject_contains": "AI", "relation_type": attribute},
+            mode="soft"
+        )
+        deleted_count = result.get("deleted_count", 0)
+
+    return {
+        "status": "success" if deleted_count > 0 else "not_found",
+        "deleted_attribute": attribute,
+        "deleted_count": deleted_count,
+        "message": f"已删除属性「{attribute}」" if deleted_count > 0 else f"未找到属性「{attribute}」"
+    }
+
+
 def execute_persona_clear(graph: Any, arguments: dict) -> dict:
-    """清除人设"""
-    if not arguments.get("confirm", True):
-        return {"status": "cancelled", "message": "需要确认才能清除人设"}
-    
-    # 删除所有人设相关关系
-    result1 = graph.purge(
-        criteria={"subject_contains": "AI", "relation_type": "扮演角色"},
-        mode="soft"
-    )
-    result2 = graph.purge(
-        criteria={"subject_contains": "AI", "relation_type": "说话风格"},
-        mode="soft"
-    )
-    result3 = graph.purge(
-        criteria={"subject_contains": "AI", "relation_type": "性格特点"},
-        mode="soft"
-    )
-    result4 = graph.purge(
-        criteria={"subject_contains": "AI", "relation_type": "语气特征"},
-        mode="soft"
-    )
-    
-    total_deleted = (
-        result1.get("deleted_count", 0) +
-        result2.get("deleted_count", 0) +
-        result3.get("deleted_count", 0) +
-        result4.get("deleted_count", 0)
-    )
-    
+    """清除所有人设"""
+    if not arguments.get("confirm"):
+        return {"status": "cancelled", "message": "请设置 confirm=true 确认清除人设"}
+
+    # 先查询AI的所有人设关系
+    recall_result = graph.recall(query_intent="AI,人设,角色", depth=1)
+
+    # 收集所有AI到其他实体的关系类型
+    relation_types = set()
+    for rel in recall_result.get("relations", []):
+        if rel.get("source") == "AI" and rel.get("type"):
+            relation_types.add(rel.get("type"))
+
+    total_deleted = 0
+    deleted_types = []
+
+    for rtype in relation_types:
+        result = graph.purge(
+            criteria={"subject_contains": "AI", "relation_type": rtype},
+            mode="soft"
+        )
+        count = result.get("deleted_count", 0)
+        if count > 0:
+            total_deleted += count
+            deleted_types.append(rtype)
+
     return {
         "status": "success",
         "deleted_count": total_deleted,
-        "message": "人设已清除，恢复默认身份"
+        "deleted_types": deleted_types,
+        "message": f"人设已清除，恢复默认身份（删除了 {len(deleted_types)} 类属性）"
     }
 
 

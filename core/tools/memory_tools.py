@@ -335,18 +335,34 @@ PERSONA_TOOLS = [
     {
         "type": "function",
         "function": {
+            "name": "persona_remove",
+            "description": "删除单条人设属性。删除指定的属性（如说话风格、扮演角色等），保留其他人设不变。",
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "attribute": {
+                        "type": "string",
+                        "description": "要删除的属性名（如：扮演角色、说话风格、性格特点、口头禅）"
+                    }
+                },
+                "required": ["attribute"]
+            }
+        }
+    },
+    {
+        "type": "function",
+        "function": {
             "name": "persona_clear",
-            "description": "清除人设。删除AI的角色设定，恢复默认身份。",
+            "description": "清除人设。删除AI所有角色设定，恢复默认身份。注意：此操作不可逆。",
             "parameters": {
                 "type": "object",
                 "properties": {
                     "confirm": {
                         "type": "boolean",
-                        "description": "确认清除",
-                        "default": True
+                        "description": "确认清除全部人设"
                     }
                 },
-                "required": []
+                "required": ["confirm"]
             }
         }
     }
