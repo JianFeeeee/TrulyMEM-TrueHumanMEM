@@ -217,6 +217,7 @@ class BackendServer:
                     temp_db.close()
                     if user_info and user_info.get('db_path'):
                         db_path = user_info['db_path']
+                        self._db_path = db_path  # 更新 _db_path，供外部（如 web_api.py）获取正确的路径
             except Exception:
                 pass  # 如果获取失败，使用默认路径
         
