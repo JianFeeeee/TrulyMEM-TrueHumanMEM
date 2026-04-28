@@ -52,6 +52,73 @@
             color: #ffffff;
             font-weight: bold;
         }
+        /* 开关切换 */
+        .toggle-row {
+            margin-top: 8px;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+        .toggle-row .label-text {
+            color: #8888aa;
+            font-size: 12px;
+        }
+        .toggle-switch {
+            position: relative;
+            width: 36px;
+            height: 20px;
+            cursor: pointer;
+            flex-shrink: 0;
+        }
+        .toggle-track {
+            position: absolute;
+            inset: 0;
+            background: rgba(60,60,80,0.8);
+            border-radius: 10px;
+            transition: all 0.3s;
+            border: 1px solid rgba(100,100,255,0.2);
+        }
+        .toggle-track.on {
+            background: rgba(68,136,255,0.5);
+            border-color: #4488ff;
+        }
+        .toggle-knob {
+            position: absolute;
+            width: 16px;
+            height: 16px;
+            left: 2px;
+            top: 2px;
+            background: #6666aa;
+            border-radius: 50%;
+            transition: all 0.3s;
+        }
+        .toggle-knob.on {
+            left: 18px;
+            background: #4488ff;
+        }
+        .toggle-btn {
+            display: flex;
+            align-items: center;
+            gap: 4px;
+            padding: 2px 8px;
+            border-radius: 4px;
+            border: 1px solid rgba(100,100,255,0.15);
+            background: transparent;
+            color: #8888aa;
+            font-size: 12px;
+            font-family: 'Courier New', monospace;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        .toggle-btn:hover {
+            background: rgba(68,136,255,0.15);
+            color: #fff;
+        }
+        .toggle-btn.on {
+            background: rgba(68,136,255,0.3);
+            color: #4488ff;
+            border-color: #4488ff;
+        }
         #node-info {
             position: absolute;
             top: 20px;
@@ -328,17 +395,17 @@
             <p>节点: <span id="node-count">0</span></p>
             <p>边: <span id="edge-count">0</span></p>
             <p>状态: <span id="status">初始化中...</span></p>
-            <p style="margin-top:8px;display:flex;align-items:center;gap:12px">
+            <div class="toggle-row">
                 <span style="display:flex;align-items:center;gap:6px">
-                    <span style="color:#8888aa;font-size:12px">自动视角</span>
-                    <label id="autoViewLabel" style="position:relative;width:36px;height:20px;cursor:pointer;flex-shrink:0">
+                    <span class="label-text">自动视角</span>
+                    <label class="toggle-switch" id="autoViewLabel">
                         <input type="checkbox" id="autoViewToggle" checked style="display:none">
-                        <span style="position:absolute;inset:0;background:rgba(60,60,80,0.8);border-radius:10px;transition:all 0.3s;border:1px solid rgba(100,100,255,0.2)"></span>
-                        <span style="position:absolute;width:16px;height:16px;left:2px;bottom:2px;background:#6666aa;border-radius:50%;transition:all 0.3s" class="auto-slider"></span>
+                        <span class="toggle-track on" id="autoTrack"></span>
+                        <span class="toggle-knob on" id="autoKnob"></span>
                     </label>
                 </span>
-                <a href="/#activity" style="color:#8888aa;font-size:12px;text-decoration:none;display:flex;align-items:center;gap:4px;padding:2px 8px;border-radius:4px;border:1px solid rgba(100,100,255,0.15);transition:all 0.2s" onmouseover="this.style.background='rgba(68,136,255,0.15)';this.style.color='#fff'" onmouseout="this.style.background='transparent';this.style.color='#8888aa'"><i class="fas fa-chart-line" style="font-size:11px"></i> 活动</a>
-            </p>
+                <button class="toggle-btn on" id="activityToggle"><i class="fas fa-chart-line" style="font-size:11px"></i> 活动</button>
+            </div>
         </div>
         <div id="node-info">
             <h3 id="info-name"></h3>
@@ -491,14 +558,35 @@ function init() {
 
         // 自动视角开关事件
         var autoViewToggle = document.getElementById("autoViewToggle");
+        var autoTrack = document.getElementById("autoTrack");
+        var autoKnob = document.getElementById("autoKnob");
+        var activityToggle = document.getElementById("activityToggle");
+
+        function updateAutoViewUI() {
+            if (autoViewToggle.checked) {
+                autoTrack.className = "toggle-track on";
+                autoKnob.className = "toggle-knob on";
+            } else {
+                autoTrack.className = "toggle-track";
+                autoKnob.className = "toggle-knob";
+            }
+        }
+        function updateActivityUI() {
+            activityToggle.classList.toggle("on");
+        }
+
         autoViewToggle.addEventListener("change", function() {
             autoViewEnabled = this.checked;
+            updateAutoViewUI();
         });
-        // 确保标签点击也能触发切换
         document.getElementById("autoViewLabel").addEventListener("click", function(e) {
-            // 防止事件冒泡，直接切换
             autoViewToggle.checked = !autoViewToggle.checked;
             autoViewToggle.dispatchEvent(new Event('change'));
+        });
+        activityToggle.addEventListener("click", function() {
+            updateActivityUI();
+            // 活动切换逻辑（默认由后端处理）
+            this.blur();
         });
         
         function createStarField() {
