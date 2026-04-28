@@ -462,16 +462,16 @@ class BackendServer:
         api_config = body.get("api_config", {})
         tool_limits = body.get("tool_limits", {})
         
-        api_key = api_config.get("api_key", "")
-        base_url = api_config.get("base_url", "https://api.deepseek.com")
-        model = api_config.get("model", "deepseek-v4-flash")
-        
-        self.update_config(api_key, base_url, model)
-        
-        # 通用配置字段（如 message_timeout）
-        for key in ["message_timeout"]:
-            if key in api_config:
-                self._config[key] = int(api_config[key])
+        # 仅当 api_config 有值时更新 API 配置（避免单独保存 tool_limits 时清空 API key）
+        if api_config:
+            api_key = api_config.get("api_key", self._config.get("api_key", ""))
+            base_url = api_config.get("base_url", self._config.get("base_url", "https://api.deepseek.com"))
+            model = api_config.get("model", self._config.get("model", "deepseek-v4-flash"))
+            self.update_config(api_key, base_url, model)
+            # 通用配置字段（如 message_timeout）
+            for key in ["message_timeout"]:
+                if key in api_config:
+                    self._config[key] = int(api_config[key])
         
         limits_keys = [
             "persona_update_max",

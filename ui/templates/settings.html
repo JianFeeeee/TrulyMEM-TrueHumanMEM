@@ -204,9 +204,41 @@
                 <label for="settings_model">Model</label>
                 <input type="text" id="settings_model" placeholder="deepseek-chat">
             </div>
-            <button type="submit" class="btn" id="saveApiConfigBtn">保 存 API 配 置</button>
+            <div class="form-group">
+                <label for="settings_timeout">消息超时（秒）</label>
+                <input type="number" id="settings_timeout" placeholder="1200" min="60" step="60">
+            </div>
+            <button type="submit" class="btn" id="saveApiConfigBtn">保 存 配 置</button>
         </form>
         <div id="apiConfigStatus" style="text-align:center;font-size:12px;color:#666688;margin-top:5px;"></div>
+
+        <!-- 工具调用限制 -->
+        <div class="section-title"><i class="fas fa-sliders-h"></i> 工具调用限制</div>
+        <div class="limits-hint" style="color:#7777aa;font-size:12px;margin-bottom:10px;">AI 每轮对话中各类工具的最大调用次数</div>
+        <form id="toolLimitsForm">
+            <div class="form-group">
+                <label for="settings_persona_update">人设更新 <span style="color:#7777aa;font-size:12px;">(persona_update_max)</span></label>
+                <input type="number" id="settings_persona_update" min="0" max="100">
+            </div>
+            <div class="form-group">
+                <label for="settings_task_update">任务写入 <span style="color:#7777aa;font-size:12px;">(task_update_max)</span></label>
+                <input type="number" id="settings_task_update" min="1" max="200">
+            </div>
+            <div class="form-group">
+                <label for="settings_task_query">任务查询 <span style="color:#7777aa;font-size:12px;">(task_query_max)</span></label>
+                <input type="number" id="settings_task_query" min="1" max="200">
+            </div>
+            <div class="form-group">
+                <label for="settings_memory_query">记忆查询 <span style="color:#7777aa;font-size:12px;">(memory_query_max)</span></label>
+                <input type="number" id="settings_memory_query" min="1" max="200">
+            </div>
+            <div class="form-group">
+                <label for="settings_memory_update">记忆写入 <span style="color:#7777aa;font-size:12px;">(memory_update_max)</span></label>
+                <input type="number" id="settings_memory_update" min="1" max="200">
+            </div>
+            <button type="submit" class="btn" id="saveLimitsBtn">保 存 限 制</button>
+        </form>
+        <div id="limitsStatus" style="text-align:center;font-size:12px;color:#666688;margin-top:5px;"></div>
 
         <!-- 修改密码 -->
         <div class="section-title"><i class="fas fa-key"></i> 修改密码</div>
@@ -477,9 +509,18 @@
                 const data = await resp.json();
                 if (data.success && data.data) {
                     const cfg = data.data.api_config || {};
+                    const limits = data.data.tool_limits || {};
+                    // API 配置
                     document.getElementById('settings_api_key').value = cfg.api_key || '';
                     document.getElementById('settings_base_url').value = cfg.base_url || 'https://api.deepseek.com';
                     document.getElementById('settings_model').value = cfg.model || 'deepseek-chat';
+                    document.getElementById('settings_timeout').value = cfg.message_timeout || 1200;
+                    // 工具限制
+                    document.getElementById('settings_persona_update').value = limits.persona_update_max || 1;
+                    document.getElementById('settings_task_update').value = limits.task_update_max || 20;
+                    document.getElementById('settings_task_query').value = limits.task_query_max || 30;
+                    document.getElementById('settings_memory_query').value = limits.memory_query_max || 30;
+                    document.getElementById('settings_memory_update').value = limits.memory_update_max || 15;
                     document.getElementById('apiConfigStatus').textContent = '✅ 配置已加载';
                 }
             } catch (e) {
@@ -487,6 +528,7 @@
             }
         }
 
+        // 保存 API 配置（含超时）
         document.getElementById('apiConfigForm').addEventListener('submit', async (e) => {
             e.preventDefault();
             const btn = document.getElementById('saveApiConfigBtn');
@@ -503,7 +545,8 @@
                         api_config: {
                             api_key: document.getElementById('settings_api_key').value,
                             base_url: document.getElementById('settings_base_url').value,
-                            model: document.getElementById('settings_model').value
+                            model: document.getElementById('settings_model').value,
+                            message_timeout: parseInt(document.getElementById('settings_timeout').value) || 1200
                         }
                     })
                 });
@@ -518,7 +561,45 @@
                 statusEl.textContent = '⚠️ 网络错误';
             } finally {
                 btn.disabled = false;
-                btn.textContent = '保 存 API 配 置';
+                btn.textContent = '保 存 配 置';
+            }
+        });
+
+        // 保存工具调用限制
+        document.getElementById('toolLimitsForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const btn = document.getElementById('saveLimitsBtn');
+            btn.disabled = true;
+            btn.textContent = '保存中...';
+            const statusEl = document.getElementById('limitsStatus');
+            statusEl.textContent = '🔄 保存中...';
+
+            try {
+                const resp = await fetch('/api/settings', {
+                    method: 'PUT',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        tool_limits: {
+                            persona_update_max: parseInt(document.getElementById('settings_persona_update').value) || 1,
+                            task_update_max: parseInt(document.getElementById('settings_task_update').value) || 20,
+                            task_query_max: parseInt(document.getElementById('settings_task_query').value) || 30,
+                            memory_query_max: parseInt(document.getElementById('settings_memory_query').value) || 30,
+                            memory_update_max: parseInt(document.getElementById('settings_memory_update').value) || 15
+                        }
+                    })
+                });
+                const data = await resp.json();
+                if (data.success) {
+                    statusEl.textContent = '✅ 工具限制已保存并生效';
+                    setTimeout(() => { statusEl.textContent = ''; }, 3000);
+                } else {
+                    statusEl.textContent = '⚠️ 保存失败: ' + (data.error || '未知错误');
+                }
+            } catch (e) {
+                statusEl.textContent = '⚠️ 网络错误';
+            } finally {
+                btn.disabled = false;
+                btn.textContent = '保 存 限 制';
             }
         });
 
