@@ -65,13 +65,7 @@ class BackendServer:
         
         self._lock = threading.Lock()
         self._config = {"api_key": "", "base_url": "https://api.deepseek.com", "model": "deepseek-v4-flash"}
-        self._tool_limits = {
-            "persona_update_max": 1,
-            "task_update_max": 20,
-            "task_query_max": 30,
-            "memory_query_max": 30,
-            "memory_update_max": 15,
-        }
+        self._tool_limits: Dict[str, int] = {}
         self._message_history: list = []
 
     def start(self, api_key: str = "", base_url: str = "https://api.deepseek.com", model: str = "deepseek-v4-flash") -> None:
@@ -103,8 +97,19 @@ class BackendServer:
         self._thread = threading.Thread(target=self._run_loop, daemon=True)
         self._thread.start()
 
+    # 工具限制默认值（仅首次启动无 config.json 时使用）
+    # 启动后请直接编辑配置文件修改
+    _DEFAULT_LIMITS = {
+        "persona_update_max": 1,
+        "task_update_max": 20,
+        "task_query_max": 30,
+        "memory_query_max": 30,
+        "memory_update_max": 15,
+    }
+
     def _load_config(self) -> None:
-        """加载配置。如果指定了用户名，从用户的 config_path 加载。"""
+        """加载配置。如果指定了用户名，从用户的 config_path 加载。
+        所有工具调用限制值均从配置文件读取，不硬编码在代码中。"""
         config_file = self._config_file
         
         # 如果指定了用户名，尝试从全局数据库获取用户的配置路径
@@ -121,16 +126,30 @@ class BackendServer:
             except Exception:
                 pass
         
+        # 工具限制字段列表
+        limit_keys = list(self._DEFAULT_LIMITS.keys())
+        
         if config_file.exists():
             try:
                 with open(config_file, 'r') as f:
                     saved = json.load(f)
+                    # API 配置
                     self._config.update(saved)
-                    for key in self._tool_limits:
+                    # 工具限制：从配置文件读取（覆盖代码默认值）
+                    for key in limit_keys:
                         if key in saved:
-                            self._tool_limits[key] = saved[key]
+                            self._tool_limits[key] = int(saved[key])
+                        else:
+                            # 配置文件中缺失的字段也写入文件（后续 _save_config 会补全）
+                            self._tool_limits[key] = self._DEFAULT_LIMITS[key]
             except Exception:
-                pass
+                # 读取失败时使用默认值
+                for key in limit_keys:
+                    self._tool_limits[key] = self._DEFAULT_LIMITS[key]
+        else:
+            # 首次启动，用默认值写入配置文件
+            self._tool_limits = dict(self._DEFAULT_LIMITS)
+            self._save_config()
 
     def _save_config(self) -> None:
         """保存配置。如果指定了用户名，保存到用户的 config_path。"""
@@ -157,12 +176,14 @@ class BackendServer:
 
     def _create_tool_limiter(self):
         from .tool_limiter import ToolLimiter, ToolLimits
+        # 所有值从 _tool_limits 读取（由 _load_config 从 config.json 加载）
+        # _load_config 已保证所有键存在
         limits = ToolLimits(
-            persona_update_max=self._tool_limits.get("persona_update_max", 1),
-            task_update_max=self._tool_limits.get("task_update_max", 20),
-            task_query_max=self._tool_limits.get("task_query_max", 30),
-            memory_query_max=self._tool_limits.get("memory_query_max", 30),
-            memory_update_max=self._tool_limits.get("memory_update_max", 15),
+            persona_update_max=self._tool_limits["persona_update_max"],
+            task_update_max=self._tool_limits["task_update_max"],
+            task_query_max=self._tool_limits["task_query_max"],
+            memory_query_max=self._tool_limits["memory_query_max"],
+            memory_update_max=self._tool_limits["memory_update_max"],
         )
         return ToolLimiter(limits)
 

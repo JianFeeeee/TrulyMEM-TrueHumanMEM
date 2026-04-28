@@ -7,7 +7,10 @@ from dataclasses import dataclass
 
 @dataclass
 class ToolLimits:
-    """工具调用限制配置"""
+    """工具调用限制配置
+    实际值由 server.py 从 config.json 加载后传入，此处默认值仅作安全兜底。
+    如需修改限制，请编辑 ~/.trulymem/config.json。
+    """
     persona_update_max: int = 1
     task_update_max: int = 20      # 工作记忆链修改（create/set_state/delete/link_info）
     task_query_max: int = 30      # 工作记忆链查询（memory_recall 查任务相关）
