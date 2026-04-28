@@ -456,7 +456,9 @@ class BackendServer:
         limits_keys = [
             "persona_update_max",
             "task_update_max",
-            "memory_query_max", "memory_update_max"
+            "task_query_max",
+            "memory_query_max",
+            "memory_update_max",
         ]
         for key in limits_keys:
             if key in tool_limits:
