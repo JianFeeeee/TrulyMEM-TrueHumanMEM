@@ -242,7 +242,8 @@ def main():
 - `persona_update` - Update persona
 - `persona_clear` - Clear persona
 
-### Task Tools (5)
+### Task Tools (6)
+| `task_archive` | Archive completed/expired tasks | Step 6 mandatory, writes completion summary |
 | `task_query` | Query recent task list | Call first in new conversations to avoid duplicate tasks |
 - `task_create` - Create task
 - `task_set_state` - Set state
