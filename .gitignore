@@ -1,0 +1,18 @@
+# Build cache
+entry/build/default/
+trulymem-core/build/default/
+trulymem-core/.preview/
+build/
+dist/
+
+# Python cache
+__pycache__/
+*.pyc
+
+# Database
+graph_memory.db
+
+# IDE
+.idea/
+.vscode/
+*.iml
