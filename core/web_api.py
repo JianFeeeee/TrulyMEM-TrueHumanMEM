@@ -146,9 +146,8 @@ def reload_server_for_user(username: str):
 def login_page():
     """登录页面 - 如果没有用户则重定向到设置页"""
     # 如果没有用户，重定向到首次设置页
-    users_count = 0
-    if graph_db:
-        users_count = graph_db.get_web_users_count()
+    g_db = get_global_db()
+    users_count = g_db.get_web_users_count() if g_db else 0
     if users_count == 0:
         return redirect('/setup')
     return render_template('login.html')
@@ -157,9 +156,8 @@ def login_page():
 @app.route('/setup')
 def setup_page():
     """首次设置页面 - 如果已有用户则跳转到登录页"""
-    has_users = False
-    if graph_db:
-        has_users = graph_db.get_web_users_count() > 0
+    g_db = get_global_db()
+    has_users = g_db.get_web_users_count() > 0 if g_db else False
     if has_users:
         return redirect('/login')
     return render_template('setup.html')
@@ -231,9 +229,8 @@ def userinfo():
 @app.route('/api/web-check', methods=['GET'])
 def web_check():
     """检查是否需要首次设置，返回是否配置完成"""
-    users_count = 0
-    if graph_db:
-        users_count = graph_db.get_web_users_count()
+    g_db = get_global_db()
+    users_count = g_db.get_web_users_count() if g_db else 0
 
     return jsonify({
         "needs_setup": users_count == 0,
