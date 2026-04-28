@@ -577,11 +577,15 @@ function init() {
 
         // 创建图可视化
         function createGraphVisualization() {
-            // 清除旧的对象
+            // 清除旧的对象（包括边粒子）
             nodeMeshes.forEach(mesh => scene.remove(mesh));
             edgeLines.forEach(line => scene.remove(line));
+            Object.keys(edgeParticles).forEach(key => {
+                scene.remove(edgeParticles[key].mesh);
+            });
             nodeMeshes = [];
             edgeLines = [];
+            edgeParticles = {};
 
             if (nodes.length === 0) return;
 
@@ -971,8 +975,11 @@ function init() {
         let _consumedHighlightIds = new Set();
 
         // 平滑重新定位剩余的节点
-        function smoothReposition() {
+        let _smoothAnimCount = 0;
+
+function smoothReposition() {
             if (nodeMeshes.length < 2) return;
+            _smoothAnimCount = nodeMeshes.length;
 
             // 从当前节点位置计算新布局
             const currentPositions = {};
@@ -1047,22 +1054,26 @@ function init() {
                     // ease-out cubic
                     const ease = 1 - Math.pow(1 - t, 3);
                     m.position.lerpVectors(startPos, endPos, ease);
+
+                    if (t >= 1) {
+                        _smoothAnimCount--;
+                        // 所有动画完成后再重建粒子
+                        if (_smoothAnimCount <= 0) {
+                            Object.keys(edgeParticles).forEach(key => {
+                                scene.remove(edgeParticles[key].mesh);
+                            });
+                            edgeParticles = {};
+                            edges.forEach(e => createEdgeParticle(e));
+                        }
+                    }
+
                     if (t < 1) requestAnimationFrame(lerpPosition);
                 }
                 lerpPosition();
             });
 
-            // 更新边的几何
-            edgeLines.forEach(line => {
-                const e = line.userData.edgeData;
-                const p1 = currentPositions[e.source];
-                const p2 = currentPositions[e.target];
-                if (!p1 || !p2) return;
-                line.geometry.setFromPoints([
-                    new THREE.Vector3(p1.x, p1.y, p1.z),
-                    new THREE.Vector3(p2.x, p2.y, p2.z)
-                ]);
-            });
+            // 不在此处更新边的几何——让粒子在动画完成后重建
+            // 边线在下一轮 loadGraphData 时会自动更新
 
             // 更新相机
             fitCameraToGraph();
