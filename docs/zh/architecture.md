@@ -247,7 +247,8 @@ def main():
 - `persona_update` - 更新人设
 - `persona_clear` - 清除人设
 
-### 任务工具 (4个)
+### 任务工具 (5个)
+| `task_query` | 查询最近任务列表 | 新对话时优先调用，避免重复创建任务 |
 - `task_create` - 创建任务
 - `task_set_state` - 设置状态
 - `task_delete` - 删除任务

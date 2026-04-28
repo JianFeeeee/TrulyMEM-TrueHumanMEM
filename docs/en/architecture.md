@@ -241,7 +241,8 @@ def main():
 - `persona_update` - Update persona
 - `persona_clear` - Clear persona
 
-### Task Tools (4)
+### Task Tools (5)
+| `task_query` | Query recent task list | Call first in new conversations to avoid duplicate tasks |
 - `task_create` - Create task
 - `task_set_state` - Set state
 - `task_delete` - Delete task
