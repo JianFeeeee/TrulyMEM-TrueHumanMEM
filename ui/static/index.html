@@ -199,18 +199,39 @@ body {
     overflow: hidden;
 }
 
-.sidebar-title {
+.sidebar-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
     padding: 8px 12px;
     background: var(--primary);
-    color: var(--text);
-    font-weight: bold;
-    font-size: 0.9em;
-    cursor: pointer;
-    user-select: none;
 }
 
-.sidebar-title:hover {
+.sidebar-header .sidebar-label {
+    font-weight: bold;
+    font-size: 0.9em;
+}
+
+.btn-close-sidebar {
+    background: var(--surface-lighten);
+    color: var(--text);
+    border: 1px solid var(--panel);
+    border-radius: 3px;
+    cursor: pointer;
+    font-family: inherit;
+    font-size: 13px;
+    padding: 2px 8px;
+    line-height: 1.4;
+    transition: background 0.2s;
+}
+
+.btn-close-sidebar:hover {
     background: var(--accent);
+    border-color: var(--accent);
+}
+
+.btn-close-sidebar:active {
+    transform: scale(0.95);
 }
 
 /* Config Section */
@@ -556,7 +577,10 @@ body {
 
     <!-- Right Panel -->
     <div class="right-panel" id="rightPanel">
-        <div class="sidebar-title" id="toggleSidebar">📂 隐藏侧边栏</div>
+        <div class="sidebar-header">
+            <span class="sidebar-label">📂 设置</span>
+            <button class="btn-close-sidebar" id="closeSidebarBtn" title="收起侧边栏">✕ 收起</button>
+        </div>
 
         <div class="config-section">
             <div class="config-title">API 配置</div>
@@ -612,7 +636,8 @@ body {
             <hr style="border-color: var(--primary); margin: 12px 0;">
             <p><strong>操作说明：</strong></p>
             <ul>
-                <li>📂 <strong>侧边栏</strong>：显示/隐藏右侧配置面板</li>
+                <li>📂 <strong>侧边栏</strong>：显示/隐藏右侧配置面板（状态栏按钮）</li>
+                <li>✕ <strong>收起</strong>：收起侧边栏（侧边栏顶部按钮）</li>
                 <li>🔧 <strong>工具详情</strong>：展开/折叠所有工具调用详情</li>
                 <li>🗑️ <strong>清屏</strong>：清空聊天记录（AI 记忆保持不变）</li>
                 <li>ℹ️ <strong>帮助</strong>：显示此帮助信息</li>
@@ -637,7 +662,7 @@ const messageInputEl = document.getElementById('messageInput');
 const sendBtn = document.getElementById('sendBtn');
 const clearBtn = document.getElementById('clearBtn');
 const rightPanelEl = document.getElementById('rightPanel');
-const toggleSidebarEl = document.getElementById('toggleSidebar');
+const closeSidebarBtn = document.getElementById('closeSidebarBtn');
 const operationLogEl = document.getElementById('operationLog');
 const statusIconEl = document.getElementById('statusIcon');
 const apiStatusEl = document.getElementById('apiStatus');
@@ -1038,14 +1063,21 @@ async function clearHistory() {
 function toggleSidebar() {
     rightPanelCollapsed = !rightPanelCollapsed;
     rightPanelEl.classList.toggle('collapsed', rightPanelCollapsed);
-    toggleSidebarEl.textContent = rightPanelCollapsed ? '📂 显示侧边栏' : '📂 隐藏侧边栏';
-    btnSidebar.textContent = rightPanelCollapsed ? '📂' : '📂';
+    btnSidebar.style.background = rightPanelCollapsed ? 'var(--accent)' : 'var(--surface-lighten)';
+}
+
+function closeSidebar() {
+    if (!rightPanelCollapsed) {
+        rightPanelCollapsed = true;
+        rightPanelEl.classList.add('collapsed');
+        btnSidebar.style.background = 'var(--accent)';
+    }
 }
 
 // Event Listeners
 sendBtn.addEventListener('click', sendMessage);
 clearBtn.addEventListener('click', clearHistory);
-toggleSidebarEl.addEventListener('click', toggleSidebar);
+closeSidebarBtn.addEventListener('click', closeSidebar);
 
 // Status bar buttons
 btnSidebar.addEventListener('click', toggleSidebar);
