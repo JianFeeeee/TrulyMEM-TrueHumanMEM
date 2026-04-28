@@ -328,13 +328,16 @@
             <p>节点: <span id="node-count">0</span></p>
             <p>边: <span id="edge-count">0</span></p>
             <p>状态: <span id="status">初始化中...</span></p>
-            <p style="margin-top:8px;display:flex;align-items:center;gap:6px">
-                <span style="color:#8888aa;font-size:12px">自动视角</span>
-                <label style="position:relative;width:36px;height:20px;cursor:pointer;flex-shrink:0">
-                    <input type="checkbox" id="autoViewToggle" checked style="display:none">
-                    <span style="position:absolute;inset:0;background:rgba(60,60,80,0.8);border-radius:10px;transition:all 0.3s;border:1px solid rgba(100,100,255,0.2)"></span>
-                    <span style="position:absolute;width:16px;height:16px;left:2px;bottom:2px;background:#6666aa;border-radius:50%;transition:all 0.3s" class="auto-slider"></span>
-                </label>
+            <p style="margin-top:8px;display:flex;align-items:center;gap:12px">
+                <span style="display:flex;align-items:center;gap:6px">
+                    <span style="color:#8888aa;font-size:12px">自动视角</span>
+                    <label id="autoViewLabel" style="position:relative;width:36px;height:20px;cursor:pointer;flex-shrink:0">
+                        <input type="checkbox" id="autoViewToggle" checked style="display:none">
+                        <span style="position:absolute;inset:0;background:rgba(60,60,80,0.8);border-radius:10px;transition:all 0.3s;border:1px solid rgba(100,100,255,0.2)"></span>
+                        <span style="position:absolute;width:16px;height:16px;left:2px;bottom:2px;background:#6666aa;border-radius:50%;transition:all 0.3s" class="auto-slider"></span>
+                    </label>
+                </span>
+                <a href="/#activity" style="color:#8888aa;font-size:12px;text-decoration:none;display:flex;align-items:center;gap:4px;padding:2px 8px;border-radius:4px;border:1px solid rgba(100,100,255,0.15);transition:all 0.2s" onmouseover="this.style.background='rgba(68,136,255,0.15)';this.style.color='#fff'" onmouseout="this.style.background='transparent';this.style.color='#8888aa'"><i class="fas fa-chart-line" style="font-size:11px"></i> 活动</a>
             </p>
         </div>
         <div id="node-info">
@@ -345,7 +348,6 @@
         </div>
         <div id="nav">
             <a href="/graph.html" class="nav-btn active"><i class="fas fa-star"></i> 星图</a>
-            <a href="/#activity" class="nav-btn"><i class="fas fa-chart-line"></i> 活动</a>
             <a href="/settings" class="nav-btn"><i class="fas fa-cog"></i> 设置</a>
         </div>
     </div>
@@ -488,8 +490,15 @@ function init() {
         // 创建星空背景
 
         // 自动视角开关事件
-        document.getElementById("autoViewToggle").addEventListener("change", function() {
+        var autoViewToggle = document.getElementById("autoViewToggle");
+        autoViewToggle.addEventListener("change", function() {
             autoViewEnabled = this.checked;
+        });
+        // 确保标签点击也能触发切换
+        document.getElementById("autoViewLabel").addEventListener("click", function(e) {
+            // 防止事件冒泡，直接切换
+            autoViewToggle.checked = !autoViewToggle.checked;
+            autoViewToggle.dispatchEvent(new Event('change'));
         });
         
         function createStarField() {
