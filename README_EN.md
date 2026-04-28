@@ -13,7 +13,6 @@
 
 *The More Human Choice.*
 
-
 [![License: GPL v3](https://img.shields.io/badge/License-GPLv3-blue.svg)](https://www.gnu.org/licenses/gpl-3.0)
 [![Python 3.8+](https://img.shields.io/badge/python-3.8+-blue.svg)](https://www.python.org/downloads/)
 [![Platform](https://img.shields.io/badge/platform-Windows%20%7C%20Linux%20%7C%20macOS-lightgrey.svg)]()
@@ -57,18 +56,49 @@ pip install -r requirements.txt
 python trulymem_entry.py
 ```
 
-### Configuration
+### First Run (TUI Login)
 
-1. Press **F2** to expand sidebar
-2. Enter **API Key** (supports DeepSeek, OpenAI, etc.)
+On first launch, TrulyMEM will guide you through:
+
+1. **TUI Login Screen** — Set up your username and password
+2. **Auto Migration** — If old `~/.trulymem/config.json` is detected, guides you through multi-user migration
+3. **First user becomes admin automatically**
+
+After login:
+
+1. Press **F2** to expand the right-side configuration panel
+2. Enter your **API Key** (supports DeepSeek, OpenAI, etc.)
 3. Press **Enter** to save
 4. Start chatting!
 
+📌 **Admin users** can manage Web service settings and Web login credentials in the side panel.
+📌 **Regular users** can only configure API Key and model parameters.
+
 ---
 
-### Web Visualization (Optional)
+### Multi-User System
 
-TrulyMEM provides a Web star-map visualization interface for browsing the knowledge graph in real-time:
+TrulyMEM supports isolated multi-user environments. Each user has their own config and database:
+
+```
+~/.trulymem/
+├── trulymem.db          # Global user database
+├── .migrated            # Migration flag
+├── admin/
+│   ├── config.json      # Admin config
+│   └── admin_graph.db   # Admin knowledge graph
+└── user2/
+    ├── config.json      # user2 config
+    └── user2_graph.db   # user2 knowledge graph
+```
+
+- **First user becomes admin automatically**
+- Admins can add/delete users on the Web settings page
+- Regular users cannot see the user management section
+
+### Web Visualization Interface
+
+From TUI, admin users can enable Web service via the right-side panel checkbox, or start manually:
 
 ```bash
 # Start Web service
@@ -77,12 +107,44 @@ python web_api.py --port 4096
 
 Then open `http://localhost:4096` in your browser.
 
-**Login Setup:**
-1. Copy `web_config.example.json` to `web_config.json`
-2. Set login password (using SHA256) and secret key
-3. Web service will automatically read the config
+**First visit** → Auto-redirect to setup page → Create admin account → Redirect to star map visualization.
 
-Default port is 4096, change with `--port` flag.
+**Web features:**
+- 🌟 Star map visualization for browsing the knowledge graph
+- ⚙ Settings page: change password, manage users (admin only)
+- 🔒 Session-based authentication with multi-user isolation
+
+---
+
+## Building
+
+TrulyMEM supports PyInstaller packaging into single-file executables:
+
+```bash
+# Linux
+bash build/build_linux.sh
+
+# macOS
+bash build/build_macos.sh
+
+# Windows
+build\build_windows.bat
+
+# AppImage (Linux universal)
+bash build/build_appimage.sh
+```
+
+Build outputs in `dist/`:
+
+| File | Purpose |
+|------|---------|
+| `TrulyMEM` | TUI main program (can spawn Web subprocess) |
+| `trulymem-web` | Web service standalone binary (auto-detected by TUI) |
+
+### Web binary priority (within TUI)
+1. `trulymem-web` in same directory (packaged)
+2. `sys._MEIPASS/web_api.py` (PyInstaller data fallback)
+3. `python3 web_api.py` (development fallback)
 
 ---
 

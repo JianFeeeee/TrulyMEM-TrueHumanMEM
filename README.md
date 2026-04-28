@@ -13,7 +13,6 @@
 
 *The More Human Choice.*
 
-
 [![License: GPL v3](https://img.shields.io/badge/License-GPLv3-blue.svg)](https://www.gnu.org/licenses/gpl-3.0)
 [![Python 3.8+](https://img.shields.io/badge/python-3.8+-blue.svg)](https://www.python.org/downloads/)
 [![Platform](https://img.shields.io/badge/platform-Windows%20%7C%20Linux%20%7C%20macOS-lightgrey.svg)]()
@@ -57,32 +56,95 @@ pip install -r requirements.txt
 python trulymem_entry.py
 ```
 
-### 配置
+### 首次使用（TUI 登录）
 
-1. 按 **F2** 展开侧边栏
+首次运行时会检测数据库状态，引导你完成：
+
+1. **TUI 登录页面** — 如果是新部署或无迁移需求，直接设置账号密码
+2. **旧版自动迁移** — 如果检测到旧版 `~/.trulymem/config.json`，自动引导迁移为多用户模式
+3. **首个用户自动成为管理员**
+
+登录后进入聊天界面：
+
+1. 按 **F2** 展开右侧配置面板
 2. 输入 **API Key**（支持 DeepSeek、OpenAI 等兼容 API）
 3. 按 **Enter** 保存配置
 4. 开始对话！
 
+📌 **管理员** 可在右侧面板管理 Web 服务开关、修改 Web 登录凭据。
+📌 **普通用户** 只能配置 API Key 和模型参数。
+
 ---
 
-### Web 可视化界面（可选）
+### 多用户系统
 
-TrulyMEM 提供 Web 星图可视化界面，支持实时浏览知识图谱：
+TrulyMEM 支持多用户隔离，每个用户拥有独立的配置和数据目录：
+
+```
+~/.trulymem/
+├── trulymem.db          # 全局用户数据库
+├── .migrated            # 旧版迁移标记
+├── admin/
+│   ├── config.json      # 管理员配置
+│   └── admin_graph.db   # 管理员知识图谱
+└── user2/
+    ├── config.json      # user2 配置
+    └── user2_graph.db   # user2 知识图谱
+```
+
+- **首个注册用户自动成为管理员**
+- 管理员可在 Web 设置页添加/删除用户
+- 普通用户无法看到用户管理区域
+
+### Web 可视化界面
+
+TUI 启动后，管理员可在右侧面板勾选「启用 Web 服务」自动启动，或手动运行：
 
 ```bash
-# 启动 Web 服务
+# 手动启动 Web 服务
 python web_api.py --port 4096
 ```
 
 然后打开浏览器访问 `http://localhost:4096`。
 
-**登录配置：**
-1. 复制 `web_config.example.json` 为 `web_config.json`
-2. 设置登录密码（使用 SHA256）和 secret key
-3. Web 服务会自动读取该配置
+**首次访问** → 自动跳转至设置页，创建管理员账号 → 跳转至星图可视化页面。
 
-默认端口 4096，可通过 `--port` 参数修改。
+**Web 功能：**
+- 🌟 星图可视化浏览知识图谱
+- ⚙ 设置页：修改密码、管理用户（管理员专属）
+- 🔒 会话认证，多用户安全隔离
+
+---
+
+## 打包构建
+
+项目支持 PyInstaller 打包为单文件可执行文件：
+
+```bash
+# Linux
+bash build/build_linux.sh
+
+# macOS
+bash build/build_macos.sh
+
+# Windows
+build\build_windows.bat
+
+# AppImage（Linux 通用打包）
+bash build/build_appimage.sh
+```
+
+构建产出在 `dist/` 目录：
+
+| 文件 | 用途 |
+|------|------|
+| `TrulyMEM` | TUI 主程序（含 Web 子进程启动能力） |
+| `trulymem-web` | Web 服务独立二进制（TUI 启动子进程时自动使用） |
+
+### Web 启动优先级（TUI 内）
+1. 同目录 `trulymem-web` 二进制（打包环境）
+2. `sys._MEIPASS/web_api.py`（PyInstaller 数据文件回退）
+3. `python3 web_api.py`（开发环境回退）
 
 ---
 
