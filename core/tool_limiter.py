@@ -9,9 +9,10 @@ from dataclasses import dataclass
 class ToolLimits:
     """工具调用限制配置"""
     persona_update_max: int = 1
-    task_update_max: int = 5
-    memory_query_max: int = 20
-    memory_update_max: int = 10
+    task_update_max: int = 20      # 工作记忆链修改（create/set_state/delete/link_info）
+    task_query_max: int = 30      # 工作记忆链查询（memory_recall 查任务相关）
+    memory_query_max: int = 30
+    memory_update_max: int = 15
 
 
 @dataclass
@@ -19,6 +20,7 @@ class ToolCallCount:
     """工具调用计数"""
     persona_update: int = 0
     task_update: int = 0
+    task_query: int = 0
     memory_query: int = 0
     memory_update: int = 0
 
@@ -44,6 +46,12 @@ class ToolLimiter:
             return ('task', 'update')
 
         if tool_name == 'memory_recall':
+            # 尝试区分工作记忆链查询 vs 一般记忆查询
+            query = (arguments.get('queryIntent', '') + ' ' + ' '.join(
+                arguments.get('seedEntities', []))).strip().lower()
+            task_keywords = ['task', '任务', '工作记忆', '当前轮', '会话', '过程', '流程']
+            if any(kw in query for kw in task_keywords):
+                return ('task', 'query')
             return ('memory', 'query')
 
         if tool_name == 'memory_commit':
@@ -75,7 +83,10 @@ class ToolLimiter:
                 return (False, f"人设图修改次数已达上限({self.limits.persona_update_max}次)")
 
         elif category == 'task':
-            if self.counts.task_update >= self.limits.task_update_max:
+            if operation == 'query':
+                if self.counts.task_query >= self.limits.task_query_max:
+                    return (False, f"工作记忆链查询次数已达上限({self.limits.task_query_max}次)")
+            elif self.counts.task_update >= self.limits.task_update_max:
                 return (False, f"工作记忆链修改次数已达上限({self.limits.task_update_max}次)")
 
         elif category == 'memory':
@@ -96,7 +107,10 @@ class ToolLimiter:
             self.counts.persona_update += 1
 
         elif category == 'task':
-            self.counts.task_update += 1
+            if operation == 'query':
+                self.counts.task_query += 1
+            else:
+                self.counts.task_update += 1
 
         elif category == 'memory':
             if operation == 'query':
@@ -108,7 +122,8 @@ class ToolLimiter:
         """获取调用统计摘要"""
         lines = [
             f"人设图: 修改{self.counts.persona_update}/{self.limits.persona_update_max}次",
-            f"工作记忆链: 修改{self.counts.task_update}/{self.limits.task_update_max}次",
+            f"工作记忆链: 查询{self.counts.task_query}/{self.limits.task_query_max}次, "
+            f"修改{self.counts.task_update}/{self.limits.task_update_max}次",
             f"一般记忆: 查询{self.counts.memory_query}/{self.limits.memory_query_max}次, "
             f"修改{self.counts.memory_update}/{self.limits.memory_update_max}次"
         ]
