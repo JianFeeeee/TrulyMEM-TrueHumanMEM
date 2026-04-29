@@ -91,14 +91,18 @@ class GraphMemoryApp(App):
         
         # 更新 config section 的 admin 权限
         from .widgets.config_section import ConfigSection
-        try:
-            is_admin = user_info.get('role') == 'admin'
-            config_section = self.query_one(ConfigSection)
-            config_section.set_admin(is_admin)
-        except Exception:
-            pass
+        is_admin = user_info.get('role') == 'admin'
+        self.call_after_refresh(lambda: self._update_admin(is_admin))
         # 重新初始化后端
         self._init_after_login()
+    
+    def _update_admin(self, is_admin: bool) -> None:
+        from .widgets.config_section import ConfigSection
+        try:
+            config_section = self.query_one(ConfigSection)
+            config_section.set_admin(is_admin)
+        except Exception as e:
+            print(f"配置区加载失败: {e}", file=sys.stderr)
     
     def _init_after_login(self) -> None:
         """登录后初始化"""

@@ -88,8 +88,6 @@ class ConfigSection(Vertical):
         sep2.can_focus = False
         yield sep2
 
-        from textual.containers import Vertical
-
         # Web 登录 — 仅 admin 可见
         with Vertical(id="admin-web-login-section"):
             web_title = Static("━━ Web 登录 ━━", classes="config-title")
