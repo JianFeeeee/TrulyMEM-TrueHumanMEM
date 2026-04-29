@@ -632,9 +632,12 @@ def web_ssl_config():
 
     ok = save_web_config(updates)
     if ok:
+        # 在后台线程中延迟退出，让进程重启以加载新配置（systemd Restart=always 会自动拉起）
+        threading.Thread(target=lambda: (time.sleep(1.5), os._exit(0)), daemon=True).start()
         return jsonify({
             "success": True,
-            "message": "SSL 配置已保存，重启服务后生效",
+            "message": "SSL 配置已保存，服务自动重启中…",
+            "restarting": True,
             **updates
         })
     return jsonify({"success": False, "error": "写入配置文件失败"}), 500

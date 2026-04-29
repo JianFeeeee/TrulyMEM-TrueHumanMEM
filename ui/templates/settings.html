@@ -700,14 +700,24 @@
                 if (data.success) {
                     document.getElementById('sslStatus').innerHTML = '<i class="fas fa-check-circle" style="color:#22c55e"></i> ' + (data.message || '配置已保存');
                     showSuccess('HTTPS 配置已保存');
+                    if (data.restarting) {
+                        btn.textContent = '服务重启中… 页面将自动刷新';
+                        btn.style.background = 'var(--warning-color, #f59e0b)';
+                        // 等待服务重启后自动刷新页面
+                        setTimeout(() => { window.location.reload(); }, 4000);
+                    }
                 } else {
                     document.getElementById('sslStatus').innerHTML = '<i class="fas fa-exclamation-triangle" style="color:#ff6b6b"></i> ' + (data.error || '保存失败');
                 }
             } catch (e) {
-                document.getElementById('sslStatus').innerHTML = '<i class="fas fa-exclamation-triangle" style="color:#ff6b6b"></i> 网络错误';
+                // 服务重启时连接会断开，这是预期行为
+                document.getElementById('sslStatus').innerHTML = '<i class="fas fa-sync-alt fa-spin" style="color:var(--primary-color,#4488ff)"></i> 服务正在重启… 页面将自动刷新';
+                btn.textContent = '服务重启中…';
+                btn.style.background = 'var(--warning-color, #f59e0b)';
+                setTimeout(() => { window.location.reload(); }, 4000);
             } finally {
                 btn.disabled = false;
-                btn.textContent = '保 存 HTTPS 配 置';
+                // 不重置按钮文案，保持重启中的视觉状态
             }
         });
 
