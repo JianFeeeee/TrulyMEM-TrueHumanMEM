@@ -1,7 +1,6 @@
-import AbilityConstant from '@ohos.app.ability.AbilityConstant';
-import UIAbility from '@ohos.app.ability.UIAbility';
-import Window from '@ohos.window';
-import Want from '@ohos.app.ability.Want';
+import { UIAbility, AbilityConstant, Want } from '@kit.AbilityKit';
+import { window } from '@kit.ArkUI';
+import { BusinessError } from '@kit.BasicServicesKit';
 
 export default class EntryAbility extends UIAbility {
     onCreate(want: Want, param: AbilityConstant.LaunchParam): void {
@@ -12,13 +11,34 @@ export default class EntryAbility extends UIAbility {
         console.info('EntryAbility onDestroy');
     }
 
-    onWindowStageCreate(windowStage: Window.WindowStage): void {
-        windowStage.loadContent('pages/Index', (err, data) => {
+    onWindowStageCreate(windowStage: window.WindowStage): void {
+        const windowClass: window.Window = windowStage.getMainWindowSync();
+
+        try {
+            windowClass.setWindowBackgroundColor('#00000000');
+        } catch (e) {
+            console.error('Failed to set background color: ' + (e as BusinessError).message);
+        }
+
+        try {
+            windowClass.setWindowSystemBarProperties({
+                statusBarColor: '#00000000',
+                navigationBarColor: '#00000000',
+                statusBarContentColor: '#FFFFFF',
+                navigationBarContentColor: '#FFFFFF'
+            });
+        } catch (e) {
+            console.error('Failed to set system bar: ' + (e as BusinessError).message);
+        }
+
+        AppStorage.setOrCreate('main_window', windowClass);
+
+        windowStage.loadContent('pages/Index', (err: BusinessError) => {
             if (err.code) {
-                console.error('Failed to load content: ' + JSON.stringify(err));
+                console.error('Failed to load content: ' + err.message);
                 return;
             }
-            console.info('Succeeded in loading content: ' + JSON.stringify(data));
+            console.info('Succeeded in loading content');
         });
     }
 

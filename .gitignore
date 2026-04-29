@@ -1,4 +1,5 @@
 # Build cache
+.hvigor/
 entry/build/default/
 trulymem-core/build/default/
 trulymem-core/.preview/

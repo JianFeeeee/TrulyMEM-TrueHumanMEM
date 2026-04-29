@@ -1,35 +1,40 @@
 import { MainPage } from './MainPage';
 import { SettingsPage } from './SettingsPage';
 import { GraphDatabase } from '../model/GraphDatabase';
+import { ImmersiveTabNavigation } from '../components/ImmersiveTabNavigation';
 
 @Entry
 @Component
 struct Index {
-    @State currentIndex: number = 0;
-    private db: GraphDatabase = new GraphDatabase();
+  @State currentIndex: number = 0;
+  private db: GraphDatabase = new GraphDatabase();
 
-    aboutToAppear() {
-        this.db.init(getContext(this));
+  aboutToAppear() {
+    this.db.init(getContext(this));
+  }
+
+  @Builder
+  tabContentBuilder() {
+    Column() {
+      if (this.currentIndex === 0) {
+        MainPage({ db: this.db })
+      } else {
+        SettingsPage()
+      }
     }
+    .width('100%')
+    .height('100%')
+  }
 
-    build() {
-        Column() {
-            Tabs({ index: this.currentIndex, barPosition: BarPosition.End }) {
-                TabContent() {
-                    MainPage({ db: this.db })
-                }
-                .tabBar('🌌 TrulyMEM')
-
-                TabContent() {
-                    SettingsPage()
-                }
-                .tabBar('⚙ 设置')
-            }
-            .width('100%')
-            .height('100%')
-            .onChange((index: number) => { this.currentIndex = index; })
-        }
-        .width('100%')
-        .height('100%')
+  build() {
+    Stack() {
+      ImmersiveTabNavigation({
+        currentIndex: this.currentIndex,
+        onTabChange: (index: number): void => { this.currentIndex = index; },
+        contentBuilder: (): void => { this.tabContentBuilder(); }
+      })
     }
+    .width('100%')
+    .height('100%')
+  }
 }

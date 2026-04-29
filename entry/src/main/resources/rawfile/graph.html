@@ -89,7 +89,12 @@
                     loadGraphData();
                 }
             });
-            window.parent.postMessage('request_graph_data', '*');
+            // 通知 ArkTS 请求图数据
+            try {
+                if (window.nativeBridge && window.nativeBridge.requestGraphData) {
+                    window.nativeBridge.requestGraphData();
+                }
+            } catch(e) {}
             animate();
         }
 
@@ -265,7 +270,16 @@
             if (intersects.length > 0) {
                 const node = intersects[0].object;
                 if (selectedNode === node) { selectedNode = null; document.getElementById('node-info').style.display = 'none'; }
-                else { selectedNode = node; showNodeInfo(node.userData.nodeData, true); }
+                else {
+                    selectedNode = node;
+                    showNodeInfo(node.userData.nodeData, true);
+                    // 通知 ArkTS 节点被点击
+                    try {
+                        if (window.nativeBridge && window.nativeBridge.onNodeClick) {
+                            window.nativeBridge.onNodeClick(node.userData.nodeData.id, node.userData.nodeData.name);
+                        }
+                    } catch(e) {}
+                }
             }
         }
 

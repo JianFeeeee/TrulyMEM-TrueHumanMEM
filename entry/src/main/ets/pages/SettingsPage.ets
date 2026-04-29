@@ -34,27 +34,93 @@ export struct SettingsPage {
     }
 
     build() {
-        Column() {
-            Text('API 配置').fontSize(24).fontWeight(FontWeight.Bold).margin({ top: 20, bottom: 16 })
+        Stack() {
+            // 主题色光晕背景
+            Column()
+                .width(200)
+                .height(200)
+                .backgroundColor('rgba(124,77,255,0.15)')
+                .blur(40)
+                .borderRadius(100)
+                .position({ x: '10%', y: '20%' })
 
-            Text('Base URL').fontSize(14).width('100%').margin({ left: 16 })
-            TextInput({ placeholder: 'https://api.deepseek.com', text: this.baseUrl })
-                .onChange((v: string) => { this.onBaseUrlChange(v); })
-                .margin({ left: 16, right: 16, bottom: 12 })
+            Column() {
+                Text('API 配置')
+                    .fontSize(24)
+                    .fontWeight(FontWeight.Bold)
+                    .fontColor('#FFFFFF')
+                    .margin({ top: 20, bottom: 16 })
 
-            Text('Model ID').fontSize(14).width('100%').margin({ left: 16 })
-            TextInput({ placeholder: 'deepseek-chat', text: this.model })
-                .onChange((v: string) => { this.onModelChange(v); })
-                .margin({ left: 16, right: 16, bottom: 12 })
+                // Base URL 设置项
+                Column() {
+                    Text('Base URL')
+                        .fontSize(14)
+                        .fontColor('#FFFFFF')
+                        .width('100%')
+                        .margin({ bottom: 8 })
 
-            Text('API Key').fontSize(14).width('100%').margin({ left: 16 })
-            TextInput({ placeholder: 'sk-...', text: this.apiKey })
-                .type(InputType.Password)
-                .onChange((v: string) => { this.onApiKeyChange(v); })
-                .margin({ left: 16, right: 16, bottom: 12 })
+                    TextInput({ placeholder: 'https://api.deepseek.com', text: this.baseUrl })
+                        .onChange((v: string) => { this.onBaseUrlChange(v); })
+                        .backgroundColor('rgba(255,255,255,0.1)')
+                        .borderRadius(8)
+                        .border({ width: 1, color: 'rgba(124,77,255,0.3)' })
+                        .height(40)
+                }
+                .padding(12)
+                .backgroundColor('rgba(255,255,255,0.05)')
+                .borderRadius(12)
+                .backgroundBlurStyle(BlurStyle.Thin)
+                .margin({ bottom: 12 })
+
+                // Model ID 设置项
+                Column() {
+                    Text('Model ID')
+                        .fontSize(14)
+                        .fontColor('#FFFFFF')
+                        .width('100%')
+                        .margin({ bottom: 8 })
+
+                    TextInput({ placeholder: 'deepseek-chat', text: this.model })
+                        .onChange((v: string) => { this.onModelChange(v); })
+                        .backgroundColor('rgba(255,255,255,0.1)')
+                        .borderRadius(8)
+                        .border({ width: 1, color: 'rgba(124,77,255,0.3)' })
+                        .height(40)
+                }
+                .padding(12)
+                .backgroundColor('rgba(255,255,255,0.05)')
+                .borderRadius(12)
+                .backgroundBlurStyle(BlurStyle.Thin)
+                .margin({ bottom: 12 })
+
+                // API Key 设置项
+                Column() {
+                    Text('API Key')
+                        .fontSize(14)
+                        .fontColor('#FFFFFF')
+                        .width('100%')
+                        .margin({ bottom: 8 })
+
+                    TextInput({ placeholder: 'sk-...', text: this.apiKey })
+                        .type(InputType.Password)
+                        .onChange((v: string) => { this.onApiKeyChange(v); })
+                        .backgroundColor('rgba(255,255,255,0.1)')
+                        .borderRadius(8)
+                        .border({ width: 1, color: 'rgba(124,77,255,0.3)' })
+                        .height(40)
+                }
+                .padding(12)
+                .backgroundColor('rgba(255,255,255,0.05)')
+                .borderRadius(12)
+                .backgroundBlurStyle(BlurStyle.Thin)
+                .margin({ bottom: 12 })
+            }
+            .padding(16)
+            .width('100%')
         }
         .width('100%')
         .height('100%')
-        .padding(16)
+        .backgroundColor('rgba(26,27,46,0.95)')
+        .backgroundBlurStyle(BlurStyle.Regular)
     }
 }
