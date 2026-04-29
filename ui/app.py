@@ -224,7 +224,7 @@ class GraphMemoryApp(App):
         status_bar = self.query_one(StatusBar)
         
         history.add_message(Message(role="user", content=user_input))
-        history.add_message(Message(role="assistant", content="⏳ 正在处理..."))
+        history.add_message(Message(role="assistant", content="正在处理..."))
         status_bar.set_processing(True)
         
         asyncio.create_task(self._process(user_input))
