@@ -116,22 +116,18 @@ python -m core.web_api --port 4096
 ## 打包构建
 
 ```bash
-# Linux
-bash build/build_linux.sh
+# 安装依赖
+pip install -r requirements.txt
 
-# macOS
-bash build/build_macos.sh
-
-# Windows
-build\build_windows.bat
-
-# AppImage
-bash build/build_appimage.sh
+# 构建（Linux / macOS）
+pyinstaller --clean build/trulymem.spec
 ```
 
 构建产出：`dist/TrulyMEM`（单文件，TUI + Web 服务均内嵌于同一二进制）
 
 > 📦 从 v2 开始，Web 服务作为线程嵌入主程序，不再需要独立打包 `trulymem-web`。
+> 
+> 💡 修改 `ui/static/` 或 `core/` 等源码后必须重新编译才能生效（静态文件在构建时打入二进制）。
 
 ---
 

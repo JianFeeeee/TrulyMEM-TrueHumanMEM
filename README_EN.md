@@ -40,7 +40,7 @@ First run → TUI login screen → create/sign in → press **F2** for API Key �
 |---------|-------------|
 | 🧠 **Graph Memory** | Triplet storage, LLM autonomous navigation |
 | 🔐 **Multi-User** | Isolated profiles + Admin/User roles |
-| 🌐 **Web UI** | Embedded Flask server (thread mode) for knowledge graph browsing |
+| 🌐 **Web UI** | Embedded Flask server (thread mode), graph browsing + file upload in chat (PDF/Word/text) |
 | 🎮 **TUI** | Textual-based terminal UI with F2 config panel |
 | 📦 **Single Binary** | PyInstaller build, Web server embedded |
 
