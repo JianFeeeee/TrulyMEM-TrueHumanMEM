@@ -23,18 +23,18 @@ if os.path.exists(prompt_tmpl_dir):
             datas.append((os.path.join(root, f), 'core/prompts/templates'))
 
 # Web 静态文件
-static_dir = os.path.join(project_root, 'static')
+static_dir = os.path.join(project_root, 'ui', 'static')
 if os.path.exists(static_dir):
     for root, dirs, files in os.walk(static_dir):
         for f in files:
-            datas.append((os.path.join(root, f), 'static'))
+            datas.append((os.path.join(root, f), 'ui/static'))
 
 # Web 模板
-templates_dir = os.path.join(project_root, 'templates')
+templates_dir = os.path.join(project_root, 'ui', 'templates')
 if os.path.exists(templates_dir):
     for root, dirs, files in os.walk(templates_dir):
         for f in files:
-            datas.append((os.path.join(root, f), 'templates'))
+            datas.append((os.path.join(root, f), 'ui/templates'))
 
 # Web API 脚本（以便子进程模式回退使用）
 web_api_src = os.path.join(project_root, 'web_api.py')

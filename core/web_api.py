@@ -7,6 +7,7 @@ import argparse
 import threading
 import time
 import hashlib
+from collections import defaultdict
 from datetime import timedelta
 from flask import Flask, request, jsonify, session, redirect, url_for, render_template
 from flask_cors import CORS
@@ -20,16 +21,85 @@ from core.activity_recorder import get_recorder
 from core.embedded_db import EmbeddedGraphDB
 
 
+# 登录安全限制
+LOGIN_MAX_ATTEMPTS = 5          # 最大尝试次数
+LOGIN_WAIT_MINUTES = 5           # 超过次数后等待分钟数
+LOGIN_BAN_THRESHOLD = 3          # 超过此轮次后 ban IP
+LOGIN_BAN_HOURS = 24            # IP ban 时长（小时）
+
+# 内存记录：{ip: {"attempts": 0, "first_fail": 0, "ban_until": 0, "rounds": 0}}
+_login_attempts: dict = {}
+
+def _check_login_limit(ip: str) -> dict:
+    """检查 IP 的登录限制。返回 {"blocked": bool, "reason": str, "wait_seconds": int}"""
+    now = time.time()
+    record = _login_attempts.get(ip)
+
+    if record:
+        # 检查是否在 ban 中
+        if record["ban_until"] > now:
+            remaining = int(record["ban_until"] - now)
+            return {"blocked": True, "reason": f"IP 已被临时封禁，剩余 {remaining//60} 分钟", "wait_seconds": remaining}
+
+        # 检查是否需要等待（连续失败超过阈值）
+        if record["attempts"] >= LOGIN_MAX_ATTEMPTS:
+            wait_end = record["first_fail"] + LOGIN_WAIT_MINUTES * 60
+            if wait_end > now:
+                remaining = int(wait_end - now)
+                return {"blocked": True, "reason": f"登录尝试过多，请等待 {remaining} 秒后再试", "wait_seconds": remaining}
+            else:
+                # 等待时间已过，重置计数但记录轮次
+                record["rounds"] += 1
+                record["attempts"] = 0
+                record["first_fail"] = 0
+
+                # 如果轮次超过阈值则 ban IP
+                if record["rounds"] >= LOGIN_BAN_THRESHOLD:
+                    record["ban_until"] = now + LOGIN_BAN_HOURS * 3600
+                    record["rounds"] = 0
+                    return {"blocked": True, "reason": f"多次登录失败，IP 已被封禁 {LOGIN_BAN_HOURS} 小时", "wait_seconds": LOGIN_BAN_HOURS * 3600}
+
+    return {"blocked": False, "reason": "", "wait_seconds": 0}
+
+def _record_login_fail(ip: str):
+    """记录一次登录失败"""
+    now = time.time()
+    record = _login_attempts.get(ip)
+    if not record:
+        _login_attempts[ip] = {"attempts": 1, "first_fail": now, "ban_until": 0, "rounds": 0}
+    else:
+        if record["first_fail"] == 0:
+            record["first_fail"] = now
+        record["attempts"] += 1
+
+def _record_login_success(ip: str):
+    """登录成功后清除该 IP 的记录"""
+    _login_attempts.pop(ip, None)
+
+# 定期清理过期记录（防止内存泄漏）
+_cleanup_interval = 3600  # 1小时
+_last_cleanup = time.time()
+
+
 # Web 服务配置（仅 SECRET_KEY 保留在 json 文件，用户信息在数据库）
 def load_secret_key():
     import json
-    config_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'web_config.json')
     defaults = {"SECRET_KEY": "trulymem-secret-key-2026"}
-    if os.path.exists(config_path):
-        with open(config_path, 'r', encoding='utf-8') as f:
-            file_config = json.load(f)
-            if "SECRET_KEY" in file_config:
-                defaults["SECRET_KEY"] = file_config["SECRET_KEY"]
+    search_paths = [
+        os.path.join(os.path.dirname(os.path.abspath(__file__)), 'web_config.json'),
+        os.path.join(os.getcwd(), 'web_config.json'),
+        os.path.join(os.path.expanduser("~"), ".trulymem", 'web_config.json'),
+    ]
+    for config_path in search_paths:
+        if os.path.exists(config_path):
+            try:
+                with open(config_path, 'r', encoding='utf-8') as f:
+                    file_config = json.load(f)
+                    if "SECRET_KEY" in file_config:
+                        defaults["SECRET_KEY"] = file_config["SECRET_KEY"]
+                        break
+            except Exception:
+                continue
     return defaults
 
 WEB_CONFIG = load_secret_key()
@@ -176,19 +246,28 @@ def api_login():
     data = request.get_json() or {}
     username = data.get('username', '')
     password = data.get('password', '')
-    
+
+    client_ip = request.remote_addr or "unknown"
+
+    # 登录安全限制检查
+    limit_check = _check_login_limit(client_ip)
+    if limit_check["blocked"]:
+        return jsonify({"success": False, "error": limit_check["reason"]}), 429
+
     # 从全局数据库验证
     g_db = get_global_db()
     if g_db and g_db.verify_web_user(username, password):
         session['authenticated'] = True
         session['username'] = username  # 存储用户名
         session.permanent = True
-        
+
         # 重新加载服务器使用该用户的数据库
         reload_server_for_user(username)
-        
+
+        _record_login_success(client_ip)
         return jsonify({"success": True})
-    
+
+    _record_login_fail(client_ip)
     return jsonify({"success": False, "error": "用户名或密码错误"})
 
 

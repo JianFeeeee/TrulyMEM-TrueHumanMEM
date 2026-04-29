@@ -438,9 +438,9 @@
             <input type="text" id="chatInput" placeholder="输入消息..." autocomplete="off">
             <button id="chatSendBtn">发送</button>
         </div>
-        <div class="chat-status" id="chatStatus">🟢 已连接</div>
+        <div class="chat-status" id="chatStatus"><span class="status-dot" style="color:#22c55e">●</span> 已连接</div>
     </div>
-    <button id="toggle-chat">📌</button>
+    <button id="toggle-chat"><i class="fas fa-thumbtack"></i></button>
     </div> <!-- /app-container -->
 
     <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
@@ -1780,13 +1780,13 @@ function smoothReposition() {
         toggleChat.addEventListener('click', () => {
             chatCollapsed = !chatCollapsed;
             chatPanel.classList.toggle('collapsed', chatCollapsed);
-            toggleChat.textContent = chatCollapsed ? '📎' : '📌';
+            toggleChat.innerHTML = chatCollapsed ? "<i class=\"fas fa-paperclip\"></i>" : "<i class=\"fas fa-thumbtack\"></i>";
             setTimeout(onWindowResize, 300);
         });
         chatCloseBtn.addEventListener('click', () => {
             chatCollapsed = true;
             chatPanel.classList.add('collapsed');
-            toggleChat.textContent = '📎';
+            toggleChat.innerHTML = '<i class="fas fa-paperclip"></i>';
             setTimeout(onWindowResize, 300);
         });
 
@@ -1856,16 +1856,16 @@ function smoothReposition() {
                 if (data.success) {
                     const reply = data.content || data.data?.content || '(无回复)';
                     addChatMessage('assistant', reply);
-                    chatStatus.textContent = '🟢 已连接';
+                    chatStatus.innerHTML = '<span class="status-dot" style="color:#22c55e">●</span> 已连接';
                     chatStatus.className = 'chat-status';
                 } else {
                     addChatMessage('assistant', '❌ ' + (data.error || '请求失败'));
-                    chatStatus.textContent = '🔴 错误: ' + (data.error || 'unknown');
+                    chatStatus.innerHTML = '<span class="status-dot" style="color:#ef4444">●</span> 错误: ' + (data.error || 'unknown');
                     chatStatus.className = 'chat-status error';
                 }
             } catch(e) {
                 addChatMessage('assistant', '❌ 网络错误: ' + e.message);
-                chatStatus.textContent = '🔴 网络错误';
+                chatStatus.innerHTML = '<span class="status-dot" style="color:#ef4444">●</span> 网络错误';
                 chatStatus.className = 'chat-status error';
             }
             chatInput.disabled = false;

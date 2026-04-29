@@ -101,10 +101,15 @@
         }
         .btn:disabled { opacity: 0.6; cursor: not-allowed; }
         .back-link {
-            display: block; text-align: center; margin-top: 20px; color: #6666aa;
-            text-decoration: none; font-size: 13px; transition: color 0.3s;
+            display: block; text-align: center; margin-top: 20px; color: #4488ff;
+            text-decoration: none; cursor: pointer; font-size: 13px; transition: color 0.3s;
         }
-        .back-link:hover { color: #4488ff; }
+        .back-link:hover { color: #66aaff; }
+        .logout-link {
+            display: block; text-align: center; margin-top: 8px; color: #ff4488;
+            text-decoration: none; cursor: pointer; font-size: 13px; transition: color 0.3s;
+        }
+        .logout-link:hover { color: #ff66aa; }
         .success-msg, .error-msg {
             display: none; margin-top: 12px; padding: 10px;
             border-radius: 6px; font-size: 13px; text-align: center;
@@ -259,7 +264,7 @@
         </form>
 
         <!-- TUI 服务控制 -->
-        <div class="section-title">🖥 TUI 终端服务</div>
+        <div class="section-title"><i class="fas fa-terminal"></i> TUI 终端服务</div>
         <div class="toggle-row">
             <div>
                 <div class="toggle-label">启用终端 TUI 服务</div>
@@ -278,7 +283,7 @@
 
         <!-- 用户管理（仅管理员可见） -->
         <div id="adminSection" style="display:none;">
-            <div class="section-title">👥 用户管理</div>
+            <div class="section-title"><i class="fas fa-users"></i> 用户管理</div>
             <div class="user-section">
                 <table class="user-table" id="userTable">
                     <thead>
@@ -297,7 +302,8 @@
             </div>
         </div>
 
-        <a href="/graph.html" class="back-link">← 返回星图</a>
+        <a href="/graph.html" class="back-link"><i class="fas fa-arrow-left"></i> 返回星图</a>
+        <a href="#" class="logout-link" onclick="event.preventDefault(); fetch('/api/logout', {method: 'POST'}).then(() => window.location.href='/login');"><i class="fas fa-sign-out-alt"></i> 退出登录</a>
     </div>
 
     <!-- 添加用户弹窗 -->
@@ -356,11 +362,11 @@
                 const data = await resp.json();
                 if (data.success) {
                     document.getElementById('enableTuiToggle').checked = data.enable_tui !== false;
-                    document.getElementById('tuiStatus').textContent =
-                        data.enable_tui ? '✅ TUI 服务已启用' : '⏹️ TUI 服务已禁用';
+                    document.getElementById('tuiStatus').innerHTML =
+                        data.enable_tui ? '<i class="fas fa-check-circle" style="color:var(--success-color,#22c55e)"></i> TUI 服务已启用' : '<i class="fas fa-stop-circle" style="color:var(--warning-color,#f59e0b)"></i> TUI 服务已禁用';
                 }
             } catch (e) {
-                document.getElementById('tuiStatus').textContent = '⚠️ 无法加载配置';
+                document.getElementById('tuiStatus').innerHTML = '<i class="fas fa-exclamation-triangle" style="color:var(--warning-color,#f59e0b)"></i> 无法加载配置';
             }
         }
 
@@ -464,7 +470,7 @@
                 });
                 const data = await resp.json();
                 if (data.success) {
-                    showAddUserSuccess('✅ 用户添加成功');
+                    showAddUserSuccess('<i class="fas fa-check-circle" style="color:var(--success-color,#22c55e)"></i> 用户添加成功');
                     setTimeout(() => {
                         document.getElementById('addUserModal').classList.remove('show');
                         document.getElementById('addUserForm').reset();
@@ -483,7 +489,7 @@
 
         function showAddUserSuccess(msg) {
             const el = document.getElementById('addUserSuccess');
-            el.textContent = msg;
+            el.innerHTML = msg;
             el.classList.add('show');
             document.getElementById('addUserError').classList.remove('show');
         }
@@ -521,10 +527,10 @@
                     document.getElementById('settings_task_query').value = limits.task_query_max || 30;
                     document.getElementById('settings_memory_query').value = limits.memory_query_max || 30;
                     document.getElementById('settings_memory_update').value = limits.memory_update_max || 15;
-                    document.getElementById('apiConfigStatus').textContent = '✅ 配置已加载';
+                    document.getElementById('apiConfigStatus').innerHTML = '<i class="fas fa-check-circle" style="color:var(--success-color,#22c55e)"></i> 配置已加载';
                 }
             } catch (e) {
-                document.getElementById('apiConfigStatus').textContent = '⚠️ 无法加载配置';
+                document.getElementById('apiConfigStatus').innerHTML = '<i class="fas fa-exclamation-triangle" style="color:var(--warning-color,#f59e0b)"></i> 无法加载配置';
             }
         }
 
@@ -535,7 +541,7 @@
             btn.disabled = true;
             btn.textContent = '保存中...';
             const statusEl = document.getElementById('apiConfigStatus');
-            statusEl.textContent = '🔄 保存中...';
+            statusEl.innerHTML = '<i class="fas fa-spinner fa-spin" style="color:var(--primary-color,#4488ff)"></i> 保存中...';
 
             try {
                 const resp = await fetch('/api/settings', {
@@ -552,13 +558,13 @@
                 });
                 const data = await resp.json();
                 if (data.success) {
-                    statusEl.textContent = '✅ API 配置已保存并生效';
+                    statusEl.innerHTML = '<i class="fas fa-check-circle" style="color:var(--success-color,#22c55e)"></i> API 配置已保存并生效';
                     setTimeout(() => { statusEl.textContent = ''; }, 3000);
                 } else {
-                    statusEl.textContent = '⚠️ 保存失败: ' + (data.error || '未知错误');
+                    statusEl.innerHTML = '<i class="fas fa-exclamation-triangle" style="color:var(--warning-color,#f59e0b)"></i> 保存失败: ' + (data.error || '未知错误');
                 }
             } catch (e) {
-                statusEl.textContent = '⚠️ 网络错误';
+                statusEl.innerHTML = '<i class="fas fa-exclamation-triangle" style="color:var(--warning-color,#f59e0b)"></i> 网络错误';
             } finally {
                 btn.disabled = false;
                 btn.textContent = '保 存 配 置';
@@ -572,7 +578,7 @@
             btn.disabled = true;
             btn.textContent = '保存中...';
             const statusEl = document.getElementById('limitsStatus');
-            statusEl.textContent = '🔄 保存中...';
+            statusEl.innerHTML = '<i class="fas fa-spinner fa-spin" style="color:var(--primary-color,#4488ff)"></i> 保存中...';
 
             try {
                 const resp = await fetch('/api/settings', {
@@ -590,13 +596,13 @@
                 });
                 const data = await resp.json();
                 if (data.success) {
-                    statusEl.textContent = '✅ 工具限制已保存并生效';
+                    statusEl.innerHTML = '<i class="fas fa-check-circle" style="color:var(--success-color,#22c55e)"></i> 工具限制已保存并生效';
                     setTimeout(() => { statusEl.textContent = ''; }, 3000);
                 } else {
-                    statusEl.textContent = '⚠️ 保存失败: ' + (data.error || '未知错误');
+                    statusEl.innerHTML = '<i class="fas fa-exclamation-triangle" style="color:var(--warning-color,#f59e0b)"></i> 保存失败: ' + (data.error || '未知错误');
                 }
             } catch (e) {
-                statusEl.textContent = '⚠️ 网络错误';
+                statusEl.innerHTML = '<i class="fas fa-exclamation-triangle" style="color:var(--warning-color,#f59e0b)"></i> 网络错误';
             } finally {
                 btn.disabled = false;
                 btn.textContent = '保 存 限 制';
@@ -613,7 +619,7 @@
         // TUI 开关
         document.getElementById('enableTuiToggle').addEventListener('change', async function() {
             const enable = this.checked;
-            document.getElementById('tuiStatus').textContent = '🔄 更新中...';
+            document.getElementById('tuiStatus').innerHTML = '<i class="fas fa-spinner fa-spin" style="color:var(--primary-color,#4488ff)"></i> 更新中...';
             try {
                 const resp = await fetch('/api/settings/config', {
                     method: 'PUT',
@@ -622,15 +628,15 @@
                 });
                 const data = await resp.json();
                 if (data.success) {
-                    document.getElementById('tuiStatus').textContent =
-                        enable ? '✅ TUI 服务已启用' : '⏹️ TUI 服务已禁用';
+                    document.getElementById('tuiStatus').innerHTML =
+                        enable ? '<i class="fas fa-check-circle" style="color:var(--success-color,#22c55e)"></i> TUI 服务已启用' : '<i class="fas fa-stop-circle" style="color:var(--warning-color,#f59e0b)"></i> TUI 服务已禁用';
                     showSuccess('设置已保存');
                 } else {
-                    document.getElementById('tuiStatus').textContent = '⚠️ 更新失败';
+                    document.getElementById('tuiStatus').innerHTML = '<i class="fas fa-exclamation-triangle" style="color:var(--warning-color,#f59e0b)"></i> 更新失败';
                     this.checked = !enable;
                 }
             } catch (e) {
-                document.getElementById('tuiStatus').textContent = '⚠️ 网络错误';
+                document.getElementById('tuiStatus').innerHTML = '<i class="fas fa-exclamation-triangle" style="color:var(--warning-color,#f59e0b)"></i> 网络错误';
                 this.checked = !enable;
             }
         });
@@ -665,7 +671,7 @@
                 });
                 const data = await resp.json();
                 if (data.success) {
-                    showSuccess('✅ 密码已更新');
+                    showSuccess('<i class="fas fa-check-circle" style="color:var(--success-color,#22c55e)"></i> 密码已更新');
                     document.getElementById('current_password').value = '';
                     document.getElementById('new_password').value = '';
                     document.getElementById('confirm_password').value = '';
@@ -682,7 +688,7 @@
 
         function showSuccess(msg) {
             const el = document.getElementById('successMsg');
-            el.textContent = msg;
+            el.innerHTML = msg;
             el.classList.add('show');
             document.getElementById('errorMsg').classList.remove('show');
             setTimeout(() => el.classList.remove('show'), 3000);
