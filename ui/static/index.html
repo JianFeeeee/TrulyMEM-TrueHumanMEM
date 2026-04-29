@@ -194,6 +194,101 @@ body {
     background: var(--surface-darken);
 }
 
+/* File Chips */
+.file-chips {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    margin-bottom: 6px;
+    min-height: 0;
+}
+
+.file-chip {
+    position: relative;
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    background: var(--surface-darken);
+    border: 1px solid var(--primary);
+    border-radius: 4px;
+    padding: 4px 8px 4px 8px;
+    font-size: 12px;
+}
+
+.file-chip-remove {
+    position: absolute;
+    top: -7px;
+    left: -7px;
+    width: 16px;
+    height: 16px;
+    background: var(--accent);
+    color: #fff;
+    border: 1px solid var(--surface);
+    border-radius: 50%;
+    font-size: 11px;
+    line-height: 16px;
+    text-align: center;
+    cursor: pointer;
+    font-weight: bold;
+    user-select: none;
+}
+
+.file-chip-remove:hover {
+    background: #ff1744;
+    transform: scale(1.1);
+}
+
+.file-chip-icon {
+    font-size: 16px;
+}
+
+.file-chip-name {
+    color: var(--text);
+    max-width: 180px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.file-chip-size {
+    color: var(--text-muted);
+    font-size: 10px;
+}
+
+/* Drag & Drop */
+.input-box.drag-over {
+    outline: 2px dashed var(--accent);
+    outline-offset: -4px;
+    background: rgba(233, 69, 96, 0.05);
+    border-radius: 4px;
+}
+
+.drag-overlay {
+    display: none;
+    position: absolute;
+    inset: 0;
+    background: rgba(26, 26, 46, 0.85);
+    align-items: center;
+    justify-content: center;
+    z-index: 10;
+    border-radius: 4px;
+    pointer-events: none;
+}
+
+.drag-over .drag-overlay {
+    display: flex;
+}
+
+.drag-overlay-text {
+    color: var(--accent);
+    font-size: 18px;
+    font-weight: bold;
+    border: 3px dashed var(--accent);
+    padding: 20px 40px;
+    border-radius: 8px;
+    background: var(--surface-darken);
+}
+
 
 
 .btn {
@@ -598,12 +693,14 @@ body {
             </div>
         </div>
 
-        <div class="input-box">
-            <textarea class="input-area" id="messageInput" placeholder="输入消息，Enter 发送，Shift+Enter 换行..." rows="3"></textarea>
+        <div class="input-box" id="inputBox">
+            <div class="file-chips" id="fileChips"></div>
+            <!-- Drag overlay -->
+            <div class="drag-overlay"><span class="drag-overlay-text">📄 松开以上传文件</span></div>
+            <textarea class="input-area" id="messageInput" placeholder="输入消息，拖拽文件或点击 📎 上传，Enter 发送，Shift+Enter 换行..." rows="3"></textarea>
             <div class="file-upload-row">
-                <input type="file" class="file-input" id="fileInput">
+                <input type="file" class="file-input" id="fileInput" multiple>
                 <button class="file-upload-btn" id="fileUploadBtn">📎 添加文件</button>
-
             </div>
             <div class="input-buttons">
                 <button class="btn" id="sendBtn">发送</button>
@@ -723,6 +820,8 @@ const closeHelpBtn = document.getElementById('closeHelp');
 // File upload
 const fileInputEl = document.getElementById('fileInput');
 const fileUploadBtn = document.getElementById('fileUploadBtn');
+const fileChipsEl = document.getElementById('fileChips');
+let uploadedFiles = [];
 
 // Config inputs
 const apiKeyEl = document.getElementById('apiKey');
@@ -995,10 +1094,52 @@ function readFileAsText(file) {
     });
 }
 
-// Send Message
+function formatFileSize(bytes) {
+    if (bytes < 1024) return bytes + ' B';
+    if (bytes < 1024*1024) return (bytes/1024).toFixed(1) + ' KB';
+    return (bytes/1024/1024).toFixed(1) + ' MB';
+}
+
+// ── File chips ──
+function addFileChip(file) {
+    const chip = document.createElement('div');
+    chip.className = 'file-chip';
+    chip.dataset.fileId = file._fileId;
+    chip.innerHTML = `
+        <span class="file-chip-remove" data-file-id="${file._fileId}">✕</span>
+        <span class="file-chip-icon">📄</span>
+        <span class="file-chip-name">${escapeHtml(file.name)}</span>
+        <span class="file-chip-size">${formatFileSize(file.size)}</span>
+    `;
+    fileChipsEl.appendChild(chip);
+}
+
+function removeFileChip(fileId) {
+    const chip = fileChipsEl.querySelector(`.file-chip[data-file-id="${fileId}"]`);
+    if (chip) chip.remove();
+}
+
+function escapeHtml(text) {
+    const div = document.createElement('div');
+    div.textContent = text;
+    return div.innerHTML;
+}
+
+// ── Add files to the pending list ──
+function addFilesToList(fileList) {
+    for (const file of fileList) {
+        // Skip if already in list (by name + size)
+        if (uploadedFiles.some(f => f.name === file.name && f.size === file.size)) continue;
+        file._fileId = 'f' + Date.now() + '_' + Math.random().toString(36).slice(2, 6);
+        uploadedFiles.push(file);
+        addFileChip(file);
+    }
+}
+
+// ── Send Message ──
 async function sendMessage() {
     const message = messageInputEl.value.trim();
-    if (!message) return;
+    if (!message && uploadedFiles.length === 0) return;
 
     // Check if API is configured
     if (apiStatusEl.textContent === '未配置') {
@@ -1006,16 +1147,37 @@ async function sendMessage() {
         return;
     }
 
-    // Add user message to UI
-    addMessageToUI('user', message);
+    // Build final message: files + user text
+    let finalMessage = '';
+    if (uploadedFiles.length > 0) {
+        const fileBlocks = await Promise.all(uploadedFiles.map(async (file) => {
+            try {
+                const content = await readFileAsText(file);
+                return `文件名：${file.name}\n内容：\n${content}`;
+            } catch (e) {
+                return `文件名：${file.name}\n内容：(读取失败: ${e.message})`;
+            }
+        }));
+        finalMessage = fileBlocks.join('\n\n---\n\n');
+        if (message) finalMessage += '\n\n' + message;
+    } else {
+        finalMessage = message;
+    }
+
+    // Clear UI
+    uploadedFiles = [];
+    fileChipsEl.innerHTML = '';
     messageInputEl.value = '';
+
+    // Add user message to UI
+    addMessageToUI('user', finalMessage);
 
     // Add processing message
     addMessageToUI('assistant', '⏳ 正在处理...');
     setProcessing(true);
 
     // Send to API
-    const result = await apiRequest('/api/message', 'POST', { message });
+    const result = await apiRequest('/api/message', 'POST', { message: finalMessage });
 
     if (result.success) {
         const data = result.data || {};
@@ -1125,28 +1287,55 @@ function closeSidebar() {
 }
 
 // File upload helpers
-function insertFileContent(file) {
-    readFileAsText(file).then(content => {
-        const block = `文件名：${file.name}\n内容：\n${content}`;
-        const current = messageInputEl.value;
-        const cursorPos = messageInputEl.selectionStart;
-        if (current.length === 0) {
-            messageInputEl.value = block;
-        } else {
-            // 插入到光标位置
-            messageInputEl.value = current.slice(0, cursorPos) + block + '\n\n' + current.slice(cursorPos);
-        }
-        messageInputEl.focus();
-        fileInputEl.value = '';
-    }).catch(e => {
-        alert(`文件读取失败: ${e.message}`);
-    });
-}
-
+// ── Event: file picker ──
 fileUploadBtn.addEventListener('click', () => fileInputEl.click());
 fileInputEl.addEventListener('change', () => {
-    if (fileInputEl.files && fileInputEl.files[0]) {
-        insertFileContent(fileInputEl.files[0]);
+    if (fileInputEl.files && fileInputEl.files.length > 0) {
+        addFilesToList(fileInputEl.files);
+        fileInputEl.value = '';
+    }
+});
+
+// ── Event: chip remove via delegation ──
+fileChipsEl.addEventListener('click', (e) => {
+    const removeBtn = e.target.closest('.file-chip-remove');
+    if (!removeBtn) return;
+    const fileId = removeBtn.dataset.fileId;
+    uploadedFiles = uploadedFiles.filter(f => f._fileId !== fileId);
+    removeFileChip(fileId);
+});
+
+// ── Drag & Drop ──
+const inputBoxEl = document.getElementById('inputBox');
+
+inputBoxEl.addEventListener('dragenter', (e) => {
+    e.preventDefault();
+    e.stopPropagation();
+    inputBoxEl.classList.add('drag-over');
+});
+
+inputBoxEl.addEventListener('dragover', (e) => {
+    e.preventDefault();
+    e.stopPropagation();
+    inputBoxEl.classList.add('drag-over');
+});
+
+inputBoxEl.addEventListener('dragleave', (e) => {
+    e.preventDefault();
+    e.stopPropagation();
+    // Only remove if leaving the whole input-box
+    if (!inputBoxEl.contains(e.relatedTarget)) {
+        inputBoxEl.classList.remove('drag-over');
+    }
+});
+
+inputBoxEl.addEventListener('drop', (e) => {
+    e.preventDefault();
+    e.stopPropagation();
+    inputBoxEl.classList.remove('drag-over');
+    const files = e.dataTransfer.files;
+    if (files && files.length > 0) {
+        addFilesToList(files);
     }
 });
 
