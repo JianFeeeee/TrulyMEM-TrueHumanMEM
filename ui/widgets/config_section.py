@@ -1,7 +1,7 @@
 """配置区组件"""
 
 from textual.containers import Vertical
-from textual.widgets import Static, Input, Button
+from textual.widgets import Static, Input, Button, Checkbox
 from textual.app import ComposeResult
 from textual.message import Message
 from ..models.config import AppConfig
@@ -15,7 +15,7 @@ class ConfigSection(Vertical):
             self.is_tool_limits = is_tool_limits
             super().__init__()
 
-    def __init__(self, config: AppConfig | None = None, is_admin: bool = True, **kwargs):
+    def __init__(self, config: AppConfig | None = None, is_admin: bool = False, **kwargs):
         super().__init__(**kwargs)
         self._config = config or AppConfig()
         self._is_admin = is_admin
@@ -133,7 +133,6 @@ class ConfigSection(Vertical):
             ws_hint.can_focus = False
             yield ws_hint
 
-            from textual.widgets import Checkbox
             yield Checkbox(
                 "启用 Web 服务",
                 value=self._config.enable_web,
@@ -150,10 +149,30 @@ class ConfigSection(Vertical):
                 type="integer"
             )
 
-        # 默认隐藏 admin 区域，等 login 后决定是否显示
-        self._apply_admin_visibility()
+            sep4 = Static("", classes="config-sep")
+            sep4.can_focus = False
+            yield sep4
+
+        # TUI 服务控制 — 仅 admin 可见
+        with Vertical(id="admin-tui-service-section"):
+            tui_title = Static("━━ TUI 服务 ━━", classes="config-title")
+            tui_title.can_focus = False
+            yield tui_title
+
+            tui_hint = Static("控制终端文本界面是否允许连接", classes="config-hint")
+            tui_hint.can_focus = False
+            yield tui_hint
+
+            yield Checkbox(
+                "启用 TUI 服务",
+                value=self._config.enable_tui,
+                id="enable-tui-checkbox"
+            )
 
     def on_mount(self) -> None:
+        # 应用管理员区域的可见性
+        self._apply_admin_visibility()
+        
         try:
             api_key = self.query_one("#api-key-input", Input)
             model = self.query_one("#model-input", Input)
@@ -175,17 +194,30 @@ class ConfigSection(Vertical):
             web_user.tab_index = 7
             web_pwd.tab_index = 8
 
-            from textual.widgets import Checkbox
             web_port = self.query_one("#web-port-input", Input)
-            try:
-                web_checkbox = self.query_one("#enable-web-checkbox", Checkbox)
-            except:
-                pass
             web_port.tab_index = 9
         except Exception:
             pass
 
-    def on_input_submitted(self, event: Input.Submitted) -> None:
+    def on_checkbox_changed(self, event: Checkbox.Changed) -> None:
+        """处理复选框状态变化"""
+        try:
+            # Web 服务开关
+            if event.checkbox.id == "enable-web-checkbox":
+                self._update_config_from_ui()
+                # 发送配置更新消息
+                self.post_message(self.ConfigChanged(self._config, is_tool_limits=False))
+                
+            # TUI 服务开关
+            elif event.checkbox.id == "enable-tui-checkbox":
+                self._update_config_from_ui()
+                # 发送配置更新消息
+                self.post_message(self.ConfigChanged(self._config, is_tool_limits=False))
+        except Exception:
+            pass
+
+    def _update_config_from_ui(self) -> None:
+        """从UI组件更新配置对象"""
         try:
             api_key_input = self.query_one("#api-key-input", Input)
             model_input = self.query_one("#model-input", Input)
@@ -199,9 +231,15 @@ class ConfigSection(Vertical):
             web_username = self.query_one("#web-username-input", Input)
             web_password = self.query_one("#web-password-input", Input)
 
-            from textual.widgets import Checkbox
             web_checkbox = self.query_one("#enable-web-checkbox", Checkbox)
             web_port_input = self.query_one("#web-port-input", Input)
+            
+            # TUI checkbox 可能不存在（非管理员）
+            tui_checkbox = None
+            try:
+                tui_checkbox = self.query_one("#enable-tui-checkbox", Checkbox)
+            except:
+                pass
 
             self._config = AppConfig(
                 api_key=api_key_input.value,
@@ -215,7 +253,14 @@ class ConfigSection(Vertical):
                 web_password=web_password.value,
                 enable_web=web_checkbox.value,
                 web_port=int(web_port_input.value) if web_port_input.value else 4096,
+                enable_tui=tui_checkbox.value if tui_checkbox else True,
             )
+        except Exception:
+            pass
+
+    def on_input_submitted(self, event: Input.Submitted) -> None:
+        try:
+            self._update_config_from_ui()
 
             # 先发送 API 配置更新（is_tool_limits=False）
             self.post_message(self.ConfigChanged(self._config, is_tool_limits=False))
@@ -241,6 +286,11 @@ class ConfigSection(Vertical):
             service_section.styles.display = "block" if self._is_admin else "none"
         except Exception:
             pass
+        try:
+            tui_section = self.query_one("#admin-tui-service-section")
+            tui_section.styles.display = "block" if self._is_admin else "none"
+        except Exception:
+            pass
 
     def get_config(self) -> AppConfig:
         return self._config
@@ -264,11 +314,16 @@ class ConfigSection(Vertical):
             self.query_one("#web-username-input", Input).value = config.web_username
             self.query_one("#web-password-input", Input).value = config.web_password
 
-            from textual.widgets import Checkbox
             try:
                 self.query_one("#enable-web-checkbox", Checkbox).value = config.enable_web
             except:
                 pass
             self.query_one("#web-port-input", Input).value = str(config.web_port)
+            
+            # TUI checkbox
+            try:
+                self.query_one("#enable-tui-checkbox", Checkbox).value = config.enable_tui
+            except:
+                pass
         except Exception:
             pass

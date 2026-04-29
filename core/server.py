@@ -469,10 +469,15 @@ class BackendServer:
             base_url = api_config.get("base_url", self._config.get("base_url", "https://api.deepseek.com"))
             model = api_config.get("model", self._config.get("model", "deepseek-v4-flash"))
             self.update_config(api_key, base_url, model)
-            # 通用配置字段（如 message_timeout）
-            for key in ["message_timeout"]:
+            # 通用配置字段（如 message_timeout, enable_web, enable_tui, web_port）
+            for key in ["message_timeout", "enable_web", "enable_tui", "web_port"]:
                 if key in api_config:
-                    self._config[key] = int(api_config[key])
+                    if key == "web_port":
+                        self._config[key] = int(api_config[key])
+                    elif key in ["enable_web", "enable_tui"]:
+                        self._config[key] = bool(api_config[key])
+                    else:
+                        self._config[key] = int(api_config[key])
         
         limits_keys = [
             "persona_update_max",
