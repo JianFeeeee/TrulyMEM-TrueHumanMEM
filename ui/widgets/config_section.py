@@ -89,83 +89,87 @@ class ConfigSection(Vertical):
         yield sep2
 
         # Web 登录 — 仅 admin 可见
-        with Vertical(id="admin-web-login-section"):
-            web_title = Static("━━ Web 登录 ━━", classes="config-title")
-            web_title.can_focus = False
-            yield web_title
-            
-            label_web_user = Static("用户名:", classes="config-label")
-            label_web_user.can_focus = False
-            yield label_web_user
-            yield Input(
-                value=self._config.web_username,
-                placeholder="admin",
-                id="web-username-input"
-            )
-            
-            label_web_pwd = Static("密码:", classes="config-label")
-            label_web_pwd.can_focus = False
-            yield label_web_pwd
-            yield Input(
-                value=self._config.web_password,
-                placeholder="修改密码",
-                id="web-password-input",
-                password=True
-            )
-            
-            hint = Static("按Enter保存配置", classes="config-hint")
-            hint.can_focus = False
-            yield hint
+        web_title = Static("━━ Web 登录 ━━", classes="config-title admin-section")
+        web_title.can_focus = False
+        yield web_title
+        
+        label_web_user = Static("用户名:", classes="config-label admin-section")
+        label_web_user.can_focus = False
+        yield label_web_user
+        yield Input(
+            value=self._config.web_username,
+            placeholder="admin",
+            id="web-username-input",
+            classes="admin-section"
+        )
+        
+        label_web_pwd = Static("密码:", classes="config-label admin-section")
+        label_web_pwd.can_focus = False
+        yield label_web_pwd
+        yield Input(
+            value=self._config.web_password,
+            placeholder="修改密码",
+            id="web-password-input",
+            password=True,
+            classes="admin-section"
+        )
+        
+        hint = Static("按Enter保存配置", classes="config-hint admin-section")
+        hint.can_focus = False
+        yield hint
 
-            sep3 = Static("", classes="config-sep")
-            sep3.can_focus = False
-            yield sep3
+        sep3 = Static("", classes="config-sep admin-section")
+        sep3.can_focus = False
+        yield sep3
 
         # Web 服务 — 仅 admin 可见
-        with Vertical(id="admin-web-service-section"):
-            ws_title = Static("━━ Web 服务 ━━", classes="config-title")
-            ws_title.can_focus = False
-            yield ws_title
+        ws_title = Static("━━ Web 服务 ━━", classes="config-title admin-section")
+        ws_title.can_focus = False
+        yield ws_title
 
-            ws_hint = Static("在侧边栏启用后将自动启动 Web 管理界面", classes="config-hint")
-            ws_hint.can_focus = False
-            yield ws_hint
+        ws_hint = Static("在侧边栏启用后将自动启动 Web 管理界面", classes="config-hint admin-section")
+        ws_hint.can_focus = False
+        yield ws_hint
 
-            yield Checkbox(
-                "启用 Web 服务",
-                value=self._config.enable_web,
-                id="enable-web-checkbox"
-            )
+        cb_web = Checkbox(
+            "启用 Web 服务",
+            value=self._config.enable_web,
+            id="enable-web-checkbox",
+            classes="admin-section"
+        )
+        yield cb_web
 
-            label_web_port = Static("端口:", classes="config-label")
-            label_web_port.can_focus = False
-            yield label_web_port
-            yield Input(
-                value=str(self._config.web_port),
-                placeholder="4096",
-                id="web-port-input",
-                type="integer"
-            )
+        label_web_port = Static("端口:", classes="config-label admin-section")
+        label_web_port.can_focus = False
+        yield label_web_port
+        yield Input(
+            value=str(self._config.web_port),
+            placeholder="4096",
+            id="web-port-input",
+            type="integer",
+            classes="admin-section"
+        )
 
-            sep4 = Static("", classes="config-sep")
-            sep4.can_focus = False
-            yield sep4
+        sep4 = Static("", classes="config-sep admin-section")
+        sep4.can_focus = False
+        yield sep4
 
         # TUI 服务控制 — 仅 admin 可见
-        with Vertical(id="admin-tui-service-section"):
-            tui_title = Static("━━ TUI 服务 ━━", classes="config-title")
-            tui_title.can_focus = False
-            yield tui_title
+        tui_title = Static("━━ TUI 服务 ━━", classes="config-title admin-section")
+        tui_title.can_focus = False
+        yield tui_title
 
-            tui_hint = Static("控制终端文本界面是否允许连接", classes="config-hint")
-            tui_hint.can_focus = False
-            yield tui_hint
+        tui_hint = Static("控制终端文本界面是否允许连接", classes="config-hint admin-section")
+        tui_hint.can_focus = False
+        yield tui_hint
 
-            yield Checkbox(
-                "启用 TUI 服务",
-                value=self._config.enable_tui,
-                id="enable-tui-checkbox"
-            )
+        cb_tui = Checkbox(
+            "启用 TUI 服务",
+            value=self._config.enable_tui,
+            id="enable-tui-checkbox",
+            classes="admin-section"
+        )
+        yield cb_tui
 
     def on_mount(self) -> None:
         # 应用管理员区域的可见性
@@ -274,21 +278,9 @@ class ConfigSection(Vertical):
 
     def _apply_admin_visibility(self) -> None:
         """根据 _is_admin 显示/隐藏 admin 专用区域"""
-        try:
-            login_section = self.query_one("#admin-web-login-section")
-            login_section.styles.display = "block" if self._is_admin else "none"
-        except Exception:
-            pass
-        try:
-            service_section = self.query_one("#admin-web-service-section")
-            service_section.styles.display = "block" if self._is_admin else "none"
-        except Exception:
-            pass
-        try:
-            tui_section = self.query_one("#admin-tui-service-section")
-            tui_section.styles.display = "block" if self._is_admin else "none"
-        except Exception:
-            pass
+        display_val = "block" if self._is_admin else "none"
+        for widget in self.query(".admin-section"):
+            widget.styles.display = display_val
 
     def get_config(self) -> AppConfig:
         return self._config

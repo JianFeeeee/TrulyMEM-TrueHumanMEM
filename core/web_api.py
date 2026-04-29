@@ -784,7 +784,6 @@ def get_graph():
         SELECT id, name, type, mention_count
         FROM entities
         ORDER BY mention_count DESC
-        LIMIT 200
     """)
     
     nodes = []

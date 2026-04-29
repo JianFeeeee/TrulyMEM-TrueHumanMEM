@@ -83,7 +83,7 @@ exe = EXE(
     a.datas,
     [],
     name='TrulyMEM',
-    icon='pic/TrulyMEM.ico',
+    icon=os.path.join(project_root, 'pic', 'TrulyMEM.ico'),
     debug=False,
     bootloader_ignore_signals=False,
     strip=False,

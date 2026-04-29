@@ -51,6 +51,11 @@ ConfigSection .config-hint {
     margin: 1 0 0 0;
 }
 
+ConfigSection .config-sep {
+    height: 1;
+    margin: 1 0;
+}
+
 ConfigSection Input {
     width: 1fr;
     height: 3;
@@ -65,10 +70,8 @@ ConfigSection Checkbox {
     margin: 1 0;
 }
 
-/* Admin sections */
-#admin-web-login-section,
-#admin-web-service-section,
-#admin-tui-service-section {
+/* Admin section elements - controlled by visibility */
+ConfigSection .admin-section {
     display: block;
 }
 

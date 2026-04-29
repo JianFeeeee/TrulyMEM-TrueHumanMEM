@@ -768,29 +768,3 @@ class EmbeddedGraphDB:
 # 兼容性别名
 Neo4jGraph = EmbeddedGraphDB
 
-
-if __name__ == '__main__':
-    # 测试
-    print("Testing Embedded Graph Database...")
-    
-    with EmbeddedGraphDB("test.db") as db:
-        # 写入测试
-        result = db.commit(
-            triplets=[
-                {"subject": "用户", "relation": "喜欢", "object": "Python"},
-                {"subject": "用户", "relation": "学习", "object": "AI"}
-            ],
-            session_id="test-session",
-            turn_id=1
-        )
-        print(f"Commit: {result}")
-        
-        # 检索测试
-        result = db.recall("Python,AI")
-        print(f"Recall: {result}")
-        
-        # 状态测试
-        result = db.introspect()
-        print(f"Introspect: {result}")
-    
-    print("\nTest completed!")
