@@ -164,6 +164,70 @@ body {
     gap: 8px;
 }
 
+/* File Upload */
+.file-upload-row {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-top: 6px;
+}
+
+.file-input {
+    display: none;
+}
+
+.file-upload-btn {
+    padding: 4px 12px;
+    background: var(--surface-lighten);
+    color: var(--text);
+    border: 1px dashed var(--text-muted);
+    border-radius: 4px;
+    cursor: pointer;
+    font-family: inherit;
+    font-size: 12px;
+    transition: all 0.2s;
+}
+
+.file-upload-btn:hover {
+    border-color: var(--accent);
+    color: var(--accent);
+    background: var(--surface-darken);
+}
+
+.file-info {
+    display: none;
+    align-items: center;
+    gap: 6px;
+    font-size: 12px;
+    color: var(--text-muted);
+    background: var(--surface-darken);
+    padding: 3px 8px;
+    border-radius: 4px;
+}
+
+.file-info.attached {
+    display: inline-flex;
+}
+
+.file-info-name {
+    color: var(--success);
+    max-width: 200px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.file-info-remove {
+    cursor: pointer;
+    color: var(--accent);
+    font-weight: bold;
+    padding: 0 4px;
+}
+
+.file-info-remove:hover {
+    color: var(--warning);
+}
+
 .btn {
     padding: 6px 16px;
     background: var(--primary);
@@ -568,6 +632,14 @@ body {
 
         <div class="input-box">
             <textarea class="input-area" id="messageInput" placeholder="输入消息，Enter 发送，Shift+Enter 换行..." rows="3"></textarea>
+            <div class="file-upload-row">
+                <input type="file" class="file-input" id="fileInput">
+                <button class="file-upload-btn" id="fileUploadBtn">📎 添加文件</button>
+                <span class="file-info" id="fileInfo">
+                    <span class="file-info-name" id="fileInfoName"></span>
+                    <span class="file-info-remove" id="fileInfoRemove">✕</span>
+                </span>
+            </div>
             <div class="input-buttons">
                 <button class="btn" id="sendBtn">发送</button>
                 <button class="btn" id="clearBtn">清屏</button>
@@ -682,6 +754,14 @@ let activityVisible = false;
 // Help modal
 const helpModal = document.getElementById('helpModal');
 const closeHelpBtn = document.getElementById('closeHelp');
+
+// File upload
+const fileInputEl = document.getElementById('fileInput');
+const fileUploadBtn = document.getElementById('fileUploadBtn');
+const fileInfoEl = document.getElementById('fileInfo');
+const fileInfoNameEl = document.getElementById('fileInfoName');
+const fileInfoRemoveEl = document.getElementById('fileInfoRemove');
+let attachedFile = null;
 
 // Config inputs
 const apiKeyEl = document.getElementById('apiKey');
@@ -945,15 +1025,37 @@ function clearOperationLog() {
     operationLogEl.innerHTML = '<div class="log-title">操作日志</div><div class="log-empty">暂无操作记录</div>';
 }
 
+function readFileAsText(file) {
+    return new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onload = () => resolve(reader.result);
+        reader.onerror = () => reject(new Error('文件读取失败'));
+        reader.readAsText(file);
+    });
+}
+
 // Send Message
 async function sendMessage() {
-    const message = messageInputEl.value.trim();
-    if (!message) return;
+    let message = messageInputEl.value.trim();
+    if (!message && !attachedFile) return;
 
     // Check if API is configured
     if (apiStatusEl.textContent === '未配置') {
         alert('请先配置 API Key (点击状态栏 📂 按钮打开侧边栏)');
         return;
+    }
+
+    // If file is attached, read it and prepend to message
+    if (attachedFile) {
+        try {
+            const fileContent = await readFileAsText(attachedFile);
+            const fileBlock = `文件名：${attachedFile.name}\n内容：\n\`\`\`\n${fileContent}\n\`\`\``;
+            message = message ? `${fileBlock}\n\n${message}` : fileBlock;
+        } catch (e) {
+            updateLatestMessage(`❌ 文件读取失败: ${e.message}`);
+            return;
+        }
+        clearFile();
     }
 
     // Add user message to UI
@@ -1073,6 +1175,29 @@ function closeSidebar() {
         btnSidebar.style.background = 'var(--accent)';
     }
 }
+
+// File upload helpers
+function attachFile(file) {
+    attachedFile = file;
+    fileInfoNameEl.textContent = file.name;
+    fileInfoEl.classList.add('attached');
+    fileUploadBtn.textContent = '📎 更换文件';
+}
+
+function clearFile() {
+    attachedFile = null;
+    fileInputEl.value = '';
+    fileInfoEl.classList.remove('attached');
+    fileUploadBtn.textContent = '📎 添加文件';
+}
+
+fileUploadBtn.addEventListener('click', () => fileInputEl.click());
+fileInputEl.addEventListener('change', () => {
+    if (fileInputEl.files && fileInputEl.files[0]) {
+        attachFile(fileInputEl.files[0]);
+    }
+});
+fileInfoRemoveEl.addEventListener('click', clearFile);
 
 // Event Listeners
 sendBtn.addEventListener('click', sendMessage);
