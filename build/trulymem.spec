@@ -37,7 +37,7 @@ if os.path.exists(templates_dir):
             datas.append((os.path.join(root, f), 'ui/templates'))
 
 # Web API 脚本（以便子进程模式回退使用）
-web_api_src = os.path.join(project_root, 'web_api.py')
+web_api_src = os.path.join(project_root, 'core', 'web_api.py')
 if os.path.exists(web_api_src):
     datas.append((web_api_src, '.'))
 
