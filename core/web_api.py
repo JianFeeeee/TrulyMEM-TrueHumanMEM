@@ -150,14 +150,22 @@ def admin_required(f):
 @login_required
 def index():
     """默认首页 - 星图页面"""
-    return app.send_static_file('graph.html')
+    resp = app.send_static_file('graph.html')
+    resp.headers['Cache-Control'] = 'no-cache, no-store, must-revalidate'
+    resp.headers['Pragma'] = 'no-cache'
+    resp.headers['Expires'] = '0'
+    return resp
 
 
 @app.route('/graph.html')
 @login_required
 def graph_html():
     """返回星图页面"""
-    return app.send_static_file('graph.html')
+    resp = app.send_static_file('graph.html')
+    resp.headers['Cache-Control'] = 'no-cache, no-store, must-revalidate'
+    resp.headers['Pragma'] = 'no-cache'
+    resp.headers['Expires'] = '0'
+    return resp
 
 # 全局服务器和客户端实例
 backend_server: BackendServer = None
