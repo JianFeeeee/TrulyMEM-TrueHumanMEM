@@ -17,6 +17,7 @@ venv/
 .venv/
 dist/
 build/trulymem/
+build/trulymem/*
 *.db
 task_archive/
 ts/task_archive/
