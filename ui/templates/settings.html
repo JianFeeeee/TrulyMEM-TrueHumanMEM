@@ -29,6 +29,7 @@
         @keyframes twinkle { 0% { opacity: 0.5; } 100% { opacity: 1; } }
         .settings-container {
             position: relative; z-index: 1; width: 480px; padding: 40px;
+            padding-bottom: max(40px, calc(40px + env(safe-area-inset-bottom)));
             background: rgba(10, 10, 26, 0.9);
             border-radius: 12px;
             border: 1px solid rgba(100, 100, 255, 0.3);
@@ -287,7 +288,7 @@
             <button class="btn" id="saveSslConfigBtn">保 存 HTTPS 配 置</button>
             <div id="sslStatus" style="text-align:center;font-size:12px;color:#666688;margin-top:5px;"></div>
             <div style="text-align:center;font-size:11px;color:#555577;margin-top:5px;">
-                <i class="fas fa-info-circle"></i> 修改后需重启服务生效：<code>systemctl restart trulymem-web</code>
+                <i class="fas fa-sync-alt"></i> 保存后服务将自动重启，无需手动操作
             </div>
         </div>
 
