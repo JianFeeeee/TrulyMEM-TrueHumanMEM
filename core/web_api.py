@@ -82,31 +82,69 @@ _last_cleanup = time.time()
 
 
 # Web 服务配置（仅 SECRET_KEY 保留在 json 文件，用户信息在数据库）
-def load_secret_key():
+def _find_config_path():
+    """查找已有的 web_config.json，或返回默认路径"""
     import json
-    defaults = {"SECRET_KEY": "trulymem-secret-key-2026"}
     search_paths = [
         os.path.join(os.path.dirname(os.path.abspath(__file__)), 'web_config.json'),
         os.path.join(os.getcwd(), 'web_config.json'),
         os.path.join(os.path.expanduser("~"), ".trulymem", 'web_config.json'),
     ]
-    for config_path in search_paths:
-        if os.path.exists(config_path):
-            try:
-                with open(config_path, 'r', encoding='utf-8') as f:
-                    file_config = json.load(f)
-                    if "SECRET_KEY" in file_config:
-                        defaults["SECRET_KEY"] = file_config["SECRET_KEY"]
-                        break
-            except Exception:
-                continue
+    for p in search_paths:
+        if os.path.exists(p):
+            return p
+    return search_paths[0]
+
+
+def load_web_config():
+    """加载完整 web_config.json"""
+    import json
+    defaults = {
+        "SECRET_KEY": "trulymem-secret-key-2026",
+        "ssl_enabled": False,
+        "ssl_cert_path": "",
+        "ssl_key_path": "",
+    }
+    config_path = _find_config_path()
+    if os.path.exists(config_path):
+        try:
+            with open(config_path, 'r', encoding='utf-8') as f:
+                file_config = json.load(f)
+                for k in defaults:
+                    if k in file_config:
+                        defaults[k] = file_config[k]
+        except Exception:
+            pass
     return defaults
 
-WEB_CONFIG = load_secret_key()
+
+def save_web_config(updates: dict) -> bool:
+    """更新并保存 web_config.json"""
+    import json
+    config_path = _find_config_path()
+    # 读取已有配置
+    current = {}
+    if os.path.exists(config_path):
+        try:
+            with open(config_path, 'r', encoding='utf-8') as f:
+                current = json.load(f)
+        except Exception:
+            pass
+    current.update(updates)
+    try:
+        os.makedirs(os.path.dirname(config_path), exist_ok=True)
+        with open(config_path, 'w', encoding='utf-8') as f:
+            json.dump(current, f, ensure_ascii=False, indent=2)
+        return True
+    except Exception:
+        return False
+
+
+WEB_CONFIG = load_web_config()
 
 _ui_dir = os.path.join(os.path.dirname(__file__), '..', 'ui')
 app = Flask(__name__, static_folder=os.path.join(_ui_dir, 'static'), static_url_path='', template_folder=os.path.join(_ui_dir, 'templates'))
-app.secret_key = WEB_CONFIG["SECRET_KEY"]
+app.secret_key = WEB_CONFIG.get("SECRET_KEY", "trulymem-secret-key-2026")
 app.permanent_session_lifetime = timedelta(days=7)
 CORS(app, supports_credentials=True)  # 启用跨域支持，支持 session cookies
 
@@ -559,6 +597,49 @@ def web_settings_config():
     return jsonify({"success": False, "error": "没有需要更新的配置"}), 400
 
 
+@app.route('/api/ssl/config', methods=['GET', 'POST'])
+@api_login_required
+def web_ssl_config():
+    """获取/更新 SSL 配置（服务器级别，写入 web_config.json，重启后生效）"""
+    if request.method == 'GET':
+        cfg = load_web_config()
+        return jsonify({
+            "success": True,
+            "ssl_enabled": cfg.get('ssl_enabled', False),
+            "ssl_cert_path": cfg.get('ssl_cert_path', ''),
+            "ssl_key_path": cfg.get('ssl_key_path', ''),
+        })
+
+    data = request.get_json() or {}
+    updates = {}
+
+    # 提取有用的字段
+    for key in ('ssl_enabled', 'ssl_cert_path', 'ssl_key_path'):
+        if key in data:
+            updates[key] = data[key]
+
+    if not updates:
+        return jsonify({"success": False, "error": "没有需要更新的字段"}), 400
+
+    # 如果启用 SSL，验证证书路径
+    if updates.get('ssl_enabled'):
+        cert_path = updates.get('ssl_cert_path') or load_web_config().get('ssl_cert_path', '')
+        key_path = updates.get('ssl_key_path') or load_web_config().get('ssl_key_path', '')
+        if not os.path.exists(cert_path):
+            return jsonify({"success": False, "error": f"证书文件不存在: {cert_path}"}), 400
+        if not os.path.exists(key_path):
+            return jsonify({"success": False, "error": f"密钥文件不存在: {key_path}"}), 400
+
+    ok = save_web_config(updates)
+    if ok:
+        return jsonify({
+            "success": True,
+            "message": "SSL 配置已保存，重启服务后生效",
+            **updates
+        })
+    return jsonify({"success": False, "error": "写入配置文件失败"}), 500
+
+
 @app.errorhandler(404)
 def not_found(e):
     """404 处理"""
@@ -829,8 +910,25 @@ def run_web_server(port: int = 4096, host: str = '0.0.0.0') -> None:
         global _http_server
         try:
             from werkzeug.serving import make_server
-            _http_server = make_server(host, port, app, threaded=True)
-            print(f"Web API 服务启动在 http://{host}:{port}")
+            import ssl
+
+            # 尝试加载 SSL 配置
+            cfg = load_web_config()
+            ssl_enabled = cfg.get('ssl_enabled', False)
+            ssl_context = None
+            if ssl_enabled:
+                cert_path = cfg.get('ssl_cert_path', '')
+                key_path = cfg.get('ssl_key_path', '')
+                if cert_path and os.path.exists(cert_path) and key_path and os.path.exists(key_path):
+                    ssl_context = (cert_path, key_path)
+                    print(f"🔒 HTTPS 已启用：cert={cert_path}")
+                else:
+                    print(f"⚠️  SSL 已启用但证书路径无效：cert={cert_path}, key={key_path}")
+                    print("   回退到 HTTP")
+
+            _http_server = make_server(host, port, app, threaded=True, ssl_context=ssl_context)
+            proto = "https" if ssl_context else "http"
+            print(f"Web API 服务启动在 {proto}://{host}:{port}")
             _http_server.serve_forever()
         except Exception as e:
             print(f"Web 服务启动失败: {e}")

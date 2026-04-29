@@ -263,6 +263,34 @@
             <button type="submit" class="btn" id="changePwdBtn">更 新 密 码</button>
         </form>
 
+        <!-- HTTPS 配置 -->
+        <div class="section-title"><i class="fas fa-lock"></i> HTTPS / SSL</div>
+        <div class="toggle-row">
+            <div>
+                <div class="toggle-label">启用 HTTPS</div>
+                <div class="toggle-desc">开启后使用 HTTPS 协议，需提供有效的证书和密钥文件</div>
+            </div>
+            <label class="toggle-switch">
+                <input type="checkbox" id="enableSslToggle">
+                <span class="toggle-slider"></span>
+            </label>
+        </div>
+        <div id="sslCertFields" style="margin-top:12px;">
+            <div class="form-group">
+                <label for="ssl_cert_path">SSL 证书路径</label>
+                <input type="text" id="ssl_cert_path" placeholder="/etc/letsencrypt/live/example.com/fullchain.pem">
+            </div>
+            <div class="form-group">
+                <label for="ssl_key_path">SSL 密钥路径</label>
+                <input type="text" id="ssl_key_path" placeholder="/etc/letsencrypt/live/example.com/privkey.pem">
+            </div>
+            <button class="btn" id="saveSslConfigBtn">保 存 HTTPS 配 置</button>
+            <div id="sslStatus" style="text-align:center;font-size:12px;color:#666688;margin-top:5px;"></div>
+            <div style="text-align:center;font-size:11px;color:#555577;margin-top:5px;">
+                <i class="fas fa-info-circle"></i> 修改后需重启服务生效：<code>systemctl restart trulymem-web</code>
+            </div>
+        </div>
+
         <!-- TUI 服务控制 -->
         <div class="section-title"><i class="fas fa-terminal"></i> TUI 终端服务</div>
         <div class="toggle-row">
@@ -367,6 +395,21 @@
                 }
             } catch (e) {
                 document.getElementById('tuiStatus').innerHTML = '<i class="fas fa-exclamation-triangle" style="color:var(--warning-color,#f59e0b)"></i> 无法加载配置';
+            }
+        }
+
+            // 加载 SSL 配置
+            try {
+                const sslResp = await fetch('/api/ssl/config');
+                const sslData = await sslResp.json();
+                if (sslData.success) {
+                    document.getElementById('enableSslToggle').checked = sslData.ssl_enabled === true;
+                    document.getElementById('ssl_cert_path').value = sslData.ssl_cert_path || '';
+                    document.getElementById('ssl_key_path').value = sslData.ssl_key_path || '';
+                    toggleSslFields(sslData.ssl_enabled === true);
+                }
+            } catch (e) {
+                // SSL 端点可能不支持
             }
         }
 
@@ -615,6 +658,58 @@
             origLoadConfig();
             loadApiConfig();
         };
+
+        // SSL 开关 — 显示/隐藏证书路径
+        const sslToggle = document.getElementById('enableSslToggle');
+        const sslCertFields = document.getElementById('sslCertFields');
+        function toggleSslFields(enabled) {
+            sslCertFields.style.display = enabled ? '' : 'none';
+        }
+
+        sslToggle.addEventListener('change', function() {
+            toggleSslFields(this.checked);
+        });
+
+        // 保存 SSL 配置
+        document.getElementById('saveSslConfigBtn').addEventListener('click', async function() {
+            const enabled = sslToggle.checked;
+            const certPath = document.getElementById('ssl_cert_path').value.trim();
+            const keyPath = document.getElementById('ssl_key_path').value.trim();
+
+            if (enabled && (!certPath || !keyPath)) {
+                document.getElementById('sslStatus').innerHTML = '<i class="fas fa-exclamation-triangle" style="color:#ff6b6b"></i> 启用 HTTPS 必须填写证书和密钥路径';
+                return;
+            }
+
+            const btn = this;
+            btn.disabled = true;
+            btn.textContent = '保存中...';
+            document.getElementById('sslStatus').innerHTML = '<i class="fas fa-spinner fa-spin" style="color:#4488ff"></i> 保存中...';
+
+            try {
+                const resp = await fetch('/api/ssl/config', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        ssl_enabled: enabled,
+                        ssl_cert_path: certPath,
+                        ssl_key_path: keyPath
+                    })
+                });
+                const data = await resp.json();
+                if (data.success) {
+                    document.getElementById('sslStatus').innerHTML = '<i class="fas fa-check-circle" style="color:#22c55e"></i> ' + (data.message || '配置已保存');
+                    showSuccess('HTTPS 配置已保存');
+                } else {
+                    document.getElementById('sslStatus').innerHTML = '<i class="fas fa-exclamation-triangle" style="color:#ff6b6b"></i> ' + (data.error || '保存失败');
+                }
+            } catch (e) {
+                document.getElementById('sslStatus').innerHTML = '<i class="fas fa-exclamation-triangle" style="color:#ff6b6b"></i> 网络错误';
+            } finally {
+                btn.disabled = false;
+                btn.textContent = '保 存 HTTPS 配 置';
+            }
+        });
 
         // TUI 开关
         document.getElementById('enableTuiToggle').addEventListener('change', async function() {
