@@ -51,6 +51,9 @@ class GraphMemoryApp(App):
             initial_config.api_key = api_config.get("api_key", "")
             initial_config.base_url = api_config.get("base_url", "https://api.deepseek.com")
             initial_config.model = api_config.get("model", "deepseek-v4-flash")
+            initial_config.enable_web = api_config.get("enable_web", False)
+            initial_config.web_port = api_config.get("web_port", 4096)
+            initial_config.enable_tui = api_config.get("enable_tui", True)
             
             tool_limits = settings_data.get("tool_limits", {})
             initial_config.persona_update_max = tool_limits.get("persona_update_max", 1)
@@ -144,6 +147,23 @@ class GraphMemoryApp(App):
         welcome_msg += f"API Key: {'已配置' if self._api_configured else '未配置'}\n\n输入消息开始对话"
         welcome = Message(role="assistant", content=welcome_msg)
         history.add_message(welcome)
+        
+        # 自动启动Web服务（如果配置中启用了）
+        if self._backend_client:
+            settings_result = self._backend_client.get_settings()
+            settings_data = settings_result.get("data", {})
+            api_config = settings_data.get("api_config", {})
+            enable_web = api_config.get("enable_web", False)
+            web_port = api_config.get("web_port", 4096)
+            
+            # 更新状态栏的Web服务状态
+            try:
+                status_bar.set_web_status(self._web_running, web_port if self._web_running else 0)
+            except:
+                pass
+            
+            if enable_web:
+                self._start_web_server(web_port)
 
     def _start_web_server(self, port: int = 4096) -> None:
         """在当前进程通过线程启动 Web 服务（无需子进程）"""
@@ -153,10 +173,20 @@ class GraphMemoryApp(App):
 
         try:
             from web_api import run_web_server
+            from .widgets.status_bar import StatusBar
+            
             run_web_server(port=port)
             self._web_running = True
             if self._backend_client:
                 self._backend_client.report_web_status(True, port)
+            
+            # 更新状态栏
+            try:
+                status_bar = self.query_one(StatusBar)
+                status_bar.set_web_status(True, port)
+            except:
+                pass
+            
             self.notify(f"Web 服务已启动 → http://0.0.0.0:{port}", title="Web 服务")
         except Exception as e:
             self.notify(f"启动 Web 服务失败: {e}", severity="error")
@@ -166,12 +196,22 @@ class GraphMemoryApp(App):
         if self._web_running:
             try:
                 from web_api import stop_web_server
+                from .widgets.status_bar import StatusBar
+                
                 stop_web_server()
             except Exception:
                 pass
             self._web_running = False
             if self._backend_client:
                 self._backend_client.report_web_status(False, 0)
+            
+            # 更新状态栏
+            try:
+                status_bar = self.query_one(StatusBar)
+                status_bar.set_web_status(False)
+            except:
+                pass
+            
             self.notify("Web 服务已停止", title="Web 服务")
 
     def on_unmount(self) -> None:
@@ -370,6 +410,12 @@ class GraphMemoryApp(App):
                     self._start_web_server(config.web_port)
                 else:
                     self._stop_web_server()
+                
+                # 更新状态栏的Web服务状态
+                try:
+                    status_bar.set_web_status(self._web_running, config.web_port if self._web_running else 0)
+                except:
+                    pass
 
                 self.notify("✅ 配置已保存并生效", title="配置成功", severity="information")
             else:

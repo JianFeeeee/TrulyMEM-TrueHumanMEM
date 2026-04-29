@@ -21,6 +21,17 @@ from core.activity_recorder import get_recorder
 from core.embedded_db import EmbeddedGraphDB
 
 
+def get_resource_path(relative_path):
+    """获取资源文件的绝对路径，兼容开发环境和PyInstaller打包环境"""
+    if hasattr(sys, 'frozen'):
+        # PyInstaller打包后的环境
+        base_path = sys._MEIPASS
+    else:
+        # 开发环境
+        base_path = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+    return os.path.join(base_path, relative_path)
+
+
 # 登录安全限制
 LOGIN_MAX_ATTEMPTS = 5          # 最大尝试次数
 LOGIN_WAIT_MINUTES = 5           # 超过次数后等待分钟数
@@ -142,7 +153,7 @@ def save_web_config(updates: dict) -> bool:
 
 WEB_CONFIG = load_web_config()
 
-_ui_dir = os.path.join(os.path.dirname(__file__), '..', 'ui')
+_ui_dir = get_resource_path('ui')
 app = Flask(__name__, static_folder=os.path.join(_ui_dir, 'static'), static_url_path='', template_folder=os.path.join(_ui_dir, 'templates'))
 app.secret_key = WEB_CONFIG.get("SECRET_KEY", "trulymem-secret-key-2026")
 app.permanent_session_lifetime = timedelta(days=7)
