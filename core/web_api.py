@@ -149,8 +149,8 @@ def admin_required(f):
 @app.route('/')
 @login_required
 def index():
-    """返回聊天页面（默认首页）"""
-    return app.send_static_file('index.html')
+    """默认首页 - 星图页面"""
+    return app.send_static_file('graph.html')
 
 
 @app.route('/graph.html')
@@ -158,13 +158,6 @@ def index():
 def graph_html():
     """返回星图页面"""
     return app.send_static_file('graph.html')
-
-
-@app.route('/chat')
-@login_required
-def chat():
-    """返回聊天页面"""
-    return app.send_static_file('index.html')
 
 # 全局服务器和客户端实例
 backend_server: BackendServer = None
