@@ -69,8 +69,9 @@ class GraphMemoryApp(App):
         from core.migrate import need_migration, is_migrated
         
         # 检查是否需要登录
-        migrated = is_migrated()
-        need_login = migrated or not need_migration()
+        # 如果已迁移，需要登录验证用户
+        # 如果需要迁移，显示迁移登录界面
+        need_login = is_migrated() or need_migration()
         
         if need_login and not self.login_user:
             # 显示登录界面
@@ -84,6 +85,10 @@ class GraphMemoryApp(App):
         """登录成功后调用"""
         self.login_user = username
         self.login_user_info = user_info
+        
+        # 关闭登录界面
+        self.pop_screen()
+        
         # 更新 config section 的 admin 权限
         from .widgets.config_section import ConfigSection
         try:
@@ -295,7 +300,10 @@ class GraphMemoryApp(App):
         api_config = {
             "api_key": config.api_key,
             "base_url": config.base_url,
-            "model": getattr(config, 'model', 'deepseek-v4-flash')
+            "model": getattr(config, 'model', 'deepseek-v4-flash'),
+            "enable_web": getattr(config, 'enable_web', False),
+            "enable_tui": getattr(config, 'enable_tui', True),
+            "web_port": getattr(config, 'web_port', 4096),
         }
         
         tool_limits = {

@@ -61,6 +61,45 @@ ConfigSection Input {
     color: $text;
 }
 
+ConfigSection Checkbox {
+    margin: 1 0;
+}
+
+/* Admin sections */
+#admin-web-login-section,
+#admin-web-service-section,
+#admin-tui-service-section {
+    display: block;
+}
+
+/* Login Screen */
+#login_container,
+#migration_container {
+    width: 60;
+    height: auto;
+    padding: 2;
+    background: $surface;
+    border: solid $primary;
+}
+
+#login_title,
+#migration_title {
+    color: $primary;
+    text-style: bold;
+    margin: 0 0 1 0;
+}
+
+#migration_subtitle {
+    color: $text-muted;
+    margin: 0 0 1 0;
+}
+
+#login_message,
+#migration_message {
+    color: $warning;
+    margin: 1 0 0 0;
+}
+
 /* Other Components */
 OperationLog {
     background: $surface-darken-1;
