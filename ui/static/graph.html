@@ -298,10 +298,10 @@
     text-align: right;
 }
 .chat-input-area {
-    padding: 12px 16px;
+    padding: 10px 12px;
     border-top: 1px solid rgba(100, 100, 255, 0.15);
     display: flex;
-    gap: 8px;
+    gap: 6px;
     flex-shrink: 0;
 }
 .chat-input-area input {
@@ -331,23 +331,6 @@
 .chat-input-area button:hover {
     background: rgba(68, 136, 255, 0.5);
 }
-.chat-input-area textarea {
-    flex: 1;
-    background: rgba(20, 20, 40, 0.9);
-    border: 1px solid rgba(100, 100, 255, 0.2);
-    color: #eee;
-    padding: 10px 14px;
-    border-radius: 6px;
-    font-family: 'Courier New', monospace;
-    font-size: 13px;
-    outline: none;
-    resize: none;
-    min-height: 40px;
-    max-height: 120px;
-}
-.chat-input-area textarea:focus {
-    border-color: rgba(68, 136, 255, 0.5);
-}
 .attach-btn {
     background: rgba(68, 136, 255, 0.2);
     border: 1px solid rgba(68, 136, 255, 0.3);
@@ -369,42 +352,44 @@
 .chat-files-container {
     display: flex;
     flex-wrap: wrap;
-    gap: 6px;
-    padding: 8px 16px;
-    border-top: 1px solid rgba(100, 100, 255, 0.1);
-    background: rgba(10, 10, 25, 0.5);
+    gap: 3px;
+    padding: 2px 12px 6px;
+    min-height: 0;
 }
 .chat-file-chip {
     display: flex;
     align-items: center;
-    gap: 6px;
-    background: rgba(40, 40, 80, 0.8);
-    border: 1px solid rgba(100, 100, 255, 0.25);
-    border-radius: 4px;
-    padding: 4px 8px;
-    font-size: 12px;
+    gap: 4px;
+    background: rgba(40, 40, 80, 0.7);
+    border: 1px solid rgba(100, 100, 255, 0.2);
+    border-radius: 3px;
+    padding: 2px 6px;
+    font-size: 11px;
     color: #dde;
-    max-width: 200px;
+    max-width: 160px;
+    cursor: default;
 }
 .chat-file-chip .file-icon {
     color: #7af;
     flex-shrink: 0;
+    font-size: 10px;
 }
 .chat-file-chip .file-name {
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
     flex: 1;
+    font-size: 11px;
 }
 .chat-file-chip .file-size {
-    color: #889;
-    font-size: 10px;
+    color: #667;
+    font-size: 9px;
     flex-shrink: 0;
 }
 .chat-file-chip .file-remove {
     color: #f66;
     cursor: pointer;
-    font-size: 14px;
+    font-size: 12px;
     line-height: 1;
     flex-shrink: 0;
 }
@@ -412,22 +397,8 @@
     color: #f33;
 }
 .chat-messages.drag-over {
-    background: rgba(68, 136, 255, 0.15);
-    border: 2px dashed rgba(68, 136, 255, 0.6);
-}
-.chat-messages.drag-over::after {
-    content: '📄 松开以上传文件';
-    position: absolute;
-    top: 50%; left: 50%;
-    transform: translate(-50%, -50%);
-    background: rgba(10, 10, 40, 0.9);
+    background: rgba(68, 136, 255, 0.12);
     border: 2px dashed rgba(68, 136, 255, 0.5);
-    color: #4488ff;
-    padding: 20px 40px;
-    border-radius: 12px;
-    font-size: 18px;
-    z-index: 10;
-    pointer-events: none;
 }
 .chat-status {
     padding: 8px 16px;
@@ -533,7 +504,7 @@
             <div class="chat-welcome">你好！我是 TrulyMEM，你的图记忆助手~</div>
         </div>
         <div class="chat-input-area">
-            <textarea id="chatInput" placeholder="输入消息..." autocomplete="off" rows="1"></textarea>
+            <input type="text" id="chatInput" placeholder="输入消息..." autocomplete="off">
             <button class="attach-btn" id="attachBtn" title="添加文件">📎</button>
             <button id="chatSendBtn">发送</button>
         </div>
@@ -1915,12 +1886,6 @@ function smoothReposition() {
                 chatFilesContainer.appendChild(chip);
             });
         }
-
-        // 输入框自适应高度
-        chatInput.addEventListener('input', () => {
-            chatInput.style.height = 'auto';
-            chatInput.style.height = Math.min(chatInput.scrollHeight, 120) + 'px';
-        });
 
         attachBtn.addEventListener('click', () => fileInput.click());
 
