@@ -149,8 +149,8 @@ def admin_required(f):
 @app.route('/')
 @login_required
 def index():
-    """返回星图页面（默认首页）"""
-    return app.send_static_file('graph.html')
+    """返回聊天页面（默认首页）"""
+    return app.send_static_file('index.html')
 
 
 @app.route('/graph.html')
