@@ -249,9 +249,16 @@ export class GraphDatabase {
         return await this.store.insert('nodes', bucket);
     }
 
-    async recall(queryIntent: string, seedEntities?: string[], depth: number = 2, sessionFilter?: string): Promise<RecallResult> {
+    async recall(queryIntent: string, seedEntities?: string[], depth: number = 2, timeRange?: TimeRangeParams, sessionFilter?: string): Promise<RecallResult> {
         if (!this.store) {
             return { entities: [], relations: [], message: 'Database not initialized' };
+        }
+        // 计算时间范围过滤
+        let minDateBucket: string | undefined;
+        if (timeRange && timeRange.days && timeRange.days > 0) {
+            const cutoff = new Date();
+            cutoff.setDate(cutoff.getDate() - timeRange.days);
+            minDateBucket = cutoff.toISOString().slice(0, 10).replace(/-/g, '');
         }
         const keywords = queryIntent.toLowerCase().replace(/,/g, ' ').split(/\s+/).filter(w => w.trim());
         const allEntities: BfsEntity[] = [];
@@ -318,10 +325,14 @@ export class GraphDatabase {
         const allRelations: RelationQueryResult[] = [];
         let currentLayerIds = new Set<number>(entityIds);
         const visitedEntityIds = new Set<number>(entityIds);
+        // 批量预加载所有相关节点名称，减少 N+1 查询
+        const nodeNameCache = new Map<number, {name: string, type: string, mentions: number}>();
+        // 批量预加载所有相关节点名称，减少 N+1 查询
+        const nodeNameCache = new Map<number, {name: string, type: string, mentions: number}>();
 
         for (let layer = 0; layer < depth && currentLayerIds.size > 0; layer++) {
             const currentIds = Array.from(currentLayerIds);
-            const relations = await this.getRelationsForNodes(currentIds, sessionFilter);
+            const relations = await this.getRelationsForNodes(currentIds, sessionFilter, minDateBucket);
             const nextLayerIds = new Set<number>();
 
             for (const rel of relations) {
@@ -337,16 +348,30 @@ export class GraphDatabase {
             for (const newId of nextLayerIds) {
                 if (!visitedEntityIds.has(newId)) {
                     visitedEntityIds.add(newId);
-                    const nodeData = await this.getNodeById(newId);
-                    if (nodeData) {
+                    // 优先从缓存获取，避免 N+1 查询
+                    const cached = nodeNameCache.get(newId);
+                    if (cached) {
                         const addedEntity: BfsEntity = {
-                            id: nodeData.id,
-                            name: nodeData.name,
-                            type: nodeData.type,
-                            mentions: nodeData.mentions,
+                            id: newId,
+                            name: cached.name,
+                            type: cached.type,
+                            mentions: cached.mentions,
                             depth: layer + 1
                         };
                         allEntities.push(addedEntity);
+                    } else {
+                        const nodeData = await this.getNodeById(newId);
+                        if (nodeData) {
+                            nodeNameCache.set(newId, {name: nodeData.name, type: nodeData.type, mentions: nodeData.mentions});
+                            const addedEntity: BfsEntity = {
+                                id: nodeData.id,
+                                name: nodeData.name,
+                                type: nodeData.type,
+                                mentions: nodeData.mentions,
+                                depth: layer + 1
+                            };
+                            allEntities.push(addedEntity);
+                        }
                     }
                 }
             }
@@ -402,21 +427,32 @@ export class GraphDatabase {
         return null;
     }
 
-    private async getRelationsForNodes(nodeIds: number[], sessionFilter?: string): Promise<RelationQueryResult[]> {
+    private async getRelationsForNodes(nodeIds: number[], sessionFilter?: string, minDateBucket?: string): Promise<RelationQueryResult[]> {
         if (!this.store || nodeIds.length === 0) return [];
         const relations: RelationQueryResult[] = [];
+        // 批量预加载所有节点名称到缓存，避免 N+1 查询
+        const nodeNameCache = new Map<number, {name: string, type: string, mentions: number}>();
+        for (const id of nodeIds) {
+            const node = await this.getNodeById(id);
+            if (node) {
+                nodeNameCache.set(id, {name: node.name, type: node.type, mentions: node.mentions});
+            }
+        }
         for (const nodeId of nodeIds) {
             const predicates: relationalStore.RdbPredicates = new relationalStore.RdbPredicates('relations');
             predicates.equalTo('status', 'active').and().equalTo('subject_id', nodeId);
             if (sessionFilter) {
                 predicates.and().equalTo('session_id', sessionFilter);
             }
+            if (minDateBucket) {
+                predicates.and().greaterThanOrEqualTo('date_bucket', minDateBucket);
+            }
             const resultSet: relationalStore.ResultSet = await this.store.query(predicates, ['subject_id', 'object_id', 'relation', 'weight', 'session_id', 'turn_id']);
             while (resultSet.goToNextRow()) {
                 const sourceId = resultSet.getLong(resultSet.getColumnIndex('subject_id'));
                 const targetId = resultSet.getLong(resultSet.getColumnIndex('object_id'));
-                const sourceNode = await this.getNodeById(sourceId);
-                const targetNode = await this.getNodeById(targetId);
+                const sourceNode = nodeNameCache.get(sourceId) || await this.getNodeById(sourceId);
+                const targetNode = nodeNameCache.get(targetId) || await this.getNodeById(targetId);
                 if (sourceNode && targetNode) {
                     relations.push({
                         sourceId,
@@ -438,12 +474,15 @@ export class GraphDatabase {
             if (sessionFilter) {
                 predicates2.and().equalTo('session_id', sessionFilter);
             }
+            if (minDateBucket) {
+                predicates2.and().greaterThanOrEqualTo('date_bucket', minDateBucket);
+            }
             const resultSet2: relationalStore.ResultSet = await this.store.query(predicates2, ['subject_id', 'object_id', 'relation', 'weight', 'session_id', 'turn_id']);
             while (resultSet2.goToNextRow()) {
                 const sourceId = resultSet2.getLong(resultSet2.getColumnIndex('subject_id'));
                 const targetId = resultSet2.getLong(resultSet2.getColumnIndex('object_id'));
-                const sourceNode = await this.getNodeById(sourceId);
-                const targetNode = await this.getNodeById(targetId);
+                const sourceNode = nodeNameCache.get(sourceId) || await this.getNodeById(sourceId);
+                const targetNode = nodeNameCache.get(targetId) || await this.getNodeById(targetId);
                 if (sourceNode && targetNode) {
                     relations.push({
                         sourceId,
