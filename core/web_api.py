@@ -808,7 +808,8 @@ def get_graph():
     
     # 查询关系（边）
     cursor.execute("""
-        SELECT r.id, r.source_id, r.target_id, r.relation_type, r.confidence, r.status
+        SELECT r.id, r.source_id, r.target_id, r.relation_type,
+               r.confidence, r.status, r.created_at, r.updated_at
         FROM relations r
         WHERE r.status = 'active'
     """)
@@ -821,7 +822,9 @@ def get_graph():
             "target": row['target_id'],
             "relation_type": row['relation_type'],
             "confidence": row['confidence'],
-            "status": row['status']
+            "status": row['status'],
+            "created_at": row['created_at'],
+            "updated_at": row['updated_at']
         })
     
     return jsonify({
