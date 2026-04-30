@@ -258,8 +258,24 @@ MEMORY_TOOLS = [
 - 按时间范围查看最近归档的历史
 
 【注意】
+- 只返回 status=archived 的原始关系记录，不包含活跃的「归档摘要」
 - days 和 keyword 可以单独使用，也可以组合使用
-- 不加任何参数时返回最近的所有归档记录
+- 不加任何参数时返回所有归档记录
+
+【示例】
+```
+# 不传参数：查全部归档
+memory_query_archived({})
+
+# 最近7天
+memory_query_archived({"days": 7})
+
+# 关键词过滤
+memory_query_archived({"keyword": "任务"})
+
+# 组合使用
+memory_query_archived({"days": 30, "keyword": "配置"})
+```
 """,
             "parameters": {
                 "type": "object",
