@@ -5,7 +5,7 @@
  */
 import web_webview from '@ohos.web.webview';
 import { GraphDatabase, RecallEntity } from '../model/GraphDatabase';
-import { GraphMemoryService } from '../services/GraphMemoryService';
+import { GraphMemoryService, ConnectionItem, NodeDetailInfo } from '../services/GraphMemoryService';
 
 // ========= 图数据结构定义 =========
 
@@ -24,13 +24,7 @@ interface GraphEdgeItem {
     relation: string;
 }
 
-interface NodeDetailInfo {
-    name: string;
-    type: string;
-    mention_count: number;
-    connection_count: number;
-    connections: Array<{ type: string; target_name: string }>;
-}
+// NodeDetailInfo 已从 GraphMemoryService 导入
 
 // ========= WebView 原生桥接 =========
 
@@ -218,9 +212,7 @@ export struct GraphPage {
                 .javaScriptAccess(true)
                 .width('100%')
                 .height('100%')
-                .zoomAccess(true) // 启用缩放
-                // 捏合手势支持 - 双指缩放
-                .pinchGesture(PinchGesture({ fingers: 2 }))
+                .zoomAccess(true) // 启用缩放（自带双指捏合）
                 .onPageEnd(() => {
                     this.pushGraphDataToWebView();
                 })
@@ -249,7 +241,6 @@ export struct GraphPage {
                     })
             }
             .width('100%')
-            .alignContent(Alignment.Top)
             .position({ x: 0, y: 0 })
             .zIndex(10)
 
@@ -281,7 +272,7 @@ export struct GraphPage {
                                 .fontColor('#8888aa')
                                 .margin({ top: 10, bottom: 5 })
                             List() {
-                                ForEach(this.selectedNodeDetail.connections, (conn: { type: string; target_name: string }) => {
+                                ForEach(this.selectedNodeDetail.connections, (conn: ConnectionItem) => {
                                     ListItem() {
                                         Text(conn.type + ': ' + conn.target_name)
                                             .fontSize(12)
