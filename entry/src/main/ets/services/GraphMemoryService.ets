@@ -429,6 +429,20 @@ export class GraphMemoryService {
         return cleanupResult;
     }
 
+    /**
+     * 查询已归档的记忆
+     * 对应 tools.memory_query_archived
+     */
+    async queryArchived(days?: number, keyword?: string): Promise<RelationQueryResult[]> {
+        try {
+            const result = await this.db.queryArchived(days, keyword);
+            return result;
+        } catch (e) {
+            console.error('queryArchived error: ' + JSON.stringify(e));
+            return [];
+        }
+    }
+
     // ========= 人设管理 =========
 
     /**
@@ -518,6 +532,27 @@ export class GraphMemoryService {
                 message: `清除人设失败: ${(e as Error).message || ''}`
             };
             return errorResult;
+        }
+    }
+
+    /**
+     * 删除单条人设属性
+     * 对应 tools.persona_remove
+     */
+    async personaRemove(attribute: string): Promise<PersonaResult> {
+        try {
+            // 将 attribute 转为关系名格式
+            const relationName = 'HAS_PERSONA_' + attribute.toUpperCase();
+            const result = await this.db.purge({ subject: PERSONA_NODE_NAME, relationType: relationName }, 'hard');
+            return {
+                success: result.deleted_count > 0,
+                message: result.deleted_count > 0 ? `已删除人设属性: ${attribute}` : `未找到人设属性: ${attribute}`
+            };
+        } catch (e) {
+            return {
+                success: false,
+                message: `删除人设属性失败: ${(e as Error).message || ''}`
+            };
         }
     }
 
