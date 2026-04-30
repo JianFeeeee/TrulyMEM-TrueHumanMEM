@@ -247,6 +247,36 @@ MEMORY_TOOLS = [
     {
         "type": "function",
         "function": {
+            "name": "memory_query_archived",
+            "description": """查询已归档的记忆。
+
+【使用场景】
+- 想了解之前归档过哪些记忆
+- 按关键词搜索归档内容
+- 按时间范围查看最近归档的历史
+
+【注意】
+- days 和 keyword 可以单独使用，也可以组合使用
+- 不加任何参数时返回最近的所有归档记录
+""",
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "days": {
+                        "type": "integer",
+                        "description": "最近N天内的归档记录，不指定则不限时间"
+                    },
+                    "keyword": {
+                        "type": "string",
+                        "description": "关键词，匹配实体名或关系类型"
+                    }
+                }
+            }
+        }
+    },
+    {
+        "type": "function",
+        "function": {
             "name": "context_rewrite",
             "description": """压缩本轮对话的工具调用上下文。将冗长的JSON工具结果提炼为简洁摘要。
 

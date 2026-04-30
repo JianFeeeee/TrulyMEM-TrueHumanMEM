@@ -69,6 +69,13 @@ def execute_tool(graph: Any, tool_name: str, arguments: dict) -> str:
             result = graph.cleanup(dry_run=arguments.get("dry_run", True))
             return json.dumps(result, ensure_ascii=False, default=str)
         
+        elif tool_name == "memory_query_archived":
+            days = arguments.get("days")
+            keyword = arguments.get("keyword", "")
+            recorder.record("query", tool_name, f"days={days}, keyword={keyword}")
+            result = graph.query_archived(days=days, keyword=keyword)
+            return json.dumps(result, ensure_ascii=False, default=str)
+        
         elif tool_name == "context_rewrite":
             result = execute_context_rewrite(graph, arguments)
             return json.dumps(result, ensure_ascii=False, default=str)

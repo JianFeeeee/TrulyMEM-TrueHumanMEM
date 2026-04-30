@@ -621,6 +621,74 @@ class EmbeddedGraphDB:
             "message": f"归档了 {archived} 条关系"
         }
     
+    def query_archived(self, days: int = None, keyword: str = "") -> Dict:
+        """
+        查询已归档的记忆
+        
+        Args:
+            days: 可选，最近N天内的归档记录
+            keyword: 可选，过滤包含指定关键词的实体名或关系
+        
+        Returns:
+            归档记录列表
+        """
+        cursor = self.conn.cursor()
+        
+        # 基础 SQL：查询已归档的关系及其关联实体
+        conditions = ["r.status = 'archived'"]
+        params = []
+        
+        # 时间范围过滤（最近N天）
+        if days is not None and days > 0:
+            conditions.append("r.updated_at >= datetime('now', ?)")
+            params.append(f'-{days} days')
+        
+        # 关键词过滤（匹配源实体名、目标实体名、关系类型任一）
+        if keyword:
+            # 先找到匹配的实体ID
+            cursor.execute("SELECT id FROM entities WHERE name LIKE ?", (f'%{keyword}%',))
+            matched_ids = [str(row['id']) for row in cursor.fetchall()]
+            
+            if matched_ids:
+                id_list = ','.join(matched_ids)
+                conditions.append(f"(r.source_id IN ({id_list}) OR r.target_id IN ({id_list}) OR r.relation_type LIKE ?)")
+                params.append(f'%{keyword}%')
+            else:
+                conditions.append("r.relation_type LIKE ?")
+                params.append(f'%{keyword}%')
+        
+        where_clause = " AND ".join(conditions)
+        
+        cursor.execute(f"""
+            SELECT r.id, r.relation_type, r.created_at, r.updated_at,
+                   e.name AS source_name, t.name AS target_name
+            FROM relations r
+            JOIN entities e ON r.source_id = e.id
+            JOIN entities t ON r.target_id = t.id
+            WHERE {where_clause}
+            ORDER BY r.updated_at DESC
+            LIMIT 200
+        """, params)
+        
+        rows = cursor.fetchall()
+        
+        results = []
+        for row in rows:
+            results.append({
+                "id": row['id'],
+                "source": row['source_name'],
+                "relation": row['relation_type'],
+                "target": row['target_name'],
+                "archived_at": row['updated_at'],
+                "created_at": row['created_at']
+            })
+        
+        return {
+            "archived_relations": results,
+            "total_relations": len(results),
+            "message": f"找到 {len(results)} 条归档关系"
+        }
+    
     def cleanup(self, dry_run: bool = True) -> Dict:
         """清理已删除数据"""
         cursor = self.conn.cursor()

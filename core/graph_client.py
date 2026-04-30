@@ -282,6 +282,49 @@ class Neo4jGraph:
             
             return {"archived_count": result.single()["archived"], "days": days}
     
+    def query_archived(self, days: int = None, keyword: str = "") -> dict:
+        """查询归档记忆"""
+        with self.driver.session() as session:
+            filters = []
+            params = {}
+            
+            filters.append("r.status = 'archived'")
+            
+            if days is not None and days > 0:
+                filters.append("r.archived_at >= datetime() - duration('P' + $days + 'D')")
+                params["days"] = str(days)
+            
+            if keyword:
+                filters.append("(e.name CONTAINS $keyword OR t.name CONTAINS $keyword OR r.type CONTAINS $keyword)")
+                params["keyword"] = keyword
+            
+            where = " AND ".join(filters)
+            
+            result = session.run(f"""
+            MATCH (e:Entity)-[r:RELATES]->(t:Entity)
+            WHERE {where}
+            RETURN e.name as source, r.type as relation, t.name as target,
+                   r.archived_at as archived_at, r.created_at as created_at
+            ORDER BY r.archived_at DESC
+            LIMIT 200
+            """, params)
+            
+            records = []
+            for row in result:
+                records.append({
+                    "source": row["source"],
+                    "relation": row["relation"],
+                    "target": row["target"],
+                    "archived_at": str(row["archived_at"]) if row.get("archived_at") else "",
+                    "created_at": str(row["created_at"]) if row.get("created_at") else ""
+                })
+            
+            return {
+                "archived_relations": records,
+                "total_relations": len(records),
+                "message": f"找到 {len(records)} 条归档关系"
+            }
+    
     def cleanup(self, dry_run: bool = True) -> dict:
         """清理无效数据"""
         with self.driver.session() as session:
