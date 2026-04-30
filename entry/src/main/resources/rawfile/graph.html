@@ -121,7 +121,8 @@
             mouse = new THREE.Vector2();
             createStarField();
             createNebula();
-            window.addEventListener('resize', onWindowResize);
+            // 使用 ResizeObserver 监听容器尺寸变化（比 window.resize 更准确）
+            initResizeObserver();
             renderer.domElement.addEventListener('mousemove', onMouseMove);
             renderer.domElement.addEventListener('click', onMouseClick);
             window.addEventListener('message', (event) => {
@@ -742,10 +743,72 @@
             }
         }
 
-        function onWindowResize() {
-            camera.aspect = window.innerWidth / window.innerHeight;
+        // ========= ResizeObserver 响应式适配 =========
+        let containerObserver = null;
+        function initResizeObserver() {
+            const container = document.getElementById('canvas-container');
+            if (!container) return;
+            containerObserver = new ResizeObserver((entries) => {
+                for (const entry of entries) {
+                    const { width, height } = entry.contentRect;
+                    if (width > 0 && height > 0) {
+                        onContainerResize(width, height);
+                    }
+                }
+            });
+            containerObserver.observe(container);
+        }
+
+        function onContainerResize(width, height) {
+            if (!camera || !renderer) return;
+            const aspect = width / height;
+            camera.aspect = aspect;
             camera.updateProjectionMatrix();
-            renderer.setSize(window.innerWidth, window.innerHeight);
+            renderer.setSize(width, height);
+
+            // 窄屏(<500px)时自动调整UI元素尺寸和位置
+            const isNarrow = width < 500;
+            const stats = document.getElementById('stats');
+            const nodeInfo = document.getElementById('node-info');
+            const searchBox = document.getElementById('search-box');
+            const typeFilter = document.getElementById('type-filter');
+            const searchInput = document.getElementById('search-input');
+
+            if (isNarrow) {
+                if (stats) {
+                    stats.style.fontSize = '11px';
+                    stats.style.padding = '8px 12px';
+                    stats.style.top = '6px';
+                    stats.style.left = '6px';
+                }
+                if (nodeInfo) {
+                    nodeInfo.style.fontSize = '11px';
+                    nodeInfo.style.padding = '8px 12px';
+                    nodeInfo.style.maxWidth = '180px';
+                    nodeInfo.style.top = '6px';
+                    nodeInfo.style.right = '6px';
+                }
+                if (searchBox) { searchBox.style.top = '70px'; searchBox.style.left = '6px'; }
+                if (searchInput) { searchInput.style.width = '140px'; searchInput.style.fontSize = '12px'; }
+                if (typeFilter) { typeFilter.style.top = '108px'; typeFilter.style.left = '6px'; }
+            } else {
+                if (stats) {
+                    stats.style.fontSize = '14px';
+                    stats.style.padding = '15px 20px';
+                    stats.style.top = '20px';
+                    stats.style.left = '20px';
+                }
+                if (nodeInfo) {
+                    nodeInfo.style.fontSize = '14px';
+                    nodeInfo.style.padding = '15px 20px';
+                    nodeInfo.style.maxWidth = '300px';
+                    nodeInfo.style.top = '20px';
+                    nodeInfo.style.right = '20px';
+                }
+                if (searchBox) { searchBox.style.top = '80px'; searchBox.style.left = '20px'; }
+                if (searchInput) { searchInput.style.width = '200px'; searchInput.style.fontSize = '14px'; }
+                if (typeFilter) { typeFilter.style.top = '120px'; typeFilter.style.left = '20px'; }
+            }
         }
 
         function animate() {

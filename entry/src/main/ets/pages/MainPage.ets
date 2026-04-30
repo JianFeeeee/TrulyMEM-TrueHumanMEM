@@ -1,38 +1,82 @@
 import { GraphDatabase } from '../model/GraphDatabase';
 import { GraphPage } from './GraphPage';
 import { ChatPage } from './ChatPage';
+import display from '@ohos.display';
 
 @Component
 export struct MainPage {
     @Prop db: GraphDatabase;
+    @State isWide: boolean = false;
+
+    aboutToAppear() {
+        this.updateBreakpoint();
+        try {
+            display.on('change', () => {
+                this.updateBreakpoint();
+            });
+        } catch (e) {
+            console.error('display.on error: ' + JSON.stringify(e));
+        }
+    }
+
+    private updateBreakpoint(): void {
+        try {
+            const defaultWindow = display.getDefaultDisplaySync();
+            this.isWide = defaultWindow.width > 520;
+        } catch (e) {
+            console.error('updateBreakpoint error: ' + JSON.stringify(e));
+        }
+    }
 
     build() {
-        GridRow({ columns: { sm: 1, md: 2, lg: 2 }, gutter: { x: 8, y: 8 } }) {
-            GridCol({ span: { sm: 1, md: 1, lg: 1 } }) {
+        if (this.isWide) {
+            // ======== 宽屏模式（>520px）：左侧星图 + 右侧聊天 ========
+            Row() {
+                GraphPage({ db: this.db })
+                    .layoutWeight(1)
+                    .height('100%')
+                    .clip(true)
+                    .borderRadius(12)
+                    .margin({ left: 4, right: 2 })
+
+                ChatPage({ db: this.db })
+                    .width(380)
+                    .height('100%')
+                    .clip(true)
+                    .borderRadius(12)
+                    .margin({ left: 2, right: 4 })
+            }
+            .width('100%')
+            .height('100%')
+            .padding(4)
+            .backgroundColor('#1A1B2E')
+            .backgroundBlurStyle(BlurStyle.Regular)
+        } else {
+            // ======== 窄屏模式（≤520px）：上方星图(55%) + 下方聊天(45%) ========
+            Column() {
                 Stack() {
                     GraphPage({ db: this.db })
                 }
-                .backgroundColor('rgba(255,255,255,0.05)')
-                .borderRadius(12)
-                .backgroundBlurStyle(BlurStyle.Thin)
+                .height('55%')
                 .width('100%')
-                .height('100%')
-            }
+                .clip(true)
+                .borderRadius(12)
+                .margin({ top: 2, left: 4, right: 4, bottom: 2 })
 
-            GridCol({ span: { sm: 1, md: 1, lg: 1 } }) {
                 Stack() {
                     ChatPage({ db: this.db })
                 }
-                .backgroundColor('rgba(255,255,255,0.05)')
-                .borderRadius(12)
-                .backgroundBlurStyle(BlurStyle.Thin)
+                .height('45%')
                 .width('100%')
-                .height('100%')
+                .clip(true)
+                .borderRadius(12)
+                .margin({ top: 2, left: 4, right: 4, bottom: 2 })
             }
+            .width('100%')
+            .height('100%')
+            .padding(2)
+            .backgroundColor('#1A1B2E')
+            .backgroundBlurStyle(BlurStyle.Regular)
         }
-        .width('100%')
-        .height('100%')
-        .backgroundColor('#1A1B2E')
-        .backgroundBlurStyle(BlurStyle.Regular)
     }
 }
