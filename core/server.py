@@ -345,6 +345,8 @@ class BackendServer:
             messages_history.append(assistant_msg)
             
             current_tool_results = []
+            deferred_rewrite = None  # 延迟处理 context_rewrite
+            
             for tool_call in message.tool_calls:
                 args = json.loads(tool_call.function.arguments)
                 
@@ -364,26 +366,9 @@ class BackendServer:
                 self._tool_limiter.record_call(tool_call.function.name, args)
                 
                 if tool_call.function.name == "context_rewrite":
-                    result = execute_tool(self._graph, tool_call.function.name, args)
-                    result_data = json.loads(result)
-                    
-                    # 记录到 tool_calls，让 TUI 显示这个工具调用
-                    tool_calls.append({
-                        "name": tool_call.function.name,
-                        "arguments": args,
-                        "result": result
-                    })
-                    
-                    if result_data.get("status") == "success":
-                        user_msg = messages_history[0]
-                        # 添加特殊标记，让 AI 知道这是上下文压缩的结果
-                        compressed_content = f"<context_compressed>\n{result_data['summary']}\n</context_compressed>"
-                        messages_history[:] = [
-                            user_msg,
-                            {"role": "assistant", "content": compressed_content}
-                        ]
-                    # context_rewrite 压缩上下文后，不需要添加 tool 结果消息
-                    # 因为 messages_history 已经被重写为压缩后的状态
+                    # 延迟执行 context_rewrite：先处理完其他所有工具
+                    # 避免在迭代中途重写 messages_history 导致 tool 结果丢失对应的 tool_calls
+                    deferred_rewrite = (tool_call.id, args)
                     continue
                 
                 result = execute_tool(self._graph, tool_call.function.name, args)
@@ -400,7 +385,29 @@ class BackendServer:
                 }
                 current_tool_results.append(tool_result_msg)
             
+            # 先添加所有非 context_rewrite 工具的结果到消息历史
             messages_history.extend(current_tool_results)
+            
+            # 再处理延迟的 context_rewrite（作为本轮最后一步）
+            if deferred_rewrite:
+                tool_call_id, args = deferred_rewrite
+                result = execute_tool(self._graph, "context_rewrite", args)
+                result_data = json.loads(result)
+                
+                tool_calls.append({
+                    "name": "context_rewrite",
+                    "arguments": args,
+                    "result": result
+                })
+                
+                if result_data.get("status") == "success":
+                    user_msg = messages_history[0]
+                    compressed_content = f"<context_compressed>\n{result_data['summary']}\n</context_compressed>"
+                    messages_history[:] = [
+                        user_msg,
+                        {"role": "assistant", "content": compressed_content}
+                    ]
+                # 不添加 context_rewrite 的 tool 结果到历史（压缩后的历史已替代）
             
             response = self._client.send_message_with_history(messages_history)
             message = response.choices[0].message
