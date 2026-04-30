@@ -22,3 +22,20 @@ build/trulymem/*
 task_archive/
 ts/task_archive/
 core/web_config.json
+
+# Build artifacts
+build/trulymem/
+dist/
+*.spec
+
+# HarmonyOS / Hvigor build cache
+.hvigor/
+entry/build/
+
+# Log files
+*.log
+full_output.log
+
+# OS
+__pycache__/
+*.pyc
