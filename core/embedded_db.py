@@ -443,6 +443,16 @@ class EmbeddedGraphDB:
         
         Args:
             criteria: 删除条件
+                支持:
+                - source: 源实体名（精确匹配）
+                - target: 目标实体名（精确匹配）
+                - relation: 关系类型
+                - subject_contains: 源实体名包含（模糊匹配）
+                - target_contains: 目标实体名包含（模糊匹配）
+                - relation_type: 关系类型（同 relation）
+                - source_type: 源实体类型过滤
+                - target_type: 目标实体类型过滤
+                - source_has_status: 源实体 mentions_count 状态（支持 type 字段）
             mode: 删除模式 (soft/hard)
             new_relation: 替代关系
         
@@ -454,39 +464,94 @@ class EmbeddedGraphDB:
         # 构建查询条件
         conditions = []
         params = []
+        joins = []
+        
+        relation_type = criteria.get('relation') or criteria.get('relation_type', '')
         
         if criteria.get('source'):
             cursor.execute("SELECT id FROM entities WHERE name = ?", (criteria['source'],))
             row = cursor.fetchone()
             if row:
-                conditions.append("source_id = ?")
+                conditions.append("r.source_id = ?")
                 params.append(row['id'])
         
         if criteria.get('target'):
             cursor.execute("SELECT id FROM entities WHERE name = ?", (criteria['target'],))
             row = cursor.fetchone()
             if row:
-                conditions.append("target_id = ?")
+                conditions.append("r.target_id = ?")
                 params.append(row['id'])
         
-        if criteria.get('relation'):
-            conditions.append("relation_type = ?")
-            params.append(criteria['relation'])
+        if relation_type:
+            conditions.append("r.relation_type = ?")
+            params.append(relation_type)
+        
+        # 通过子查询支持实体属性过滤
+        if criteria.get('subject_contains'):
+            cursor.execute("SELECT id FROM entities WHERE name LIKE ?",
+                          (f'%{criteria["subject_contains"]}%',))
+            ids = [row['id'] for row in cursor.fetchall()]
+            if ids:
+                placeholders = ','.join(['?'] * len(ids))
+                conditions.append(f"r.source_id IN ({placeholders})")
+                params.extend(ids)
+        
+        if criteria.get('target_contains'):
+            cursor.execute("SELECT id FROM entities WHERE name LIKE ?",
+                          (f'%{criteria["target_contains"]}%',))
+            ids = [row['id'] for row in cursor.fetchall()]
+            if ids:
+                placeholders = ','.join(['?'] * len(ids))
+                conditions.append(f"r.target_id IN ({placeholders})")
+                params.extend(ids)
+        
+        # 源实体类型过滤
+        if criteria.get('source_type'):
+            cursor.execute("SELECT id FROM entities WHERE type = ?",
+                          (criteria['source_type'],))
+            ids = [row['id'] for row in cursor.fetchall()]
+            if ids:
+                placeholders = ','.join(['?'] * len(ids))
+                conditions.append(f"r.source_id IN ({placeholders})")
+                params.extend(ids)
+        
+        # 目标实体类型过滤
+        if criteria.get('target_type'):
+            cursor.execute("SELECT id FROM entities WHERE type = ?",
+                          (criteria['target_type'],))
+            ids = [row['id'] for row in cursor.fetchall()]
+            if ids:
+                placeholders = ','.join(['?'] * len(ids))
+                conditions.append(f"r.target_id IN ({placeholders})")
+                params.extend(ids)
+        
+        # 源实体状态过滤（检查 entity name 是否以特定后缀结尾等）
+        if criteria.get('source_has_status'):
+            status = criteria['source_has_status']
+            # 匹配 entities 表中 type 字段包含状态信息的节点
+            cursor.execute("SELECT id FROM entities WHERE type LIKE ?",
+                          (f'%{status}%',))
+            ids = [row['id'] for row in cursor.fetchall()]
+            if ids:
+                placeholders = ','.join(['?'] * len(ids))
+                conditions.append(f"r.source_id IN ({placeholders})")
+                params.extend(ids)
         
         if not conditions:
             return {"deleted": 0, "message": "无删除条件"}
         
+        conditions.append("r.status = 'active'")
         where_clause = " AND ".join(conditions)
         
         if mode == "soft":
             cursor.execute(f"""
-                UPDATE relations
+                UPDATE relations r
                 SET status = 'deleted', updated_at = CURRENT_TIMESTAMP
-                WHERE {where_clause} AND status = 'active'
+                WHERE {where_clause}
             """, params)
         else:
             cursor.execute(f"""
-                DELETE FROM relations
+                DELETE FROM relations r
                 WHERE {where_clause}
             """, params)
         

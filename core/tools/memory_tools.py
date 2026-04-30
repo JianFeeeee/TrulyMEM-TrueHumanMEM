@@ -146,6 +146,12 @@ MEMORY_TOOLS = [
 4. 删除旧记忆:
    {"criteria": {"time_before": "2024-01-01"}, "mode": "soft"}
 
+5. 删除残留在已归档任务上的状态关系:
+   {"criteria": {"relation_type": "HAS_STATE", "source_type": "TaskNode", "source_has_status": "archived"}, "mode": "soft"}
+
+6. 删除特定类型的节点关系:
+   {"criteria": {"relation_type": "某种关系", "target_type": "某种类型"}, "mode": "soft"}
+
 【重要】删除原则:
 - 优先使用 supersede 模式修正错误
 - 软删除不会物理删除数据
@@ -159,6 +165,9 @@ MEMORY_TOOLS = [
                             "subject_contains": {"type": "string"},
                             "relation_type": {"type": "string"},
                             "target_contains": {"type": "string"},
+                            "source_type": {"type": "string", "description": "源实体类型过滤（如 TaskNode）"},
+                            "target_type": {"type": "string", "description": "目标实体类型过滤"},
+                            "source_has_status": {"type": "string", "description": "源实体状态过滤（如 archived）"},
                             "time_before": {"type": "string"},
                             "session_id": {"type": "string"}
                         },

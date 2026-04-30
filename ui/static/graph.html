@@ -913,7 +913,11 @@ function init() {
                 positions[node.id] = { x, y, z };
             });
 
-            // 简单力导向模拟（迭代几次）
+            // 简单力导向模拟（迭代几次）— 使用度数加权距离
+            function getIdealDist(id) {
+                return 5 + ((nodeDegrees[id] || 0) * 0.8);
+            }
+
             for (let iter = 0; iter < 30; iter++) {
                 // 斥力：节点之间互相排斥
                 Object.keys(positions).forEach(id1 => {
@@ -926,8 +930,14 @@ function init() {
                         const dz = pos1.z - pos2.z;
                         const dist = Math.sqrt(dx*dx + dy*dy + dz*dz) + 0.1;
 
-                        if (dist < 10) {
-                            const force = 0.04 / Math.max(dist, 0.5);
+                        // 动态阈值：度数越高理想距离越大，取两节点较大值
+                        const idealDist = getIdealDist(id1) + getIdealDist(id2);
+                        const repulsionThreshold = idealDist * 1.5;
+
+                        if (dist < repulsionThreshold) {
+                            // 斥力强度按度数加权
+                            const degreeWeight = ((nodeDegrees[id1] || 0) + (nodeDegrees[id2] || 0)) * 0.5 + 1;
+                            const force = (0.04 * degreeWeight) / Math.max(dist, 0.5);
                             const fx = (dx / dist) * force;
                             const fy = (dy / dist) * force;
                             const fz = (dz / dist) * force;
@@ -953,7 +963,11 @@ function init() {
                     const dz = pos2.z - pos1.z;
                     const dist = Math.sqrt(dx*dx + dy*dy + dz*dz) + 0.1;
 
-                    if (dist > 15) {
+                    // 动态引力阈值：以两节点平均理想距离为基准
+                    const idealDist = (getIdealDist(edge.source) + getIdealDist(edge.target)) * 0.8;
+                    const attractionThreshold = idealDist * 1.5;
+
+                    if (dist > attractionThreshold) {
                         const force = 0.05;
                         const fx = (dx / dist) * force;
                         const fy = (dy / dist) * force;
@@ -1236,6 +1250,18 @@ function smoothReposition() {
                 };
             });
 
+            // 重新计算度数（从当前节点 + 边）
+            const smoothDegrees = {};
+            nodeMeshes.forEach(m => { smoothDegrees[m.userData.nodeId] = 0; });
+            edges.forEach(e => {
+                smoothDegrees[e.source] = (smoothDegrees[e.source] || 0) + 1;
+                smoothDegrees[e.target] = (smoothDegrees[e.target] || 0) + 1;
+            });
+
+            function getSmoothIdealDist(id) {
+                return 5 + ((smoothDegrees[id] || 0) * 0.8);
+            }
+
             // 用力导向模拟迭代 30 次平滑
             for (let iter = 0; iter < 30; iter++) {
                 // 斥力
@@ -1248,8 +1274,11 @@ function smoothReposition() {
                         const dy = a.y - b.y;
                         const dz = a.z - b.z;
                         const dist = Math.sqrt(dx*dx + dy*dy + dz*dz) + 0.1;
-                        if (dist < 12) {
-                            const force = 0.08 / Math.max(dist, 0.5);
+                        const idealDist = getSmoothIdealDist(ids[i]) + getSmoothIdealDist(ids[j]);
+                        const repulsionThreshold = idealDist * 1.5;
+                        if (dist < repulsionThreshold) {
+                            const degreeWeight = ((smoothDegrees[ids[i]] || 0) + (smoothDegrees[ids[j]] || 0)) * 0.5 + 1;
+                            const force = (0.08 * degreeWeight) / Math.max(dist, 0.5);
                             a.x += (dx/dist) * force;
                             a.y += (dy/dist) * force;
                             a.z += (dz/dist) * force;
@@ -1268,7 +1297,9 @@ function smoothReposition() {
                     const dy = p2.y - p1.y;
                     const dz = p2.z - p1.z;
                     const dist = Math.sqrt(dx*dx + dy*dy + dz*dz) + 0.1;
-                    if (dist > 8) {
+                    const idealDist = (getSmoothIdealDist(e.source) + getSmoothIdealDist(e.target)) * 0.8;
+                    const attractionThreshold = idealDist * 1.5;
+                    if (dist > attractionThreshold) {
                         const force = 0.03;
                         p1.x += (dx/dist) * force;
                         p1.y += (dy/dist) * force;

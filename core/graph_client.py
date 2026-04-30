@@ -173,6 +173,9 @@ class Neo4jGraph:
             subject_pattern = criteria.get("subject_contains", "")
             rel_type = criteria.get("relation_type", "")
             target_pattern = criteria.get("target_contains", "")
+            source_type = criteria.get("source_type", "")
+            target_type = criteria.get("target_type", "")
+            source_status = criteria.get("source_has_status", "")
             session_id = criteria.get("session_id", CURRENT_SESSION_ID)
             
             cond_parts = ["r.status = 'active'"]
@@ -187,6 +190,15 @@ class Neo4jGraph:
             if rel_type:
                 cond_parts.append("r.type = $rel_type")
                 params["rel_type"] = rel_type
+            if source_type:
+                cond_parts.append("s.entity_type = $source_type")
+                params["source_type"] = source_type
+            if target_type:
+                cond_parts.append("t.entity_type = $target_type")
+                params["target_type"] = target_type
+            if source_status:
+                cond_parts.append("s.status = $source_status")
+                params["source_status"] = source_status
             
             where_clause = " AND ".join(cond_parts)
             
@@ -208,7 +220,7 @@ class Neo4jGraph:
                 return {"deleted_count": count, "mode": "supersede"}
             else:
                 result = session.run(f"""
-                MATCH ()-[r:RELATES]->()
+                MATCH (s:Entity)-[r:RELATES]->(t:Entity)
                 WHERE {where_clause}
                 SET r.status = 'deleted', r.updated_at = datetime()
                 RETURN count(r) as deleted
