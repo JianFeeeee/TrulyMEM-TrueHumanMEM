@@ -2,13 +2,14 @@ import { MainPage } from './MainPage';
 import { SettingsPage } from './SettingsPage';
 import { GraphDatabase } from '../model/GraphDatabase';
 import { ImmersiveTabNavigation } from '../components/ImmersiveTabNavigation';
+import display from '@ohos.display';
 
 @Entry
 @Component
 struct Index {
   @State currentIndex: number = 0;
   private db: GraphDatabase = new GraphDatabase();
-  private displayCallback?: (data: display.Display) => void;
+  private displayCallback?: Callback<number>;
 
   aboutToAppear() {
     this.db.init(getContext(this));

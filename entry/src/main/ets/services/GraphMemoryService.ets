@@ -3,9 +3,59 @@
  * 封装 GraphDatabase，提供 AI Agent 友好的图记忆操作方法
  * 参考：main 分支 core/tools/memory_tools.py
  */
-import { GraphDatabase } from '../model/GraphDatabase';
+import { GraphDatabase, RelationQueryResult, TimeRangeParams } from '../model/GraphDatabase';
 
 // ========= 接口定义 =========
+
+export interface SnapshotData {
+    entities: EntityInfo[];
+    relations: RelationInfo[];
+}
+
+export interface GraphDataNode {
+    id: number;
+    label: string;
+    type: string;
+    mentions: number;
+    depth?: number;
+}
+
+export interface GraphDataEdge {
+    from: number;
+    to: number;
+    label: string;
+    weight: number;
+    depth?: number;
+    sessionId?: string;
+    turnId?: number;
+}
+
+export interface SnapshotEntity {
+    name: string;
+    type: string;
+    mention_count: number;
+    depth?: number;
+}
+
+export interface SnapshotRelation {
+    source: string;
+    target: string;
+    type: string;
+    confidence: number;
+    session_id?: string;
+    turn_id?: number;
+    depth?: number;
+}
+
+export interface GraphOutput {
+    nodes: GraphDataNode[];
+    edges: GraphDataEdge[];
+}
+
+export interface SnapshotOutput {
+    entities: SnapshotEntity[];
+    relations: SnapshotRelation[];
+}
 
 export interface EntityInfo {
     name: string;
@@ -73,10 +123,6 @@ export interface GraphData {
 }
 
 // 内部接口 — 用于替换内联对象类型声明
-
-export interface TimeRangeParams {
-    days: number;
-}
 
 export interface PurgeCriteriaParams {
     subjectContains?: string;
@@ -269,6 +315,7 @@ export class GraphMemoryService {
             params.queryIntent,
             params.seedEntities,
             depth,
+            undefined,
             params.sessionFilter
         );
         const entities: EntityInfo[] = result.entities.map(e => {
@@ -430,6 +477,140 @@ export class GraphMemoryService {
     }
 
     /**
+     * 记忆图谱 — 在指定时间范围内查询关系
+     * 对应 tools.memory_graph
+     */
+    async memoryGraph(timeRange: TimeRangeParams, sessionFilter?: string): Promise<GraphOutput> {
+        const dbResult = await this.db.graph(timeRange, sessionFilter);
+        const nodeCount: number = dbResult.nodes.length;
+        const edgeCount: number = dbResult.edges.length;
+        const nodeList: GraphDataNode[] = [];
+        const edgeList: GraphDataEdge[] = [];
+        let idx: number = 0;
+        while (idx < nodeCount) {
+            const n = dbResult.nodes[idx];
+            const id1: number = n.id;
+            const label1: string = n.label;
+            const type1: string = n.type;
+            const mentions1: number = n.mentions;
+            const depth1: number | undefined = n.depth;
+            const graphNode: GraphDataNode = {
+                id: id1,
+                label: label1,
+                type: type1,
+                mentions: mentions1,
+                depth: depth1
+            };
+            nodeList.push(graphNode);
+            idx++;
+        }
+        idx = 0;
+        while (idx < edgeCount) {
+            const e = dbResult.edges[idx];
+            const from1: number = e.from;
+            const to1: number = e.to;
+            const label1: string = e.label;
+            const weight1: number = e.weight;
+            const depth1: number | undefined = e.depth;
+            const sessionId1: string | undefined = e.sessionId;
+            const turnId1: number | undefined = e.turnId;
+            const graphEdge: GraphDataEdge = {
+                from: from1,
+                to: to1,
+                label: label1,
+                weight: weight1,
+                depth: depth1,
+                sessionId: sessionId1,
+                turnId: turnId1
+            };
+            edgeList.push(graphEdge);
+            idx++;
+        }
+        const out: GraphOutput = {
+            nodes: nodeList,
+            edges: edgeList
+        };
+        return out;
+    }
+
+    /**
+     * 记忆快照 — 在指定时间范围内查询实体和关系
+     * 对应 tools.memory_snapshot
+     */
+    async memorySnapshot(timeRange: TimeRangeParams, sessionFilter?: string): Promise<SnapshotOutput> {
+        const dbResult = await this.db.snapshot(timeRange, sessionFilter);
+        const entityCount: number = dbResult.entities.length;
+        const relationCount: number = dbResult.relations.length;
+        const entityList: SnapshotEntity[] = [];
+        const relationList: SnapshotRelation[] = [];
+        let idx: number = 0;
+        while (idx < entityCount) {
+            const e = dbResult.entities[idx];
+            const name1: string = e.name;
+            const type1: string = e.type;
+            const mentionCount1: number = e.mention_count;
+            const depth1: number | undefined = e.depth;
+            const entity: SnapshotEntity = {
+                name: name1,
+                type: type1,
+                mention_count: mentionCount1,
+                depth: depth1
+            };
+            entityList.push(entity);
+            idx++;
+        }
+        idx = 0;
+        while (idx < relationCount) {
+            const r = dbResult.relations[idx];
+            const source1: string = r.source;
+            const target1: string = r.target;
+            const type1: string = r.type;
+            const confidence1: number = r.confidence;
+            const sessionId1: string | undefined = r.session_id;
+            const turnId1: number | undefined = r.turn_id;
+            const depth1: number | undefined = r.depth;
+            const relation: SnapshotRelation = {
+                source: source1,
+                target: target1,
+                type: type1,
+                confidence: confidence1,
+                session_id: sessionId1,
+                turn_id: turnId1,
+                depth: depth1
+            };
+            relationList.push(relation);
+            idx++;
+        }
+        const out2: SnapshotOutput = {
+            entities: entityList,
+            relations: relationList
+        };
+        return out2;
+    }
+
+    /**
+     * 记忆清理 — 归档旧记忆并清理孤立节点
+     * 对应 tools.memory_cleanup
+     */
+    async memoryCleanup(dryRun: boolean = false): Promise<CleanupResult> {
+        const result = await this.db.cleanup(dryRun);
+        const cleanupResult: CleanupResult = {
+            cleaned: result.cleaned,
+            deletedRelations: result.deleted_relations,
+            deletedOrphans: result.deleted_orphans,
+            dryRun: result.dry_run,
+            message: result.message || ''
+        };
+        return cleanupResult;
+    }
+
+    /**
+     * 记忆清理 — 删除指定条件的记忆
+     * 对应 tools.memory_purge
+     */
+
+
+    /**
      * 查询已归档的记忆
      * 对应 tools.memory_query_archived
      */
@@ -543,10 +724,10 @@ export class GraphMemoryService {
         try {
             // 将 attribute 转为关系名格式
             const relationName = 'HAS_PERSONA_' + attribute.toUpperCase();
-            const result = await this.db.purge({ subject: PERSONA_NODE_NAME, relationType: relationName }, 'hard');
+            await this.db.purge({ subject: PERSONA_NODE_NAME, relation: relationName }, 'hard');
             return {
-                success: result.deleted_count > 0,
-                message: result.deleted_count > 0 ? `已删除人设属性: ${attribute}` : `未找到人设属性: ${attribute}`
+                success: true,
+                message: `已删除人设属性: ${attribute}`
             };
         } catch (e) {
             return {

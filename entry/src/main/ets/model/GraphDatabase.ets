@@ -1,6 +1,9 @@
 import relationalStore from '@ohos.data.relationalStore';
 import { Context } from '@ohos.abilityAccessCtrl';
 
+interface NodeNameCacheItem { name: string; type: string; mentions: number; }
+export interface TimeRangeParams { days: number; }
+
 interface TripletData {
     subject: string;
     relation: string;
@@ -68,7 +71,7 @@ interface BfsEntity {
     depth: number;
 }
 
-interface RelationQueryResult {
+export interface RelationQueryResult {
     sourceId: number;
     targetId: number;
     sourceName: string;
@@ -117,6 +120,11 @@ interface ChatMessage {
     role: string;
     content: string;
     session_id?: string;
+}
+
+interface SnapshotData {
+    entities: RecallEntity[];
+    relations: RecallRelation[];
 }
 
 const STORE_CONFIG: relationalStore.StoreConfig = {
@@ -326,9 +334,7 @@ export class GraphDatabase {
         let currentLayerIds = new Set<number>(entityIds);
         const visitedEntityIds = new Set<number>(entityIds);
         // 批量预加载所有相关节点名称，减少 N+1 查询
-        const nodeNameCache = new Map<number, {name: string, type: string, mentions: number}>();
-        // 批量预加载所有相关节点名称，减少 N+1 查询
-        const nodeNameCache = new Map<number, {name: string, type: string, mentions: number}>();
+        const nodeNameCache = new Map<number, NodeNameCacheItem>();
 
         for (let layer = 0; layer < depth && currentLayerIds.size > 0; layer++) {
             const currentIds = Array.from(currentLayerIds);
@@ -362,7 +368,8 @@ export class GraphDatabase {
                     } else {
                         const nodeData = await this.getNodeById(newId);
                         if (nodeData) {
-                            nodeNameCache.set(newId, {name: nodeData.name, type: nodeData.type, mentions: nodeData.mentions});
+                            const cacheItem: NodeNameCacheItem = { name: nodeData.name, type: nodeData.type, mentions: nodeData.mentions };
+                            nodeNameCache.set(newId, cacheItem);
                             const addedEntity: BfsEntity = {
                                 id: nodeData.id,
                                 name: nodeData.name,
@@ -431,11 +438,12 @@ export class GraphDatabase {
         if (!this.store || nodeIds.length === 0) return [];
         const relations: RelationQueryResult[] = [];
         // 批量预加载所有节点名称到缓存，避免 N+1 查询
-        const nodeNameCache = new Map<number, {name: string, type: string, mentions: number}>();
+        const nodeNameCache = new Map<number, NodeNameCacheItem>();
         for (const id of nodeIds) {
             const node = await this.getNodeById(id);
             if (node) {
-                nodeNameCache.set(id, {name: node.name, type: node.type, mentions: node.mentions});
+                const cacheItem: NodeNameCacheItem = { name: node.name, type: node.type, mentions: node.mentions };
+                nodeNameCache.set(id, cacheItem);
             }
         }
         for (const nodeId of nodeIds) {
@@ -571,6 +579,149 @@ export class GraphDatabase {
             }
         }
         await this.removeOrphanNodes();
+    }
+
+    /**
+     * 记忆图谱 — 在指定时间范围内查询关系和节点
+     * 对应 tools.memory_graph
+     */
+    async graph(timeRange: TimeRangeParams, sessionFilter?: string): Promise<GraphData> {
+        if (!this.store) return { nodes: [], edges: [] };
+        const predicates: relationalStore.RdbPredicates = new relationalStore.RdbPredicates('relations');
+        predicates.equalTo('status', 'active');
+        if (sessionFilter) {
+            predicates.and().equalTo('session_id', sessionFilter);
+        }
+        if (timeRange && timeRange.days && timeRange.days > 0) {
+            const cutoff = new Date();
+            cutoff.setDate(cutoff.getDate() - timeRange.days);
+            const minDateBucket = cutoff.toISOString().slice(0, 10).replace(/-/g, '');
+            predicates.and().greaterThanOrEqualTo('date_bucket', minDateBucket);
+        }
+        const resultSet: relationalStore.ResultSet = await this.store.query(predicates, ['subject_id', 'object_id', 'relation', 'weight', 'session_id', 'turn_id']);
+        const nodeIds = new Set<number>();
+        const edges: EdgeData[] = [];
+        while (resultSet.goToNextRow()) {
+            const sourceId = resultSet.getLong(resultSet.getColumnIndex('subject_id'));
+            const targetId = resultSet.getLong(resultSet.getColumnIndex('object_id'));
+            nodeIds.add(sourceId);
+            nodeIds.add(targetId);
+            const edge: EdgeData = {
+                from: sourceId,
+                to: targetId,
+                label: resultSet.getString(resultSet.getColumnIndex('relation')),
+                weight: resultSet.getDouble(resultSet.getColumnIndex('weight')),
+                sessionId: resultSet.getString(resultSet.getColumnIndex('session_id')),
+                turnId: resultSet.getLong(resultSet.getColumnIndex('turn_id'))
+            };
+            edges.push(edge);
+        }
+        resultSet.close();
+        const nodes: NodeData[] = [];
+        for (const id of nodeIds) {
+            const node = await this.getNodeById(id);
+            if (node) {
+                const nodeData: NodeData = { id: node.id, label: node.name, type: node.type, mentions: node.mentions };
+                nodes.push(nodeData);
+            }
+        }
+        const result: GraphData = { nodes, edges };
+        return result;
+    }
+
+    /**
+     * 记忆快照 — 在指定时间范围内查询实体和关系
+     * 对应 tools.memory_snapshot
+     */
+    async snapshot(timeRange: TimeRangeParams, sessionFilter?: string): Promise<SnapshotData> {
+        if (!this.store) return { entities: [], relations: [] };
+        const predicates: relationalStore.RdbPredicates = new relationalStore.RdbPredicates('relations');
+        predicates.equalTo('status', 'active');
+        if (sessionFilter) {
+            predicates.and().equalTo('session_id', sessionFilter);
+        }
+        if (timeRange && timeRange.days && timeRange.days > 0) {
+            const cutoff = new Date();
+            cutoff.setDate(cutoff.getDate() - timeRange.days);
+            const minDateBucket = cutoff.toISOString().slice(0, 10).replace(/-/g, '');
+            predicates.and().greaterThanOrEqualTo('date_bucket', minDateBucket);
+        }
+        const resultSet: relationalStore.ResultSet = await this.store.query(predicates, ['subject_id', 'object_id', 'relation', 'weight', 'session_id', 'turn_id']);
+        const nodeIds = new Set<number>();
+        const relations: RecallRelation[] = [];
+        while (resultSet.goToNextRow()) {
+            const sourceId = resultSet.getLong(resultSet.getColumnIndex('subject_id'));
+            const targetId = resultSet.getLong(resultSet.getColumnIndex('object_id'));
+            nodeIds.add(sourceId);
+            nodeIds.add(targetId);
+            const sourceNode = await this.getNodeById(sourceId);
+            const targetNode = await this.getNodeById(targetId);
+            if (sourceNode && targetNode) {
+                const rel: RecallRelation = {
+                    source: sourceNode.name,
+                    target: targetNode.name,
+                    type: resultSet.getString(resultSet.getColumnIndex('relation')),
+                    confidence: resultSet.getDouble(resultSet.getColumnIndex('weight')),
+                    session_id: resultSet.getString(resultSet.getColumnIndex('session_id')),
+                    turn_id: resultSet.getLong(resultSet.getColumnIndex('turn_id'))
+                };
+                relations.push(rel);
+            }
+        }
+        resultSet.close();
+        const entities: RecallEntity[] = [];
+        for (const id of nodeIds) {
+            const node = await this.getNodeById(id);
+            if (node) {
+                const recallEntity: RecallEntity = { name: node.name, type: node.type, mention_count: node.mentions };
+                entities.push(recallEntity);
+            }
+        }
+        const snapResult: SnapshotData = { entities, relations };
+        return snapResult;
+    }
+
+    /**
+     * 查询已归档的记忆
+     * 对应 tools.memory_query_archived
+     */
+    async queryArchived(days?: number, keyword?: string): Promise<RelationQueryResult[]> {
+        if (!this.store) return [];
+        const predicates: relationalStore.RdbPredicates = new relationalStore.RdbPredicates('relations');
+        predicates.equalTo('status', 'archived');
+        if (keyword) {
+            predicates.and().like('relation', '%' + keyword + '%');
+        }
+        if (days && days > 0) {
+            const cutoff = new Date();
+            cutoff.setDate(cutoff.getDate() - days);
+            const maxDateBucket = cutoff.toISOString().slice(0, 10).replace(/-/g, '');
+            predicates.and().lessThanOrEqualTo('date_bucket', maxDateBucket);
+        }
+        const resultSet: relationalStore.ResultSet = await this.store.query(predicates, ['subject_id', 'object_id', 'relation', 'weight', 'session_id', 'turn_id']);
+        const results: RelationQueryResult[] = [];
+        while (resultSet.goToNextRow()) {
+            const sourceId = resultSet.getLong(resultSet.getColumnIndex('subject_id'));
+            const targetId = resultSet.getLong(resultSet.getColumnIndex('object_id'));
+            const sourceNode = await this.getNodeById(sourceId);
+            const targetNode = await this.getNodeById(targetId);
+            if (sourceNode && targetNode) {
+                const queryResult: RelationQueryResult = {
+                    sourceId: sourceId,
+                    targetId: targetId,
+                    sourceName: sourceNode.name,
+                    targetName: targetNode.name,
+                    type: resultSet.getString(resultSet.getColumnIndex('relation')),
+                    confidence: resultSet.getDouble(resultSet.getColumnIndex('weight')),
+                    sessionId: resultSet.getString(resultSet.getColumnIndex('session_id')),
+                    turnId: resultSet.getLong(resultSet.getColumnIndex('turn_id')),
+                    depth: 0
+                };
+                results.push(queryResult);
+            }
+        }
+        resultSet.close();
+        return results;
     }
 
     private async removeOrphanNodes(): Promise<number> {

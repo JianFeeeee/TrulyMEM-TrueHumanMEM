@@ -6,8 +6,9 @@
  */
 import http from '@ohos.net.http';
 import dataPreferences from '@ohos.data.preferences';
-import { Context } from '@ohos.app.ability.UIAbility';
-import { GraphMemoryService, EntityInfo, RelationInfo, TaskInfo, MemoryRecallParams, MemoryCommitParams, MemoryPurgeParams, TimeRangeParams, PurgeCriteriaParams, NewRelationParams, PersonaUpdateParams, TaskCreateParams, TaskSetStateParams, TaskDeleteParams, TaskLinkInfoParams, TaskArchiveParams, TaskQueryParams, TripletInput, PersonaQueryResult, TaskQueryResult, MemoryRecallResult } from './GraphMemoryService';
+import { Context } from '@ohos.abilityAccessCtrl';
+import { GraphMemoryService, EntityInfo, RelationInfo, TaskInfo, MemoryRecallParams, MemoryCommitParams, MemoryPurgeParams, PurgeCriteriaParams, NewRelationParams, PersonaUpdateParams, TaskCreateParams, TaskSetStateParams, TaskDeleteParams, TaskLinkInfoParams, TaskArchiveParams, TaskQueryParams, TripletInput, PersonaQueryResult, TaskQueryResult, MemoryRecallResult } from './GraphMemoryService';
+import { TimeRangeParams } from '../model/GraphDatabase';
 
 export interface ChatMessage {
     role: string;
@@ -64,6 +65,9 @@ interface ToolPropertiesDefinition {
     relationType?: ToolParamProperty;
     targetContains?: ToolParamProperty;
     target?: ToolParamProperty;
+    dryRun?: ToolParamProperty;
+    keyword?: ToolParamProperty;
+    attribute?: ToolParamProperty;
 }
 
 interface ToolParamProperty {
