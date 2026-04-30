@@ -576,33 +576,35 @@ export class GraphDatabase {
     private async removeOrphanNodes(): Promise<number> {
         if (!this.store) return 0;
         let deleted = 0;
-        const predicates: relationalStore.RdbPredicates = new relationalStore.RdbPredicates('nodes');
-        const resultSet: relationalStore.ResultSet = await this.store.query(predicates, ['id', 'name']);
-        const nodesToCheck: number[] = [];
-        while (resultSet.goToNextRow()) {
-            nodesToCheck.push(resultSet.getLong(resultSet.getColumnIndex('id')));
+        // 优化：批量查询所有有关系的节点 ID，避免 O(N²) 逐节点检查
+        const activeRelPred: relationalStore.RdbPredicates = new relationalStore.RdbPredicates('relations');
+        activeRelPred.equalTo('status', 'active');
+        const relResultSet: relationalStore.ResultSet = await this.store.query(activeRelPred, ['subject_id', 'object_id']);
+        const relatedIds = new Set<number>();
+        while (relResultSet.goToNextRow()) {
+            relatedIds.add(relResultSet.getLong(relResultSet.getColumnIndex('subject_id')));
+            relatedIds.add(relResultSet.getLong(relResultSet.getColumnIndex('object_id')));
         }
-        resultSet.close();
+        relResultSet.close();
 
-        for (const nodeId of nodesToCheck) {
-            const pred1: relationalStore.RdbPredicates = new relationalStore.RdbPredicates('relations');
-            pred1.equalTo('subject_id', nodeId);
-            const rs1 = await this.store.query(pred1, ['id']);
-            const hasSourceRel = rs1.goToFirstRow();
-            rs1.close();
-
-            const pred2: relationalStore.RdbPredicates = new relationalStore.RdbPredicates('relations');
-            pred2.equalTo('object_id', nodeId);
-            const rs2 = await this.store.query(pred2, ['id']);
-            const hasTargetRel = rs2.goToFirstRow();
-            rs2.close();
-
-            if (!hasSourceRel && !hasTargetRel) {
-                const deletePred: relationalStore.RdbPredicates = new relationalStore.RdbPredicates('nodes');
-                deletePred.equalTo('id', nodeId);
-                await this.store.delete(deletePred);
-                deleted++;
+        // 查询所有节点，筛选出不在关系中的孤儿节点
+        const nodePred: relationalStore.RdbPredicates = new relationalStore.RdbPredicates('nodes');
+        const nodeResultSet: relationalStore.ResultSet = await this.store.query(nodePred, ['id']);
+        const orphanIds: number[] = [];
+        while (nodeResultSet.goToNextRow()) {
+            const nodeId = nodeResultSet.getLong(nodeResultSet.getColumnIndex('id'));
+            if (!relatedIds.has(nodeId)) {
+                orphanIds.push(nodeId);
             }
+        }
+        nodeResultSet.close();
+
+        // 批量删除孤儿节点
+        for (const orphanId of orphanIds) {
+            const deletePred: relationalStore.RdbPredicates = new relationalStore.RdbPredicates('nodes');
+            deletePred.equalTo('id', orphanId);
+            await this.store.delete(deletePred);
+            deleted++;
         }
         return deleted;
     }
