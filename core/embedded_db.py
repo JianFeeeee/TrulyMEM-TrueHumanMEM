@@ -393,8 +393,9 @@ class EmbeddedGraphDB:
                 continue
             
             # 创建或更新实体
-            for entity_name in [subject, obj]:
-                entity_type = entity_types.get(entity_name) if entity_types else None
+            for entity_name, entity_key in [(subject, 'subject_type'), (obj, 'object_type')]:
+                # 按优先级获取实体类型：1) triplet中的_type字段 2) entity_types字典 3) 默认
+                entity_type = triplet.get(entity_key) or (entity_types.get(entity_name) if entity_types else None) or 'Concept'
                 
                 cursor.execute("""
                     INSERT INTO entities (name, type)

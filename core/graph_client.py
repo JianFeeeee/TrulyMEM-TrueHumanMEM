@@ -121,7 +121,7 @@ class Neo4jGraph:
             
             return {"entities": list(entities.values()), "relations": relations[:20]}
     
-    def commit(self, triplets: list, entity_types: list = None, temporal_tag: str = None) -> dict:
+    def commit(self, triplets: list, entity_types: dict = None, temporal_tag: str = None) -> dict:
         """写入记忆"""
         global CURRENT_TURN
         with self.driver.session() as session:
@@ -130,7 +130,6 @@ class Neo4jGraph:
             if not valid_triplets:
                 return {"committed_count": 0, "details": []}
             
-            etype = entity_types[0] if entity_types else "unknown"
             date_bucket = temporal_tag or datetime.now().strftime("%Y-%m-%d")
             
             results = []
@@ -140,13 +139,17 @@ class Neo4jGraph:
                 obj = triplet.get("object", "").strip()
                 confidence = triplet.get("confidence", 0.9)
                 
+                # 按优先级获取实体类型：1) triplet中的_type字段 2) entity_types字典 3) 默认
+                s_type = triplet.get("subject_type") or (entity_types.get(subject) if entity_types else None) or "Concept"
+                o_type = triplet.get("object_type") or (entity_types.get(obj) if entity_types else None) or "Concept"
+                
                 session.run("""
                 MERGE (s:Entity {name: $subject})
-                ON CREATE SET s.type = $type, s.created_at = datetime(), s.mention_count = 1, s.updated_at = datetime()
+                ON CREATE SET s.type = $s_type, s.created_at = datetime(), s.mention_count = 1, s.updated_at = datetime()
                 ON MATCH SET s.mention_count = coalesce(s.mention_count, 0) + 1, s.updated_at = datetime()
                 
                 MERGE (t:Entity {name: $object})
-                ON CREATE SET t.type = $type, t.created_at = datetime(), t.mention_count = 1, t.updated_at = datetime()
+                ON CREATE SET t.type = $o_type, t.created_at = datetime(), t.mention_count = 1, t.updated_at = datetime()
                 ON MATCH SET t.mention_count = coalesce(t.mention_count, 0) + 1, t.updated_at = datetime()
                 
                 CREATE (s)-[r:RELATES {
@@ -159,7 +162,8 @@ class Neo4jGraph:
                     confidence: $confidence,
                     date_bucket: $date_bucket
                 }]->(t)
-                """, subject=subject, object=obj, relation=relation, type=etype,
+                """, subject=subject, object=obj, relation=relation,
+                      s_type=s_type, o_type=o_type,
                       session_id=CURRENT_SESSION_ID, turn_id=CURRENT_TURN, confidence=confidence,
                       date_bucket=date_bucket)
                 

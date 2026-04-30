@@ -548,7 +548,6 @@
         let currentHighlightIds = [];
         let currentHighlightEdgeIds = new Set(); // 存储高亮的边ID
         let edgeParticles = {}; // 存储边的流动光点 {edgeId: {mesh, progress, edge}}
-        let edgeLabels = []; // 存储边标签
 
         // 颜色映射
         const typeColors = {
@@ -813,13 +812,11 @@ function init() {
             // 清除旧的对象（包括边粒子）
             nodeMeshes.forEach(mesh => scene.remove(mesh));
             edgeLines.forEach(line => scene.remove(line));
-            edgeLabels.forEach(label => scene.remove(label));
             Object.keys(edgeParticles).forEach(key => {
                 scene.remove(edgeParticles[key].mesh);
             });
             nodeMeshes = [];
             edgeLines = [];
-            edgeLabels = [];
             edgeParticles = {};
 
             if (nodes.length === 0) return;
@@ -1084,53 +1081,6 @@ function init() {
 
                 scene.add(line);
                 edgeLines.push(line);
-
-                // 边标签（中间位置显示关系类型 + 时间戳）
-                const midX = (pos1.x + pos2.x) / 2;
-                const midY = (pos1.y + pos2.y) / 2;
-                const midZ = (pos1.z + pos2.z) / 2;
-
-                const labelCanvas = document.createElement('canvas');
-                const labelCtx = labelCanvas.getContext('2d');
-                labelCanvas.width = 256;
-                labelCanvas.height = 48;
-                labelCtx.clearRect(0, 0, labelCanvas.width, labelCanvas.height);
-
-                // 时间戳文本
-                const ts = edge.created_at || '';
-                const tsShort = ts ? ts.substring(0, 10) : '';
-                let labelText = edge.relation_type;
-                if (tsShort) labelText += '\n' + tsShort;
-
-                labelCtx.font = '16px Courier New';
-                labelCtx.fillStyle = color;
-                labelCtx.textAlign = 'center';
-                labelCtx.shadowColor = color;
-                labelCtx.shadowBlur = 4;
-                labelCtx.fillText(edge.relation_type, 128, 20);
-                if (tsShort) {
-                    labelCtx.font = '12px Courier New';
-                    labelCtx.fillStyle = '#999999';
-                    labelCtx.fillText(tsShort, 128, 38);
-                }
-
-                const labelTex = new THREE.CanvasTexture(labelCanvas);
-                labelTex.needsUpdate = true;
-                const labelMat = new THREE.SpriteMaterial({
-                    map: labelTex,
-                    transparent: true,
-                    opacity: 0.7,
-                    depthTest: false,
-                    depthWrite: false,
-                    blending: THREE.AdditiveBlending
-                });
-                const edgeLabel = new THREE.Sprite(labelMat);
-                edgeLabel.scale.set(5, 1, 1);
-                edgeLabel.position.set(midX, midY, midZ);
-                edgeLabel.userData = { edgeId: edge.id };
-
-                scene.add(edgeLabel);
-                edgeLabels.push(edgeLabel);
             });
 
             // 调整相机位置以适应所有节点

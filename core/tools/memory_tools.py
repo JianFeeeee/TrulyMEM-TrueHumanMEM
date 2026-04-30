@@ -103,16 +103,18 @@ MEMORY_TOOLS = [
                                 "subject": {"type": "string"},
                                 "relation": {"type": "string"},
                                 "object": {"type": "string"},
-                                "confidence": {"type": "number"}
+                                "confidence": {"type": "number"},
+                                "subject_type": {"type": "string", "description": "主体的实体类型，如 Person、Project"},
+                                "object_type": {"type": "string", "description": "客体的实体类型，如 Language、Technology"}
                             },
                             "required": ["subject", "relation", "object"]
                         },
                         "description": "三元组列表"
                     },
                     "entity_types": {
-                        "type": "array",
-                        "items": {"type": "string"},
-                        "description": "实体类型（可选）"
+                        "type": "object",
+                        "additionalProperties": {"type": "string"},
+                        "description": "实体类型字典，如 {\"用户\": \"Person\", \"项目A\": \"Project\"}（可选）"
                     },
                     "temporal_tag": {
                         "type": "string",
