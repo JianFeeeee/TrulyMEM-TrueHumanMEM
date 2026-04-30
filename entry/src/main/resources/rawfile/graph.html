@@ -19,6 +19,23 @@
         #node-info .label { color: #8888aa; }
         #loading { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); font-size: 20px; color: #4488ff; z-index: 200; }
         #nav { position: absolute; bottom: 30px; left: 50%; transform: translateX(-50%); display: flex; gap: 20px; z-index: 100; }
+
+        /* 搜索框 */
+        #search-box { position: absolute; top: 80px; left: 20px; z-index: 100; }
+        #search-input { background: rgba(10, 10, 26, 0.8); border: 1px solid rgba(100, 100, 255, 0.3); color: #ffffff; padding: 8px 12px; border-radius: 6px; font-family: 'Courier New', monospace; font-size: 14px; width: 200px; outline: none; backdrop-filter: blur(10px); }
+        #search-input::placeholder { color: #666688; }
+
+        /* 类型过滤按钮 */
+        #type-filter { position: absolute; top: 120px; left: 20px; display: flex; gap: 8px; z-index: 100; flex-wrap: wrap; }
+        .type-btn { background: rgba(10, 10, 26, 0.8); border: 1px solid rgba(100, 100, 255, 0.3); color: #aaaacc; padding: 6px 12px; border-radius: 6px; cursor: pointer; font-family: 'Courier New', monospace; font-size: 12px; backdrop-filter: blur(10px); transition: all 0.3s; }
+        .type-btn.active { background: rgba(68, 136, 255, 0.3); border-color: #4488ff; color: #ffffff; }
+
+        /* 缩放控制按钮 */
+        #zoom-controls { position: absolute; bottom: 100px; right: 20px; display: flex; flex-direction: column; gap: 10px; z-index: 100; }
+        .zoom-btn { width: 40px; height: 40px; border-radius: 50%; background: rgba(10, 10, 26, 0.8); border: 1px solid rgba(100, 100, 255, 0.3); color: #ffffff; font-size: 20px; cursor: pointer; display: flex; align-items: center; justify-content: center; backdrop-filter: blur(10px); font-family: 'Courier New', monospace; }
+
+        /* 边标签 */
+        #edge-label { position: absolute; display: none; background: rgba(10, 10, 26, 0.9); color: #44ff88; padding: 4px 8px; border-radius: 4px; font-size: 12px; pointer-events: none; z-index: 150; border: 1px solid rgba(68, 255, 136, 0.3); }
         .nav-btn { background: rgba(10, 10, 26, 0.8); border: 1px solid rgba(100, 100, 255, 0.3); color: #aaaacc; padding: 12px 24px; border-radius: 8px; cursor: pointer; font-family: 'Courier New', monospace; font-size: 14px; backdrop-filter: blur(10px); }
     </style>
 </head>
@@ -40,6 +57,23 @@
         <div id="nav">
             <button class="nav-btn active">🌌 星图</button>
         </div>
+        <div id="search-box">
+            <input type="text" id="search-input" placeholder="搜索节点...">
+        </div>
+        <div id="type-filter">
+            <button class="type-btn active" data-type="全部">全部</button>
+            <button class="type-btn" data-type="Person">Person</button>
+            <button class="type-btn" data-type="Task">Task</button>
+            <button class="type-btn" data-type="AI">AI</button>
+            <button class="type-btn" data-type="Concept">Concept</button>
+            <button class="type-btn" data-type="Object">Object</button>
+        </div>
+        <div id="zoom-controls">
+            <button class="zoom-btn" id="zoom-in">+</button>
+            <button class="zoom-btn" id="zoom-out">-</button>
+            <button class="zoom-btn" id="zoom-reset">R</button>
+        </div>
+        <div id="edge-label"></div>
     </div>
 
     <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
@@ -52,6 +86,13 @@
         let hoveredNode = null, selectedNode = null;
         let animationId;
         let highlightPulse = 0;
+        let searchTerm = '';
+        let activeTypeFilter = '全部';
+        let isDragging = false;
+        let dragNode = null;
+        let originalPhysicsState = true;
+        let edgeLabelEl = null;
+        let nodePositions = {}; // 存储节点位置用于拖拽
 
         const typeColors = { 'person': 0x4488ff, 'task': 0xff8844, 'ai': 0xaa44ff, 'concept': 0x44ff88, 'object': 0xff4444 };
         const defaultColor = 0xcccccc;
@@ -88,13 +129,72 @@
                     window.__graphData = event.data.payload;
                     loadGraphData();
                 }
+                if (event.data.type === 'search_nodes') {
+                    searchTerm = event.data.query || '';
+                    document.getElementById('search-input').value = searchTerm;
+                    applyFilters();
+                }
+                if (event.data.type === 'node_detail') {
+                    showNodeDetailPanel(event.data.detail);
+                }
+                if (event.data.type === 'highlight_node') {
+                    highlightNodeById(event.data.nodeId);
+                }
             });
+            // 搜索输入框事件
+            const searchInput = document.getElementById('search-input');
+            searchInput.addEventListener('input', (e) => {
+                searchTerm = e.target.value.toLowerCase();
+                applyFilters();
+                // 通知 ArkTS
+                try {
+                    if (window.nativeBridge && window.nativeBridge.onSearch) {
+                        window.nativeBridge.onSearch(searchTerm);
+                    }
+                } catch(e) {}
+            });
+            // 类型过滤按钮事件
+            document.querySelectorAll('.type-btn').forEach(btn => {
+                btn.addEventListener('click', () => {
+                    document.querySelectorAll('.type-btn').forEach(b => b.classList.remove('active'));
+                    btn.classList.add('active');
+                    activeTypeFilter = btn.dataset.type;
+                    applyFilters();
+                });
+            });
+            // 缩放控制按钮
+            document.getElementById('zoom-in').addEventListener('click', () => {
+                camera.position.multiplyScalar(0.8);
+                controls.update();
+            });
+            document.getElementById('zoom-out').addEventListener('click', () => {
+                camera.position.multiplyScalar(1.2);
+                controls.update();
+            });
+            document.getElementById('zoom-reset').addEventListener('click', () => {
+                if (Object.keys(nodePositions).length > 0) {
+                    const allPositions = Object.values(nodePositions);
+                    let maxDist = 0;
+                    allPositions.forEach(pos => { maxDist = Math.max(maxDist, Math.sqrt(pos.x*pos.x + pos.y*pos.y + pos.z*pos.z)); });
+                    camera.position.set(maxDist * 2.2, maxDist * 1.5, maxDist * 2.2);
+                    controls.target.set(0, 0, 0);
+                    controls.update();
+                }
+            });
+            // 边标签元素
+            edgeLabelEl = document.getElementById('edge-label');
+            // 鼠标移动检测边悬停
+            renderer.domElement.addEventListener('mousemove', onEdgeHoverCheck);
             // 通知 ArkTS 请求图数据
             try {
                 if (window.nativeBridge && window.nativeBridge.requestGraphData) {
                     window.nativeBridge.requestGraphData();
                 }
             } catch(e) {}
+            // 触摸事件支持
+            initTouchEvents();
+            // 初始化拖拽功能
+            initDragFunctionality();
             animate();
         }
 
@@ -180,21 +280,22 @@
                 nodeDegrees[e.target] = (nodeDegrees[e.target] || 0) + 1;
             });
             const positions = {};
+            nodePositions = positions; // 存储供拖拽使用
             const maxDegree = Math.max(...Object.values(nodeDegrees), 1);
             nodes.forEach((node, i) => {
                 const angle = (i / nodes.length) * Math.PI * 2;
                 const radius = 15 + (nodeDegrees[node.id] / maxDegree) * 35;
                 positions[node.id] = { x: radius * Math.cos(angle), y: (Math.random() - 0.5) * 10, z: radius * Math.sin(angle) };
             });
-            for (let iter = 0; iter < 50; iter++) {
+            for (let iter = 0; iter < 200; iter++) {
                 Object.keys(positions).forEach(id1 => {
                     Object.keys(positions).forEach(id2 => {
                         if (id1 >= id2) return;
                         const pos1 = positions[id1], pos2 = positions[id2];
                         const dx = pos1.x - pos2.x, dy = pos1.y - pos2.y, dz = pos1.z - pos2.z;
                         const dist = Math.sqrt(dx*dx + dy*dy + dz*dz) + 0.1;
-                        if (dist < 10) {
-                            const force = 0.1 / dist;
+                        if (dist < 20) { // 增加排斥距离
+                            const force = 0.3 / (dist * dist); // 增加排斥力系数（平方反比）
                             pos1.x += (dx/dist)*force; pos1.y += (dy/dist)*force; pos1.z += (dz/dist)*force;
                             pos2.x -= (dx/dist)*force; pos2.y -= (dy/dist)*force; pos2.z -= (dz/dist)*force;
                         }
@@ -206,7 +307,7 @@
                     const dx = pos2.x - pos1.x, dy = pos2.y - pos1.y, dz = pos2.z - pos1.z;
                     const dist = Math.sqrt(dx*dx + dy*dy + dz*dz) + 0.1;
                     if (dist > 15) {
-                        const force = 0.05;
+                        const force = 0.08; // 增加吸引力
                         pos1.x += (dx/dist)*force; pos1.y += (dy/dist)*force; pos1.z += (dz/dist)*force;
                         pos2.x -= (dx/dist)*force; pos2.y -= (dy/dist)*force; pos2.z -= (dz/dist)*force;
                     }
@@ -218,23 +319,27 @@
                 const radius = 0.4 + Math.min(node.mention_count * 0.15, 1.5);
                 const color = typeColors[node.type] || defaultColor;
                 const geometry = new THREE.SphereGeometry(radius, 16, 12);
-                const material = new THREE.MeshPhongMaterial({ color: color, emissive: color, emissiveIntensity: 0.5 + Math.min(node.mention_count * 0.05, 0.3), shininess: 30 });
+                const material = new THREE.MeshPhongMaterial({ color: color, emissive: color, emissiveIntensity: 0.5 + Math.min(node.mention_count * 0.05, 0.3), shininess: 30, transparent: true, opacity: 0 });
                 const sphere = new THREE.Mesh(geometry, material);
                 sphere.position.set(pos.x, pos.y, pos.z);
                 sphere.userData = { nodeId: node.id, nodeData: node };
                 scene.add(sphere);
                 nodeMeshes.push(sphere);
+                // 淡入动画
+                fadeInObject(sphere, 500);
             });
             edges.forEach(edge => {
                 const pos1 = positions[edge.source], pos2 = positions[edge.target];
                 if (!pos1 || !pos2) return;
                 const color = edgeColors[edge.relation_type] || defaultEdgeColor;
                 const geometry = new THREE.BufferGeometry().setFromPoints([new THREE.Vector3(pos1.x, pos1.y, pos1.z), new THREE.Vector3(pos2.x, pos2.y, pos2.z)]);
-                const material = new THREE.LineBasicMaterial({ color: color, transparent: true, opacity: 0.4, linewidth: 1 });
+                const material = new THREE.LineBasicMaterial({ color: color, transparent: true, opacity: 0, linewidth: 1 });
                 const line = new THREE.Line(geometry, material);
                 line.userData = { edgeId: edge.id, edgeData: edge };
                 scene.add(line);
                 edgeLines.push(line);
+                // 淡入动画
+                fadeInLine(line, 500);
             });
             const allPositions = Object.values(positions);
             if (allPositions.length > 0) {
@@ -265,14 +370,19 @@
         }
 
         function onMouseClick(event) {
+            if (isDragging) return;
             raycaster.setFromCamera(mouse, camera);
             const intersects = raycaster.intersectObjects(nodeMeshes);
             if (intersects.length > 0) {
                 const node = intersects[0].object;
-                if (selectedNode === node) { selectedNode = null; document.getElementById('node-info').style.display = 'none'; }
-                else {
+                if (selectedNode === node) {
+                    selectedNode = null;
+                    document.getElementById('node-info').style.display = 'none';
+                    resetHighlight();
+                } else {
                     selectedNode = node;
                     showNodeInfo(node.userData.nodeData, true);
+                    highlightNodeConnections(node.userData.nodeData);
                     // 通知 ArkTS 节点被点击
                     try {
                         if (window.nativeBridge && window.nativeBridge.onNodeClick) {
@@ -280,6 +390,11 @@
                         }
                     } catch(e) {}
                 }
+            } else {
+                // 点击空白处恢复
+                selectedNode = null;
+                document.getElementById('node-info').style.display = 'none';
+                resetHighlight();
             }
         }
 
@@ -293,6 +408,339 @@
         }
 
         function hideNodeInfo() { if (!selectedNode) document.getElementById('node-info').style.display = 'none'; }
+
+        // 淡入动画
+        function fadeInObject(obj, duration) {
+            const startOpacity = 0;
+            const endOpacity = obj.material.opacity !== undefined ? (obj.material.transparent ? obj.material.opacity : 1) : 1;
+            obj.material.opacity = startOpacity;
+            obj.material.transparent = true;
+            const startTime = Date.now();
+            function animateFade() {
+                const elapsed = Date.now() - startTime;
+                const progress = Math.min(elapsed / duration, 1);
+                obj.material.opacity = startOpacity + (endOpacity - startOpacity) * progress;
+                if (progress < 1) {
+                    requestAnimationFrame(animateFade);
+                } else {
+                    obj.material.transparent = endOpacity < 1;
+                }
+            }
+            animateFade();
+        }
+
+        function fadeInLine(line, duration) {
+            const startOpacity = 0;
+            const endOpacity = 0.4;
+            line.material.opacity = startOpacity;
+            const startTime = Date.now();
+            function animateFade() {
+                const elapsed = Date.now() - startTime;
+                const progress = Math.min(elapsed / duration, 1);
+                line.material.opacity = startOpacity + (endOpacity - startOpacity) * progress;
+                if (progress < 1) {
+                    requestAnimationFrame(animateFade);
+                }
+            }
+            animateFade();
+        }
+
+        // 通过节点ID高亮节点（供ArkTS调用）
+        function highlightNodeById(nodeId) {
+            const mesh = nodeMeshes.find(m => m.userData.nodeData.id === nodeId);
+            if (mesh) {
+                selectedNode = mesh;
+                showNodeInfo(mesh.userData.nodeData, true);
+                highlightNodeConnections(mesh.userData.nodeData);
+            }
+        }
+
+        // 显示节点详情面板（供ArkTS调用）
+        function showNodeDetailPanel(detail) {
+            // 更新node-info面板显示详细信息
+            document.getElementById('info-name').textContent = detail.name;
+            document.getElementById('info-type').textContent = detail.type;
+            document.getElementById('info-mentions').textContent = detail.mention_count;
+            document.getElementById('info-links').textContent = detail.connection_count;
+            document.getElementById('node-info').style.display = 'block';
+
+            // 如果有连接信息，添加到面板
+            let detailHtml = `<h3>${detail.name}</h3>`;
+            detailHtml += `<p><span class="label">类型:</span> ${detail.type}</p>`;
+            detailHtml += `<p><span class="label">提及次数:</span> ${detail.mention_count}</p>`;
+            detailHtml += `<p><span class="label">连接数:</span> ${detail.connection_count}</p>`;
+            if (detail.connections && detail.connections.length > 0) {
+                detailHtml += `<p><span class="label">连接关系:</span></p><ul style="margin-left: 15px; font-size: 12px;">`;
+                detail.connections.forEach(conn => {
+                    detailHtml += `<li>${conn.type}: ${conn.target_name}</li>`;
+                });
+                detailHtml += `</ul>`;
+            }
+            document.getElementById('node-info').innerHTML = detailHtml;
+        }
+
+        // 节点拖拽功能
+        function initDragFunctionality() {
+            let dragStartPos = { x: 0, y: 0 };
+
+            renderer.domElement.addEventListener('mousedown', (event) => {
+                raycaster.setFromCamera(mouse, camera);
+                const intersects = raycaster.intersectObjects(nodeMeshes);
+                if (intersects.length > 0) {
+                    isDragging = false;
+                    dragNode = intersects[0].object;
+                    dragStartPos = { x: event.clientX, y: event.clientY };
+                    originalPhysicsState = true; // 暂停物理模拟
+                }
+            });
+
+            renderer.domElement.addEventListener('mousemove', (event) => {
+                if (dragNode) {
+                    const dx = event.clientX - dragStartPos.x;
+                    const dy = event.clientY - dragStartPos.y;
+                    if (Math.abs(dx) > 3 || Math.abs(dy) > 3) {
+                        isDragging = true;
+                    }
+                    if (isDragging) {
+                        // 将屏幕坐标转换为3D空间
+                        const rect = renderer.domElement.getBoundingClientRect();
+                        const mouseX = ((event.clientX - rect.left) / rect.width) * 2 - 1;
+                        const mouseY = -((event.clientY - rect.top) / rect.height) * 2 + 1;
+                        const vector = new THREE.Vector3(mouseX, mouseY, 0.5);
+                        vector.unproject(camera);
+                        const dir = vector.sub(camera.position).normalize();
+                        const distance = -camera.position.z / dir.z;
+                        const newPos = camera.position.clone().add(dir.multiplyScalar(distance));
+                        dragNode.position.copy(newPos);
+                        // 更新存储的位置
+                        if (nodePositions[dragNode.userData.nodeId]) {
+                            nodePositions[dragNode.userData.nodeId] = { x: newPos.x, y: newPos.y, z: newPos.z };
+                        }
+                    }
+                }
+            });
+
+            renderer.domElement.addEventListener('mouseup', () => {
+                if (dragNode) {
+                    // 恢复物理模拟
+                    dragNode = null;
+                    isDragging = false;
+                }
+            });
+        }
+
+        // Touch事件支持
+        function initTouchEvents() {
+            let touchStart = null;
+            let touchStartDistance = 0;
+            let touchStartPos = { x: 0, y: 0 };
+            let isTouchDrag = false;
+
+            renderer.domElement.addEventListener('touchstart', (event) => {
+                event.preventDefault();
+                if (event.touches.length === 1) {
+                    const touch = event.touches[0];
+                    touchStartPos = { x: touch.clientX, y: touch.clientY };
+                    isTouchDrag = false;
+
+                    // 模拟鼠标事件用于射线检测
+                    const rect = renderer.domElement.getBoundingClientRect();
+                    mouse.x = ((touch.clientX - rect.left) / rect.width) * 2 - 1;
+                    mouse.y = -((touch.clientY - rect.top) / rect.height) * 2 + 1;
+
+                    raycaster.setFromCamera(mouse, camera);
+                    const intersects = raycaster.intersectObjects(nodeMeshes);
+                    if (intersects.length > 0) {
+                        const node = intersects[0].object;
+                        if (selectedNode === node) {
+                            selectedNode = null;
+                            document.getElementById('node-info').style.display = 'none';
+                            resetHighlight();
+                        } else {
+                            selectedNode = node;
+                            showNodeInfo(node.userData.nodeData, true);
+                            highlightNodeConnections(node.userData.nodeData);
+                            try {
+                                if (window.nativeBridge && window.nativeBridge.onNodeClick) {
+                                    window.nativeBridge.onNodeClick(node.userData.nodeData.id, node.userData.nodeData.name);
+                                }
+                            } catch(e) {}
+                        }
+                    }
+                } else if (event.touches.length === 2) {
+                    // 双指缩放
+                    const dx = event.touches[0].clientX - event.touches[1].clientX;
+                    const dy = event.touches[0].clientY - event.touches[1].clientY;
+                    touchStartDistance = Math.sqrt(dx*dx + dy*dy);
+                }
+            }, { passive: false });
+
+            renderer.domElement.addEventListener('touchmove', (event) => {
+                event.preventDefault();
+                if (event.touches.length === 1 && controls) {
+                    const touch = event.touches[0];
+                    const dx = touch.clientX - touchStartPos.x;
+                    const dy = touch.clientY - touchStartPos.y;
+                    if (Math.abs(dx) > 5 || Math.abs(dy) > 5) {
+                        isTouchDrag = true;
+                    }
+                    // 模拟OrbitControls的鼠标移动
+                    if (isTouchDrag) {
+                        const rotateSpeed = 0.005;
+                        controls.rotateLeft(-dx * rotateSpeed);
+                        controls.rotateUp(-dy * rotateSpeed);
+                        controls.update();
+                        touchStartPos = { x: touch.clientX, y: touch.clientY };
+                    }
+                } else if (event.touches.length === 2 && controls) {
+                    // 双指缩放
+                    const dx = event.touches[0].clientX - event.touches[1].clientX;
+                    const dy = event.touches[0].clientY - event.touches[1].clientY;
+                    const distance = Math.sqrt(dx*dx + dy*dy);
+                    const scale = touchStartDistance / distance;
+                    camera.position.multiplyScalar(scale);
+                    controls.update();
+                    touchStartDistance = distance;
+                }
+            }, { passive: false });
+
+            renderer.domElement.addEventListener('touchend', (event) => {
+                if (event.touches.length === 0) {
+                    isTouchDrag = false;
+                }
+            }, { passive: false });
+        }
+
+        // 搜索和类型过滤
+        function applyFilters() {
+            nodeMeshes.forEach(mesh => {
+                const nodeData = mesh.userData.nodeData;
+                const nameMatch = nodeData.name.toLowerCase().includes(searchTerm);
+                const typeMatch = activeTypeFilter === '全部' || nodeData.type === activeTypeFilter;
+
+                if (nameMatch && typeMatch) {
+                    mesh.material.transparent = false;
+                    mesh.material.opacity = 1;
+                    mesh.scale.setScalar(1);
+                } else {
+                    mesh.material.transparent = true;
+                    mesh.material.opacity = 0.2;
+                    mesh.scale.setScalar(0.8);
+                }
+            });
+            // 同时过滤边
+            edgeLines.forEach(line => {
+                const edgeData = line.userData.edgeData;
+                const sourceNode = nodes.find(n => n.id === edgeData.source);
+                const targetNode = nodes.find(n => n.id === edgeData.target);
+                const sourceMatch = sourceNode && sourceNode.name.toLowerCase().includes(searchTerm) && (activeTypeFilter === '全部' || sourceNode.type === activeTypeFilter);
+                const targetMatch = targetNode && targetNode.name.toLowerCase().includes(searchTerm) && (activeTypeFilter === '全部' || targetNode.type === activeTypeFilter);
+
+                if ((sourceMatch || targetMatch) && searchTerm === '' && activeTypeFilter === '全部') {
+                    line.material.transparent = true;
+                    line.material.opacity = 0.4;
+                } else if (sourceMatch || targetMatch) {
+                    line.material.transparent = true;
+                    line.material.opacity = 0.6;
+                } else {
+                    line.material.transparent = true;
+                    line.material.opacity = 0.1;
+                }
+            });
+        }
+
+        // 连接高亮
+        function highlightNodeConnections(nodeData) {
+            const connectedNodeIds = new Set();
+            const connectedEdgeIds = new Set();
+
+            // 找出所有连接的节点和边
+            edges.forEach(edge => {
+                if (edge.source === nodeData.id || edge.target === nodeData.id) {
+                    connectedNodeIds.add(edge.source);
+                    connectedNodeIds.add(edge.target);
+                    connectedEdgeIds.add(edge.id);
+                }
+            });
+
+            nodeMeshes.forEach(mesh => {
+                const meshNodeId = mesh.userData.nodeData.id;
+                if (meshNodeId === nodeData.id) {
+                    // 选中的节点
+                    mesh.material.emissiveIntensity = 1.0;
+                    mesh.scale.setScalar(1.5);
+                } else if (connectedNodeIds.has(meshNodeId)) {
+                    // 直接连接的节点
+                    mesh.material.emissiveIntensity = 0.8;
+                    mesh.scale.setScalar(1.3);
+                    mesh.material.transparent = false;
+                    mesh.material.opacity = 1;
+                } else {
+                    // 无关系的节点
+                    mesh.material.transparent = true;
+                    mesh.material.opacity = 0.15;
+                    mesh.material.emissiveIntensity = 0.2;
+                    mesh.scale.setScalar(0.9);
+                }
+            });
+
+            edgeLines.forEach(line => {
+                if (connectedEdgeIds.has(line.userData.edgeData.id)) {
+                    line.material.transparent = true;
+                    line.material.opacity = 0.8;
+                    line.material.linewidth = 2;
+                } else {
+                    line.material.transparent = true;
+                    line.material.opacity = 0.1;
+                    line.material.linewidth = 1;
+                }
+            });
+        }
+
+        function resetHighlight() {
+            nodeMeshes.forEach(mesh => {
+                const nodeData = mesh.userData.nodeData;
+                const nameMatch = nodeData.name.toLowerCase().includes(searchTerm);
+                const typeMatch = activeTypeFilter === '全部' || nodeData.type === activeTypeFilter;
+
+                mesh.material.emissiveIntensity = 0.5 + Math.min(nodeData.mention_count * 0.05, 0.3);
+                if (nameMatch && typeMatch) {
+                    mesh.material.transparent = false;
+                    mesh.material.opacity = 1;
+                    mesh.scale.setScalar(1);
+                } else {
+                    mesh.material.transparent = true;
+                    mesh.material.opacity = 0.2;
+                    mesh.scale.setScalar(0.8);
+                }
+            });
+            edgeLines.forEach(line => {
+                line.material.transparent = true;
+                line.material.opacity = 0.4;
+                line.material.linewidth = 1;
+            });
+        }
+
+        // 边标签显示
+        function onEdgeHoverCheck(event) {
+            const rect = renderer.domElement.getBoundingClientRect();
+            mouse.x = ((event.clientX - rect.left) / rect.width) * 2 - 1;
+            mouse.y = -((event.clientY - rect.top) / rect.height) * 2 + 1;
+            raycaster.setFromCamera(mouse, camera);
+
+            // 检查边悬停
+            const edgeIntersects = raycaster.intersectObjects(edgeLines);
+            if (edgeIntersects.length > 0) {
+                const edge = edgeIntersects[0].object;
+                const edgeData = edge.userData.edgeData;
+                edgeLabelEl.textContent = edgeData.relation_type || '关系';
+                edgeLabelEl.style.display = 'block';
+                edgeLabelEl.style.left = (event.clientX - rect.left + 10) + 'px';
+                edgeLabelEl.style.top = (event.clientY - rect.top - 10) + 'px';
+            } else {
+                edgeLabelEl.style.display = 'none';
+            }
+        }
 
         function onWindowResize() {
             camera.aspect = window.innerWidth / window.innerHeight;

@@ -748,4 +748,181 @@ export class GraphMemoryService {
         const graphData: GraphData = { nodes, edges };
         return graphData;
     }
+
+    /**
+     * 查询节点的完整信息 — 自身属性 + 所有相连关系 + 相邻节点名列表
+     */
+    async getNodeDetail(nodeName: string): Promise<NodeDetailInfo | null> {
+        try {
+            const recallResult = await this.db.recall(nodeName, [nodeName], 1);
+            if (recallResult.entities.length === 0) {
+                return null;
+            }
+
+            const entity = recallResult.entities[0];
+            const connections: Array<{ type: string; target_name: string }> = [];
+            let connectionCount = 0;
+
+            for (const rel of recallResult.relations) {
+                if (rel.source === nodeName) {
+                    connections.push({
+                        type: rel.type,
+                        target_name: rel.target
+                    });
+                    connectionCount++;
+                } else if (rel.target === nodeName) {
+                    connections.push({
+                        type: rel.type + ' (反向)',
+                        target_name: rel.source
+                    });
+                    connectionCount++;
+                }
+            }
+
+            const detail: NodeDetailInfo = {
+                name: entity.name,
+                type: entity.type,
+                mention_count: entity.mention_count,
+                connection_count: connectionCount,
+                connections
+            };
+            return detail;
+        } catch (err) {
+            console.error('getNodeDetail error: ' + JSON.stringify(err));
+            return null;
+        }
+    }
+
+    /**
+     * 返回带连接度数的图数据（每个节点增加 degree 字段）
+     */
+    async getJoinedData(): Promise<GraphData> {
+        const graphData = await this.getGraphDataForView();
+
+        // 计算每个节点的连接度数
+        const degreeMap: Record<number, number> = {};
+        for (const edge of graphData.edges) {
+            degreeMap[edge.from] = (degreeMap[edge.from] || 0) + 1;
+            degreeMap[edge.to] = (degreeMap[edge.to] || 0) + 1;
+        }
+
+        // 为节点添加 degree 字段（通过扩展 NodeData）
+        const nodesWithDegree = graphData.nodes.map(node => ({
+            ...node,
+            degree: degreeMap[node.id] || 0
+        }));
+
+        return { nodes: nodesWithDegree as any[], edges: graphData.edges };
+    }
+}
+
+// ========= NodeDetailInfo 接口定义 =========
+
+interface NodeDetailInfo {
+    name: string;
+    type: string;
+    mention_count: number;
+    connection_count: number;
+    connections: Array<{ type: string; target_name: string }>;
+}
+
+        for (const rel of recallResult.relations) {
+            const from = nameToId[rel.source];
+            const to = nameToId[rel.target];
+            if (from !== undefined && to !== undefined) {
+                const edge: EdgeData = {
+                    from,
+                    to,
+                    label: rel.type,
+                    weight: rel.confidence
+                };
+                edges.push(edge);
+            }
+        }
+
+        const graphData: GraphData = { nodes, edges };
+        return graphData;
+    }
+
+    /**
+     * 获取节点详细信息——自身属性 + 所有相连关系 + 相邻节点名列表
+     * 供 GraphPage 节点点击后查询用
+     */
+    async getNodeDetail(nodeName: string): Promise<{
+        name: string;
+        type: string;
+        mention_count: number;
+        connection_count: number;
+        connections: Array<{ type: string; target_name: string }>;
+    } | null> {
+        try {
+            // 搜索节点
+            const searchResults = await this.db.search(nodeName);
+            const node = searchResults.find(n => n.name === nodeName);
+            if (!node) {
+                return null;
+            }
+
+            // 查询与该节点相关的所有关系
+            const recallResult = await this.db.recall(nodeName, [nodeName], 1);
+            const connections: Array<{ type: string; target_name: string }> = [];
+
+            for (const rel of recallResult.relations) {
+                if (rel.source === nodeName) {
+                    connections.push({ type: rel.type, target_name: rel.target });
+                } else if (rel.target === nodeName) {
+                    connections.push({ type: rel.type + '(反向)', target_name: rel.source });
+                }
+            }
+
+            return {
+                name: node.name,
+                type: node.type,
+                mention_count: node.mentions,
+                connection_count: connections.length,
+                connections
+            };
+        } catch (e) {
+            console.error('getNodeDetail error: ' + JSON.stringify(e));
+            return null;
+        }
+    }
+
+    /**
+     * 获取带连接度的图数据
+     * 每个节点增加 degree 字段，供前端根据度调整显示大小
+     */
+    async getJoinedData(): Promise<GraphData & { stats: { maxDegree: number; avgDegree: number } }> {
+        const graphData = await this.getGraphDataForView();
+
+        // 计算每个节点的度
+        const degreeMap: Record<number, number> = {};
+        for (const node of graphData.nodes) {
+            degreeMap[node.id] = 0;
+        }
+        for (const edge of graphData.edges) {
+            degreeMap[edge.from] = (degreeMap[edge.from] || 0) + 1;
+            degreeMap[edge.to] = (degreeMap[edge.to] || 0) + 1;
+        }
+
+        // 为每个节点附加度
+        const enrichedNodes: NodeData[] = [];
+        for (const n of graphData.nodes) {
+            const enriched: NodeData & { degree: number } = n as (NodeData & { degree: number });
+            enriched.degree = degreeMap[n.id] || 0;
+            enrichedNodes.push(enriched);
+        }
+
+        const degrees = Object.values(degreeMap);
+        const maxDegree = Math.max(...degrees, 1);
+        const avgDegree = degrees.length > 0
+            ? degrees.reduce((a, b) => a + b, 0) / degrees.length
+            : 0;
+
+        return {
+            nodes: enrichedNodes,
+            edges: graphData.edges,
+            stats: { maxDegree, avgDegree }
+        };
+    }
 }

@@ -1,0 +1,221 @@
+Reading package lists...
+Building dependency tree...
+Reading state information...
+python3 is already the newest version (3.13.9-3).
+python3 set to manually installed.
+python3-pip is already the newest version (26.0.1+dfsg-1).
+You might want to run 'apt --fix-broken install' to correct these.
+The following packages have unmet dependencies:
+ libxfont2 : Depends: libfontenc1 (>= 1:1.1.8) but 1:1.1.4-1 is to be installed
+ python3-venv : Depends: python3.13-venv (>= 3.13.5-1~) but it is not going to be installed
+                Depends: python3 (= 3.13.5-1) but 3.13.9-3 is to be installed
+ xserver-common : Depends: x11-xkb-utils but it is not going to be installed
+                  Recommends: xfonts-base but it is not going to be installed
+E: Unmet dependencies. Try 'apt --fix-broken install' with no packages (or specify a solution).
+
+WARNING: apt does not have a stable CLI interface. Use with caution in scripts.
+
+Reading package lists...
+Building dependency tree...
+Reading state information...
+Correcting dependencies... Done
+Solving dependencies...
+Upgrading:
+  libfontenc1  libxt-dev
+
+Installing dependencies:
+  libxt6t64  x11-xkb-utils
+
+REMOVING:
+  libxt6
+
+apt-listchanges: Reading changelogs...
+dpkg-preconfigure: unable to re-open stdin: No such file or directory
+Summary:
+  Upgrading: 2, Installing: 2, Removing: 1, Not Upgrading: 708
+  Download size: 0 B / 778 kB
+  Space needed: 526 kB / 419 GB available
+
+(Reading database… (Reading database… 5%(Reading database… 10%(Reading database… 15%(Reading database… 20%(Reading database… 25%(Reading database… 30%(Reading database… 35%(Reading database… 40%(Reading database… 45%(Reading database… 50%(Reading database… 55%(Reading database… 60%(Reading database… 65%(Reading database… 70%(Reading database… 75%(Reading database… 80%(Reading database… 85%(Reading database… 90%(Reading database… 95%(Reading database… 100%(Reading database… 103500 files and directories currently installed.)
+Preparing to unpack …/libxt-dev_1%3a1.2.1-1.2+b2_amd64.deb…
+Unpacking libxt-dev:amd64 (1:1.2.1-1.2+b2) over (1:1.2.1-1.1)…
+dpkg: libxt6:amd64: dependency problems, but removing anyway as you requested:
+ x11-xserver-utils depends on libxt6.
+ x11-utils depends on libxt6 (>= 1:1.1.0).
+ libxmu6:amd64 depends on libxt6.
+ libxaw7:amd64 depends on libxt6.
+ libgs10:amd64 depends on libxt6.
+
+(Reading database… (Reading database… 5%(Reading database… 10%(Reading database… 15%(Reading database… 20%(Reading database… 25%(Reading database… 30%(Reading database… 35%(Reading database… 40%(Reading database… 45%(Reading database… 50%(Reading database… 55%(Reading database… 60%(Reading database… 65%(Reading database… 70%(Reading database… 75%(Reading database… 80%(Reading database… 85%(Reading database… 90%(Reading database… 95%(Reading database… 100%(Reading database… 103501 files and directories currently installed.)
+Removing libxt6:amd64 (1:1.2.1-1.1)…
+Selecting previously unselected package libxt6t64:amd64.
+(Reading database… (Reading database… 5%(Reading database… 10%(Reading database… 15%(Reading database… 20%(Reading database… 25%(Reading database… 30%(Reading database… 35%(Reading database… 40%(Reading database… 45%(Reading database… 50%(Reading database… 55%(Reading database… 60%(Reading database… 65%(Reading database… 70%(Reading database… 75%(Reading database… 80%(Reading database… 85%(Reading database… 90%(Reading database… 95%(Reading database… 100%(Reading database… 103495 files and directories currently installed.)
+Preparing to unpack …/libxt6t64_1%3a1.2.1-1.2+b2_amd64.deb…
+Unpacking libxt6t64:amd64 (1:1.2.1-1.2+b2)…
+Preparing to unpack …/libfontenc1_1%3a1.1.8-1+b2_amd64.deb…
+Unpacking libfontenc1:amd64 (1:1.1.8-1+b2) over (1:1.1.4-1)…
+Selecting previously unselected package x11-xkb-utils.
+Preparing to unpack …/x11-xkb-utils_7.7+9_amd64.deb…
+Unpacking x11-xkb-utils (7.7+9)…
+Setting up libfontenc1:amd64 (1:1.1.8-1+b2)…
+Setting up libxt6t64:amd64 (1:1.2.1-1.2+b2)…
+Setting up x11-xkb-utils (7.7+9)…
+Setting up libxt-dev:amd64 (1:1.2.1-1.2+b2)…
+Processing triggers for man-db (2.11.2-2)…
+Processing triggers for libc-bin (2.42-14)…
+needrestart is being skipped since dpkg has failed
+Reading package lists...
+Building dependency tree...
+Reading state information...
+Solving dependencies...
+Some packages could not be installed. This may mean that you have
+requested an impossible situation or if you are using the unstable
+distribution that some required packages have not yet been created
+or been moved out of Incoming.
+The following information may help to resolve the situation:
+
+The following packages have unmet dependencies:
+ python3-venv : Depends: python3.13-venv (>= 3.13.5-1~) but it is not going to be installed
+                Depends: python3 (= 3.13.5-1) but 3.13.9-3 is to be installed
+E: Unable to satisfy dependencies. Reached two conflicting assignments:
+   1. python3-venv:amd64=3.13.5-1 is selected for install
+   2. python3-venv:amd64=3.13.5-1 Depends python3 (= 3.13.5-1)
+      but none of the choices are installable:
+      - python3:amd64=3.13.5-1 is not selected for install
+===== Building TrulyMEM for Linux =====
+Project root: /home/program/TrulyMEM-TrueHumanMEM
+The virtual environment was not created successfully because ensurepip is not
+available.  On Debian/Ubuntu systems, you need to install the python3-venv
+package using the following command.
+
+    apt install python3.13-venv
+
+You may need to use sudo with that command.  After installing the python3-venv
+package, recreate your virtual environment.
+
+Failing command: /home/program/TrulyMEM-TrueHumanMEM/.venv_build/bin/python3
+
+Warning: venv creation failed, falling back to system Python
+Cleaning previous builds...
+================================
+Building TrulyMEM (TUI + Web embedded)
+================================
+31 INFO: PyInstaller: 6.20.0, contrib hooks: 2026.4
+31 INFO: Python: 3.13.12
+33 INFO: Platform: Linux-6.1.0-44-amd64-x86_64-with-glibc2.42
+33 INFO: Python environment: /usr
+36 INFO: Removing temporary files and cleaning cache in /root/.cache/pyinstaller
+37 INFO: Module search paths (PYTHONPATH):
+['/home/program/TrulyMEM-TrueHumanMEM',
+ '/home/program/TrulyMEM-TrueHumanMEM',
+ '/usr/lib/python313.zip',
+ '/usr/lib/python3.13',
+ '/usr/lib/python3.13/lib-dynload',
+ '/usr/local/lib/python3.13/dist-packages',
+ '/usr/lib/python3/dist-packages',
+ '/home/program/TrulyMEM-TrueHumanMEM']
+158 INFO: Appending 'datas' from .spec
+158 INFO: checking Analysis
+158 INFO: Building Analysis because Analysis-00.toc is non existent
+159 INFO: Looking for Python shared library...
+166 INFO: Using Python shared library: /usr/lib/x86_64-linux-gnu/libpython3.13.so.1.0
+166 INFO: Running Analysis Analysis-00.toc
+166 INFO: Target bytecode optimization level: 0
+166 INFO: Initializing module dependency graph...
+166 INFO: Initializing module graph hook caches...
+170 INFO: Analyzing modules for base_library.zip ...
+651 INFO: Processing standard module hook 'hook-encodings.py' from '/usr/local/lib/python3.13/dist-packages/PyInstaller/hooks'
+943 INFO: Processing standard module hook 'hook-heapq.py' from '/usr/local/lib/python3.13/dist-packages/PyInstaller/hooks'
+1656 INFO: Processing standard module hook 'hook-pickle.py' from '/usr/local/lib/python3.13/dist-packages/PyInstaller/hooks'
+2496 INFO: Caching module dependency graph...
+2519 INFO: Analyzing /home/program/TrulyMEM-TrueHumanMEM/trulymem_entry.py
+2554 INFO: Processing standard module hook 'hook-sqlite3.py' from '/usr/local/lib/python3.13/dist-packages/PyInstaller/hooks'
+2678 INFO: Processing standard module hook 'hook-platform.py' from '/usr/local/lib/python3.13/dist-packages/PyInstaller/hooks'
+2702 INFO: Processing standard module hook 'hook-sysconfig.py' from '/usr/local/lib/python3.13/dist-packages/PyInstaller/hooks'
+2706 INFO: Processing standard module hook 'hook-_ctypes.py' from '/usr/local/lib/python3.13/dist-packages/PyInstaller/hooks'
+2716 INFO: Processing pre-safe-import-module hook 'hook-typing_extensions.py' from '/usr/local/lib/python3.13/dist-packages/PyInstaller/hooks/pre_safe_import_module'
+2717 INFO: SetuptoolsInfo: initializing cached setuptools info...
+4768 INFO: Processing standard module hook 'hook-multiprocessing.util.py' from '/usr/local/lib/python3.13/dist-packages/PyInstaller/hooks'
+4924 INFO: Processing standard module hook 'hook-xml.py' from '/usr/local/lib/python3.13/dist-packages/PyInstaller/hooks'
+5338 INFO: Processing standard module hook 'hook-pydantic.py' from '/usr/local/lib/python3.13/dist-packages/_pyinstaller_hooks_contrib/stdhooks'
+5622 INFO: Processing standard module hook 'hook-rich.py' from '/usr/local/lib/python3.13/dist-packages/_pyinstaller_hooks_contrib/stdhooks'
+5908 INFO: Processing standard module hook 'hook-pygments.py' from '/usr/local/lib/python3.13/dist-packages/PyInstaller/hooks'
+6310 INFO: Processing standard module hook 'hook-chardet.py' from '/usr/local/lib/python3.13/dist-packages/_pyinstaller_hooks_contrib/stdhooks'
+7729 INFO: Processing standard module hook 'hook-zoneinfo.py' from '/usr/local/lib/python3.13/dist-packages/_pyinstaller_hooks_contrib/stdhooks'
+8919 INFO: Processing standard module hook 'hook-certifi.py' from '/usr/local/lib/python3.13/dist-packages/_pyinstaller_hooks_contrib/stdhooks'
+8990 INFO: Processing standard module hook 'hook-anyio.py' from '/usr/local/lib/python3.13/dist-packages/_pyinstaller_hooks_contrib/stdhooks'
+9647 INFO: Processing standard module hook 'hook-difflib.py' from '/usr/local/lib/python3.13/dist-packages/PyInstaller/hooks'
+10808 INFO: Processing standard module hook 'hook-numpy.py' from '/usr/local/lib/python3.13/dist-packages/PyInstaller/hooks'
+12163 INFO: Processing standard module hook 'hook-charset_normalizer.py' from '/usr/local/lib/python3.13/dist-packages/_pyinstaller_hooks_contrib/stdhooks'
+12999 INFO: Processing standard module hook 'hook-pytz.py' from '/usr/local/lib/python3.13/dist-packages/PyInstaller/hooks'
+13591 INFO: Processing pre-safe-import-module hook 'hook-platformdirs.py' from '/usr/local/lib/python3.13/dist-packages/PyInstaller/hooks/pre_safe_import_module'
+13598 INFO: Processing standard module hook 'hook-platformdirs.py' from '/usr/local/lib/python3.13/dist-packages/_pyinstaller_hooks_contrib/stdhooks'
+15377 INFO: Processing standard module hook 'hook-jinja2.py' from '/usr/local/lib/python3.13/dist-packages/_pyinstaller_hooks_contrib/stdhooks'
+15747 INFO: Processing pre-safe-import-module hook 'hook-importlib_metadata.py' from '/usr/local/lib/python3.13/dist-packages/PyInstaller/hooks/pre_safe_import_module'
+15747 INFO: Setuptools: 'importlib_metadata' appears to be a setuptools-vendored copy - creating alias to 'setuptools._vendor.importlib_metadata'!
+15752 INFO: Processing standard module hook 'hook-setuptools.py' from '/usr/local/lib/python3.13/dist-packages/PyInstaller/hooks'
+15759 INFO: Processing pre-safe-import-module hook 'hook-distutils.py' from '/usr/local/lib/python3.13/dist-packages/PyInstaller/hooks/pre_safe_import_module'
+15778 INFO: Processing pre-safe-import-module hook 'hook-jaraco.py' from '/usr/local/lib/python3.13/dist-packages/PyInstaller/hooks/pre_safe_import_module'
+15778 INFO: Setuptools: 'jaraco' appears to be a partial setuptools-vendored copy - extending search paths to ['/usr/lib/python3/dist-packages/jaraco', '/usr/lib/python3/dist-packages/setuptools/_vendor/jaraco']!
+15778 INFO: Processing pre-safe-import-module hook 'hook-jaraco.functools.py' from '/usr/local/lib/python3.13/dist-packages/PyInstaller/hooks/pre_safe_import_module'
+15784 INFO: Processing pre-safe-import-module hook 'hook-more_itertools.py' from '/usr/local/lib/python3.13/dist-packages/PyInstaller/hooks/pre_safe_import_module'
+15927 INFO: Processing pre-safe-import-module hook 'hook-packaging.py' from '/usr/local/lib/python3.13/dist-packages/PyInstaller/hooks/pre_safe_import_module'
+16048 INFO: Processing pre-safe-import-module hook 'hook-jaraco.text.py' from '/usr/local/lib/python3.13/dist-packages/PyInstaller/hooks/pre_safe_import_module'
+16055 INFO: Processing standard module hook 'hook-jaraco.text.py' from '/usr/local/lib/python3.13/dist-packages/_pyinstaller_hooks_contrib/stdhooks'
+16088 INFO: Processing pre-safe-import-module hook 'hook-importlib_resources.py' from '/usr/local/lib/python3.13/dist-packages/PyInstaller/hooks/pre_safe_import_module'
+16089 INFO: Processing pre-safe-import-module hook 'hook-jaraco.context.py' from '/usr/local/lib/python3.13/dist-packages/PyInstaller/hooks/pre_safe_import_module'
+16094 INFO: Processing pre-safe-import-module hook 'hook-backports.py' from '/usr/local/lib/python3.13/dist-packages/PyInstaller/hooks/pre_safe_import_module'
+16094 INFO: Setuptools: 'backports' appears to be a full setuptools-vendored copy - creating alias to 'setuptools._vendor.backports'!
+16318 INFO: Processing pre-safe-import-module hook 'hook-tomli.py' from '/usr/local/lib/python3.13/dist-packages/PyInstaller/hooks/pre_safe_import_module'
+16318 INFO: Setuptools: 'tomli' appears to be a setuptools-vendored copy - creating alias to 'setuptools._vendor.tomli'!
+16606 INFO: Processing standard module hook 'hook-pkg_resources.py' from '/usr/local/lib/python3.13/dist-packages/PyInstaller/hooks'
+16784 INFO: Processing pre-safe-import-module hook 'hook-wheel.py' from '/usr/local/lib/python3.13/dist-packages/PyInstaller/hooks/pre_safe_import_module'
+16850 INFO: Processing standard module hook 'hook-setuptools._vendor.importlib_metadata.py' from '/usr/local/lib/python3.13/dist-packages/PyInstaller/hooks'
+16851 INFO: Processing pre-safe-import-module hook 'hook-zipp.py' from '/usr/local/lib/python3.13/dist-packages/PyInstaller/hooks/pre_safe_import_module'
+16888 INFO: Analyzing hidden import 'ui.handlers'
+16889 INFO: Analyzing hidden import 'ui.services'
+16889 INFO: Analyzing hidden import 'ui.services.config_manager'
+16890 INFO: Analyzing hidden import 'ui.services.config_service'
+16891 INFO: Processing module hooks (post-graph stage)...
+17198 WARNING: Hidden import "charset_normalizer.md__mypyc" not found!
+18749 INFO: Performing binary vs. data reclassification (622 entries)
+18756 INFO: Looking for ctypes DLLs
+18829 WARNING: Library ole32 required via ctypes not found
+18836 WARNING: Library shell32 required via ctypes not found
+18874 INFO: Analyzing run-time hooks ...
+18883 INFO: Including run-time hook 'pyi_rth_inspect.py' from '/usr/local/lib/python3.13/dist-packages/PyInstaller/hooks/rthooks'
+18885 INFO: Including run-time hook 'pyi_rth_multiprocessing.py' from '/usr/local/lib/python3.13/dist-packages/PyInstaller/hooks/rthooks'
+18886 INFO: Including run-time hook 'pyi_rth_pkgutil.py' from '/usr/local/lib/python3.13/dist-packages/PyInstaller/hooks/rthooks'
+18887 INFO: Including run-time hook 'pyi_rth_setuptools.py' from '/usr/local/lib/python3.13/dist-packages/PyInstaller/hooks/rthooks'
+18888 INFO: Including run-time hook 'pyi_rth_pkgres.py' from '/usr/local/lib/python3.13/dist-packages/PyInstaller/hooks/rthooks'
+18925 INFO: Creating base_library.zip...
+18938 INFO: Looking for dynamic libraries
+19222 INFO: Warnings written to /home/program/TrulyMEM-TrueHumanMEM/build/trulymem/warn-trulymem.txt
+19336 INFO: Graph cross-reference written to /home/program/TrulyMEM-TrueHumanMEM/build/trulymem/xref-trulymem.html
+19370 INFO: checking PYZ
+19370 INFO: Building PYZ because PYZ-00.toc is non existent
+19370 INFO: Building PYZ (ZlibArchive) /home/program/TrulyMEM-TrueHumanMEM/build/trulymem/PYZ-00.pyz
+20340 INFO: Building PYZ (ZlibArchive) /home/program/TrulyMEM-TrueHumanMEM/build/trulymem/PYZ-00.pyz completed successfully.
+20361 WARNING: Ignoring icon; supported only on Windows and macOS!
+20372 INFO: checking PKG
+20372 INFO: Building PKG because PKG-00.toc is non existent
+20372 INFO: Building PKG (CArchive) TrulyMEM.pkg
+25396 INFO: Building PKG (CArchive) TrulyMEM.pkg completed successfully.
+25401 INFO: Bootloader /usr/local/lib/python3.13/dist-packages/PyInstaller/bootloader/Linux-64bit-intel/run
+25401 INFO: checking EXE
+25401 INFO: Building EXE because EXE-00.toc is non existent
+25401 INFO: Building EXE from EXE-00.toc
+25401 INFO: Copying bootloader EXE to /home/program/TrulyMEM-TrueHumanMEM/dist/TrulyMEM
+25402 INFO: Appending PKG archive to custom ELF section in EXE
+25457 INFO: Building EXE from EXE-00.toc completed successfully.
+25463 INFO: Build complete! The results are available in: /home/program/TrulyMEM-TrueHumanMEM/dist
+================================
+===== Build Complete =====
+Binary: dist/TrulyMEM
+total 35848
+drwxr-xr-x  2 root root     4096 Apr 30 06:53 .
+drwxr-xr-x 15 root root     4096 Apr 30 06:52 ..
+-rwxr-xr-x  1 root root 36696800 Apr 30 06:53 TrulyMEM
+Build finished successfully!
+total 35M
+-rwxr-xr-x 1 root root 35M Apr 30 06:53 TrulyMEM
