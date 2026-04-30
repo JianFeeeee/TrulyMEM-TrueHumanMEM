@@ -15,7 +15,7 @@ export struct ChatPage {
     async aboutToAppear() {
         // 初始化图记忆服务和 Agent
         const memoryService = new GraphMemoryService(this.db);
-        this.agentService = new AIAgentService(memoryService);
+        this.agentService = new AIAgentService(memoryService, getContext(this));
 
         // 加载历史消息（兼容旧数据：无 session_id 时加载全部）
         const rawHistory = await this.db.getChatHistory(50, this.agentService.getSessionId());

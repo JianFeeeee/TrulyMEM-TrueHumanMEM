@@ -6,6 +6,7 @@
  */
 import http from '@ohos.net.http';
 import dataPreferences from '@ohos.data.preferences';
+import { Context } from '@ohos.app.ability.UIAbility';
 import { GraphMemoryService, EntityInfo, RelationInfo, TaskInfo, MemoryRecallParams, MemoryCommitParams, MemoryPurgeParams, TimeRangeParams, PurgeCriteriaParams, NewRelationParams, PersonaUpdateParams, TaskCreateParams, TaskSetStateParams, TaskDeleteParams, TaskLinkInfoParams, TaskArchiveParams, TaskQueryParams, TripletInput, PersonaQueryResult, TaskQueryResult, MemoryRecallResult } from './GraphMemoryService';
 
 export interface ChatMessage {
@@ -382,8 +383,11 @@ export class AIAgentService {
     private currentSessionId: string;
     private turnCounter: number = 0;
 
-    constructor(memoryService: GraphMemoryService, sessionId?: string) {
+    private appContext: Context;
+
+    constructor(memoryService: GraphMemoryService, appContext: Context, sessionId?: string) {
         this.memoryService = memoryService;
+        this.appContext = appContext;
         this.currentSessionId = sessionId || `session-hm-${Date.now()}`;
     }
 
@@ -413,7 +417,7 @@ export class AIAgentService {
         const taskResult = await this.memoryService.memoryRecall(recallParams);
 
         // === 读取 API 配置 ===
-        const context = getContext(this);
+        const context = this.appContext;
         const pref = await dataPreferences.getPreferences(context, 'trulymem_config');
         const baseUrl: string = String(await pref.get('base_url', 'https://api.deepseek.com'));
         const model: string = String(await pref.get('model', 'deepseek-chat'));

@@ -8,9 +8,16 @@ import { ImmersiveTabNavigation } from '../components/ImmersiveTabNavigation';
 struct Index {
   @State currentIndex: number = 0;
   private db: GraphDatabase = new GraphDatabase();
+  private displayCallback?: (data: display.Display) => void;
 
   aboutToAppear() {
     this.db.init(getContext(this));
+  }
+
+  aboutToDisappear() {
+    if (this.displayCallback) {
+      display.off('change', this.displayCallback);
+    }
   }
 
   @Builder
