@@ -464,7 +464,6 @@ class EmbeddedGraphDB:
         # 构建查询条件
         conditions = []
         params = []
-        joins = []
         
         relation_type = criteria.get('relation') or criteria.get('relation_type', '')
         
@@ -472,18 +471,18 @@ class EmbeddedGraphDB:
             cursor.execute("SELECT id FROM entities WHERE name = ?", (criteria['source'],))
             row = cursor.fetchone()
             if row:
-                conditions.append("r.source_id = ?")
+                conditions.append("source_id = ?")
                 params.append(row['id'])
         
         if criteria.get('target'):
             cursor.execute("SELECT id FROM entities WHERE name = ?", (criteria['target'],))
             row = cursor.fetchone()
             if row:
-                conditions.append("r.target_id = ?")
+                conditions.append("target_id = ?")
                 params.append(row['id'])
         
         if relation_type:
-            conditions.append("r.relation_type = ?")
+            conditions.append("relation_type = ?")
             params.append(relation_type)
         
         # 通过子查询支持实体属性过滤
@@ -493,7 +492,7 @@ class EmbeddedGraphDB:
             ids = [row['id'] for row in cursor.fetchall()]
             if ids:
                 placeholders = ','.join(['?'] * len(ids))
-                conditions.append(f"r.source_id IN ({placeholders})")
+                conditions.append(f"source_id IN ({placeholders})")
                 params.extend(ids)
         
         if criteria.get('target_contains'):
@@ -502,7 +501,7 @@ class EmbeddedGraphDB:
             ids = [row['id'] for row in cursor.fetchall()]
             if ids:
                 placeholders = ','.join(['?'] * len(ids))
-                conditions.append(f"r.target_id IN ({placeholders})")
+                conditions.append(f"target_id IN ({placeholders})")
                 params.extend(ids)
         
         # 源实体类型过滤
@@ -512,7 +511,7 @@ class EmbeddedGraphDB:
             ids = [row['id'] for row in cursor.fetchall()]
             if ids:
                 placeholders = ','.join(['?'] * len(ids))
-                conditions.append(f"r.source_id IN ({placeholders})")
+                conditions.append(f"source_id IN ({placeholders})")
                 params.extend(ids)
         
         # 目标实体类型过滤
@@ -522,36 +521,35 @@ class EmbeddedGraphDB:
             ids = [row['id'] for row in cursor.fetchall()]
             if ids:
                 placeholders = ','.join(['?'] * len(ids))
-                conditions.append(f"r.target_id IN ({placeholders})")
+                conditions.append(f"target_id IN ({placeholders})")
                 params.extend(ids)
         
-        # 源实体状态过滤（检查 entity name 是否以特定后缀结尾等）
+        # 源实体状态过滤
         if criteria.get('source_has_status'):
             status = criteria['source_has_status']
-            # 匹配 entities 表中 type 字段包含状态信息的节点
             cursor.execute("SELECT id FROM entities WHERE type LIKE ?",
                           (f'%{status}%',))
             ids = [row['id'] for row in cursor.fetchall()]
             if ids:
                 placeholders = ','.join(['?'] * len(ids))
-                conditions.append(f"r.source_id IN ({placeholders})")
+                conditions.append(f"source_id IN ({placeholders})")
                 params.extend(ids)
         
         if not conditions:
             return {"deleted": 0, "message": "无删除条件"}
         
-        conditions.append("r.status = 'active'")
+        conditions.append("status = 'active'")
         where_clause = " AND ".join(conditions)
         
         if mode == "soft":
             cursor.execute(f"""
-                UPDATE relations r
+                UPDATE relations
                 SET status = 'deleted', updated_at = CURRENT_TIMESTAMP
                 WHERE {where_clause}
             """, params)
         else:
             cursor.execute(f"""
-                DELETE FROM relations r
+                DELETE FROM relations
                 WHERE {where_clause}
             """, params)
         
