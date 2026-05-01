@@ -3,3 +3,6 @@ export { GraphDatabase, RecallEntity, TimeRangeParams } from './src/main/ets/mod
 export { GraphMemoryService } from './src/main/ets/service/GraphMemoryService';
 export { AIAgentService, ChatMessage, AgentResponse } from './src/main/ets/service/AIAgentService';
 export { ImmersiveTabNavigation } from './src/main/ets/component/ImmersiveTabNavigation';
+export { PageContext, RouterParam, IPageContext } from './src/main/ets/routermanager/PageContext';
+export { BreakpointType, BreakpointTypes, WidthBreakpoint } from './src/main/ets/util/BreakpointSystem';
+export { BaseViewModel, VMEvent } from './src/main/ets/viewmodel/BaseViewModel';
