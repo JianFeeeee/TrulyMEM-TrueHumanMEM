@@ -1,0 +1,11 @@
+{
+  "name": "@ohos/chat",
+  "version": "1.0.0",
+  "description": "TrulyMEM chat feature module",
+  "main": "Index.ets",
+  "author": "",
+  "license": "",
+  "dependencies": {
+    "@ohos/common": "file:../../common"
+  }
+}

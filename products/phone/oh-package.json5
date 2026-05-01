@@ -1,0 +1,14 @@
+{
+  "name": "@ohos/phone",
+  "version": "1.0.0",
+  "description": "TrulyMEM phone product entry",
+  "main": "Index.ets",
+  "author": "",
+  "license": "",
+  "dependencies": {
+    "@ohos/common": "file:../../common",
+    "@ohos/graph": "file:../../features/graph",
+    "@ohos/chat": "file:../../features/chat",
+    "@ohos/settings": "file:../../features/settings"
+  }
+}

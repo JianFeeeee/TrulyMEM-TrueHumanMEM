@@ -1,0 +1,9 @@
+{
+  "name": "@ohos/common",
+  "version": "1.0.0",
+  "description": "TrulyMEM common module",
+  "main": "Index.ets",
+  "author": "",
+  "license": "",
+  "dependencies": {}
+}
