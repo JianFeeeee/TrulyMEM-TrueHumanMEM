@@ -1,5 +1,17 @@
 {
   "apiType": "stageMode",
+  "buildOption": {
+    "arkOptions": {
+      "runtimeOnly": {
+        "packages": [
+          "@ohos/common",
+          "@ohos/graph",
+          "@ohos/chat",
+          "@ohos/settings"
+        ]
+      }
+    }
+  },
   "targets": [
     {
       "name": "default"

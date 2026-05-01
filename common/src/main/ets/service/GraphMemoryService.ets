@@ -4,6 +4,7 @@
  * 参考：main 分支 core/tools/memory_tools.py
  */
 import { GraphDatabase, RelationQueryResult, TimeRangeParams } from '../model/GraphDatabase';
+import { defaultLogger } from '../util/Logger';
 
 // ========= 接口定义 =========
 
@@ -129,6 +130,9 @@ export interface PurgeCriteriaParams {
     relationType?: string;
     targetContains?: string;
     sessionId?: string;
+    sourceType?: string;
+    targetType?: string;
+    sourceHasStatus?: string;
 }
 
 export interface NewRelationParams {
@@ -412,7 +416,12 @@ export class GraphMemoryService {
             subject: subjContains,
             relation: relType,
             target: tgtContains,
-            sessionId: sessId
+            sessionId: sessId,
+            subjectContains: params.criteria.subjectContains,
+            targetContains: params.criteria.targetContains,
+            sourceType: params.criteria.sourceType,
+            targetType: params.criteria.targetType,
+            sourceHasStatus: params.criteria.sourceHasStatus
         }, params.mode === 'hard' ? 'hard' : 'soft');
         const purgeResult: MemoryPurgeResult = {
             deletedCount: subjContains || tgtContains || relType || sessId ? 1 : 0,
@@ -619,7 +628,7 @@ export class GraphMemoryService {
             const result = await this.db.queryArchived(days, keyword);
             return result;
         } catch (e) {
-            console.error('queryArchived error: ' + JSON.stringify(e));
+            defaultLogger.error('queryArchived error: ' + JSON.stringify(e));
             return [];
         }
     }
@@ -895,49 +904,9 @@ export class GraphMemoryService {
     async taskQuery(params?: TaskQueryParams): Promise<TaskQueryResult> {
         const limit: number = params?.limit ?? 10;
         const stateFilter: string | undefined = params?.stateFilter;
-
-        // 查询所有 TaskNode 类型的节点
-        const allNodes = await this.db.search('');
-        const taskNodes = allNodes.filter(n => n.type === 'TaskNode');
-
-        const tasks: TaskInfo[] = [];
-        for (const node of taskNodes.slice(0, limit)) {
-            // 查 description 和 has_state
-            const result = await this.db.recall(node.name, [node.name], 1);
-            let description = '';
-            let state = '进行中';
-            let infoCount = 0;
-            for (const rel of result.relations) {
-                if (rel.type === 'description' && rel.source === node.name) {
-                    description = rel.target;
-                }
-                if (rel.type === 'has_state' && rel.source === node.name) {
-                    state = rel.target;
-                }
-                if (rel.type === 'CONTAINS_INFO' && rel.source === node.name) {
-                    infoCount++;
-                }
-            }
-
-            // 状态过滤
-            if (stateFilter && state !== stateFilter) {
-                continue;
-            }
-
-            const taskInfo: TaskInfo = {
-                taskId: node.name,
-                description,
-                state,
-                infoCount,
-                updatedAt: ''
-            };
-            tasks.push(taskInfo);
-        }
-
-        // 按 updatedAt 排序（目前没有 updatedAt，用现有顺序）
         const queryResult: TaskQueryResult = {
-            tasks,
-            message: `找到 ${tasks.length} 个任务`
+            tasks: await this.db.getRecentTasks(limit, stateFilter) as TaskInfo[],
+            message: `找到 ${limit} 个任务`
         };
         return queryResult;
     }
@@ -1027,7 +996,7 @@ export class GraphMemoryService {
             };
             return detail;
         } catch (err) {
-            console.error('getNodeDetail error: ' + JSON.stringify(err));
+            defaultLogger.error('getNodeDetail error: ' + JSON.stringify(err));
             return null;
         }
     }

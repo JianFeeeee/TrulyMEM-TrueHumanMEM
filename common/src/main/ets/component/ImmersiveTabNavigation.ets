@@ -1,3 +1,4 @@
+import { defaultLogger } from '../util/Logger';
 import { window } from '@kit.ArkUI';
 import { BusinessError } from '@kit.BasicServicesKit';
 
@@ -19,7 +20,7 @@ export struct ImmersiveTabNavigation {
         const avoidArea = mainWindow.getWindowAvoidArea(window.AvoidAreaType.TYPE_SYSTEM);
         this.bottomAvoidHeight = avoidArea.bottomRect.height || 0;
       } catch (e) {
-        console.error('Failed to get avoid area: ' + (e as BusinessError).message);
+        defaultLogger.error('Failed to get avoid area: ' + (e as BusinessError).message);
       }
     }
   }

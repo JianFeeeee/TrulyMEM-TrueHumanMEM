@@ -1,119 +1,53 @@
 import dataPreferences from '@ohos.data.preferences';
+import { SettingsSectionHeader, SettingInputItem, GlowBackground, AppConfigStore } from '../components/SettingsComponents';
 
 @Component
 export struct SettingsPage {
     @State baseUrl: string = '';
     @State model: string = '';
     @State apiKey: string = '';
-    private pref?: dataPreferences.Preferences;
+    private store: AppConfigStore = new AppConfigStore();
 
     async aboutToAppear() {
         const ctx = getContext(this);
-        this.pref = await dataPreferences.getPreferences(ctx, 'trulymem_config');
-        this.baseUrl = String(await this.pref.get('base_url', 'https://api.deepseek.com'));
-        this.model = String(await this.pref.get('model', 'deepseek-chat'));
-        this.apiKey = String(await this.pref.get('api_key', ''));
+        await this.store.init(ctx);
+        this.baseUrl = await this.store.getString('base_url', 'https://api.deepseek.com');
+        this.model = await this.store.getString('model', 'deepseek-chat');
+        this.apiKey = await this.store.getString('api_key', '');
     }
 
-    async onBaseUrlChange(value: string) {
-        this.baseUrl = value;
-        await this.pref?.put('base_url', value);
-        await this.pref?.flush();
-    }
-
-    async onModelChange(value: string) {
-        this.model = value;
-        await this.pref?.put('model', value);
-        await this.pref?.flush();
-    }
-
-    async onApiKeyChange(value: string) {
-        this.apiKey = value;
-        await this.pref?.put('api_key', value);
-        await this.pref?.flush();
+    private async saveConfig(key: string, value: string): Promise<void> {
+        await this.store.setString(key, value);
     }
 
     build() {
         Stack() {
-            // 主题色光晕背景
-            Column()
-                .width(200)
-                .height(200)
-                .backgroundColor('rgba(124,77,255,0.15)')
-                .blur(40)
-                .borderRadius(100)
-                .position({ x: '10%', y: '20%' })
+            GlowBackground()
 
             Column() {
-                Text('API 配置')
-                    .fontSize(24)
-                    .fontWeight(FontWeight.Bold)
-                    .fontColor('#FFFFFF')
-                    .margin({ top: 20, bottom: 16 })
+                SettingsSectionHeader({ title: 'API 配置' })
 
-                // Base URL 设置项
-                Column() {
-                    Text('Base URL')
-                        .fontSize(14)
-                        .fontColor('#FFFFFF')
-                        .width('100%')
-                        .margin({ bottom: 8 })
+                SettingInputItem({
+                    label: 'Base URL',
+                    placeholder: 'https://api.deepseek.com',
+                    value: this.baseUrl,
+                    onValueChange: (v: string): void => { this.saveConfig('base_url', v); }
+                })
 
-                    TextInput({ placeholder: 'https://api.deepseek.com', text: this.baseUrl })
-                        .onChange((v: string) => { this.onBaseUrlChange(v); })
-                        .backgroundColor('rgba(255,255,255,0.1)')
-                        .borderRadius(8)
-                        .border({ width: 1, color: 'rgba(124,77,255,0.3)' })
-                        .height(40)
-                }
-                .padding(12)
-                .backgroundColor('rgba(255,255,255,0.05)')
-                .borderRadius(12)
-                .backgroundBlurStyle(BlurStyle.Thin)
-                .margin({ bottom: 12 })
+                SettingInputItem({
+                    label: 'Model ID',
+                    placeholder: 'deepseek-chat',
+                    value: this.model,
+                    onValueChange: (v: string): void => { this.saveConfig('model', v); }
+                })
 
-                // Model ID 设置项
-                Column() {
-                    Text('Model ID')
-                        .fontSize(14)
-                        .fontColor('#FFFFFF')
-                        .width('100%')
-                        .margin({ bottom: 8 })
-
-                    TextInput({ placeholder: 'deepseek-chat', text: this.model })
-                        .onChange((v: string) => { this.onModelChange(v); })
-                        .backgroundColor('rgba(255,255,255,0.1)')
-                        .borderRadius(8)
-                        .border({ width: 1, color: 'rgba(124,77,255,0.3)' })
-                        .height(40)
-                }
-                .padding(12)
-                .backgroundColor('rgba(255,255,255,0.05)')
-                .borderRadius(12)
-                .backgroundBlurStyle(BlurStyle.Thin)
-                .margin({ bottom: 12 })
-
-                // API Key 设置项
-                Column() {
-                    Text('API Key')
-                        .fontSize(14)
-                        .fontColor('#FFFFFF')
-                        .width('100%')
-                        .margin({ bottom: 8 })
-
-                    TextInput({ placeholder: 'sk-...', text: this.apiKey })
-                        .type(InputType.Password)
-                        .onChange((v: string) => { this.onApiKeyChange(v); })
-                        .backgroundColor('rgba(255,255,255,0.1)')
-                        .borderRadius(8)
-                        .border({ width: 1, color: 'rgba(124,77,255,0.3)' })
-                        .height(40)
-                }
-                .padding(12)
-                .backgroundColor('rgba(255,255,255,0.05)')
-                .borderRadius(12)
-                .backgroundBlurStyle(BlurStyle.Thin)
-                .margin({ bottom: 12 })
+                SettingInputItem({
+                    label: 'API Key',
+                    placeholder: 'sk-...',
+                    value: this.apiKey,
+                    isPassword: true,
+                    onValueChange: (v: string): void => { this.saveConfig('api_key', v); }
+                })
             }
             .padding(16)
             .width('100%')

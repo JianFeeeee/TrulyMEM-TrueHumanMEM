@@ -1,0 +1,12 @@
+{
+  "module": {
+    "name": "graph",
+    "type": "har",
+    "description": "TrulyMEM graph feature module",
+    "deviceTypes": [
+      "phone",
+      "tablet",
+      "2in1"
+    ]
+  }
+}

@@ -1,5 +1,6 @@
 {
   "app": {
+    "signingConfigs": [],
     "products": [
       {
         "name": "default",
@@ -36,18 +37,7 @@
         }
       ]
     },
-    {
-      "name": "commonbusiness",
-      "srcPath": "./features/commonbusiness",
-      "targets": [
-        {
-          "name": "default",
-          "applyToProducts": [
-            "default"
-          ]
-        }
-      ]
-    },
+
     {
       "name": "graph",
       "srcPath": "./features/graph",
@@ -96,17 +86,6 @@
         }
       ]
     },
-    {
-      "name": "trulymem-core",
-      "srcPath": "./trulymem-core",
-      "targets": [
-        {
-          "name": "default",
-          "applyToProducts": [
-            "default"
-          ]
-        }
-      ]
-    }
+
   ]
 }

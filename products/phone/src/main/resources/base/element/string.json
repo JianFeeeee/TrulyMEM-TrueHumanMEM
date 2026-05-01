@@ -1,0 +1,28 @@
+{
+  "string": [
+    {
+      "name": "app_name",
+      "value": "TrulyMEM"
+    },
+    {
+      "name": "module_desc",
+      "value": "TrulyMEM Phone Module"
+    },
+    {
+      "name": "EntryAbility_label",
+      "value": "TrulyMEM"
+    },
+    {
+      "name": "EntryAbility_desc",
+      "value": "TrulyMEM Entry Ability"
+    },
+    {
+      "name": "MainAbility_label",
+      "value": "TrulyMEM"
+    },
+    {
+      "name": "MainAbility_desc",
+      "value": "TrulyMEM Main Ability"
+    }
+  ]
+}

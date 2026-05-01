@@ -1,0 +1,12 @@
+{
+  "module": {
+    "name": "chat",
+    "type": "har",
+    "description": "TrulyMEM chat feature module",
+    "deviceTypes": [
+      "phone",
+      "tablet",
+      "2in1"
+    ]
+  }
+}

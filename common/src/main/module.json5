@@ -1,13 +1,12 @@
 {
   "module": {
     "name": "common",
-    "type": "shared",
-    "description": "TrulyMEM common shared module",
+    "type": "har",
+    "description": "TrulyMEM common module",
     "deviceTypes": [
       "phone",
       "tablet",
       "2in1"
-    ],
-    "deliveryWithInstall": true
+    ]
   }
 }

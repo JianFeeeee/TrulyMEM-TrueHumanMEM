@@ -1,11 +1,15 @@
-import router from '@ohos.router';
+import { PromptAction } from '@kit.ArkUI';
 
 @Entry
 @Component
 struct SplashPage {
   aboutToAppear() {
     setTimeout(() => {
-      router.replaceUrl({ url: 'pages/Index' });
+      const uiContext = this.getUIContext();
+      if (uiContext) {
+        const router = uiContext.getRouter();
+        router.replaceUrl({ url: 'pages/Index' });
+      }
     }, 2000);
   }
 

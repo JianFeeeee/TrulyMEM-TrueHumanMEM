@@ -1,12 +1,7 @@
 {
   "modelVersion": "5.0.5",
-  "description": "Please describe the basic information.",
-  "dependencies": {
-    "@kit.UIDesignKit": "^6.1.0",
-    "@kit.ArkUI": "^6.1.0",
-    "@kit.AbilityKit": "^6.1.0",
-    "@kit.BasicServicesKit": "^6.1.0"
-  },
+  "description": "TrulyMEM - True Human Memory",
+  "dependencies": {},
   "devDependencies": {
     "@ohos/hypium": "1.0.24",
     "@ohos/hamock": "1.0.0"

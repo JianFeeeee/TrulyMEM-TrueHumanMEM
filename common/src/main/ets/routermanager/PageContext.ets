@@ -1,3 +1,5 @@
+import { defaultLogger } from '../util/Logger';
+
 export interface RouterParam {
   routerName: string;
   param?: object;
@@ -24,7 +26,7 @@ export class PageContext implements IPageContext {
     try {
       this.pathStack.replacePath({ name: data.routerName, param: data.param }, animated);
     } catch (err) {
-      console.error('Open Page ' + data.routerName + ' failed. ' + err.code + ' ' + err.message);
+      defaultLogger.error('replacePage: ' + data.routerName + ' failed. ' + err.code + ' ' + err.message);
     }
   }
 
@@ -32,7 +34,7 @@ export class PageContext implements IPageContext {
     try {
       this.pathStack.pushPath({ name: data.routerName, param: data.param }, animated);
     } catch (err) {
-      console.error('Open Page ' + data.routerName + ' failed. ' + err.code + ' ' + err.message);
+      defaultLogger.error('openPage: ' + data.routerName + ' failed. ' + err.code + ' ' + err.message);
     }
   }
 
@@ -40,7 +42,7 @@ export class PageContext implements IPageContext {
     try {
       this.pathStack.pop(animated);
     } catch (err) {
-      console.error('Pop Page failed. ' + err.code + ' ' + err.message);
+      defaultLogger.error('popPage failed. ' + err.code + ' ' + err.message);
     }
   }
 

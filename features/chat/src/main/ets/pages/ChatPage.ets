@@ -1,6 +1,5 @@
-import { GraphDatabase } from '@ohos/common';
-import { GraphMemoryService } from '@ohos/common';
-import { AIAgentService, ChatMessage, AgentResponse } from '@ohos/common';
+import { GraphDatabase, GraphMemoryService, AIAgentService, ChatMessage, AgentResponse, Logger } from '@ohos/common';
+import { ChatMessageList, ChatInputBar } from '../components/ChatComponents';
 
 @Component
 export struct ChatPage {
@@ -9,7 +8,6 @@ export struct ChatPage {
     @Prop db: GraphDatabase;
     @State toolCallLog: string = '';
     @State isThinking: boolean = false;
-    private scrollController: Scroller = new Scroller();
     private agentService?: AIAgentService;
 
     async aboutToAppear() {
@@ -62,7 +60,7 @@ export struct ChatPage {
             await this.db.saveChatMessage('assistant', agentResponse.content, this.toolCallLog, this.agentService.getSessionId());
             this.messages = [...this.messages, { role: 'assistant', content: agentResponse.content }];
         } catch (err) {
-            console.error('Agent request failed: ' + JSON.stringify(err));
+            Logger.error('Agent request failed: ' + JSON.stringify(err));
             this.messages = [...this.messages, { role: 'assistant', content: `⚠️ 请求失败: ${err.message || JSON.stringify(err)}` }];
         } finally {
             this.isThinking = false;
@@ -71,98 +69,17 @@ export struct ChatPage {
 
     build() {
         Column() {
-            // 聊天列表
-            List() {
-                ForEach(this.messages, (msg: ChatMessage) => {
-                    ListItem() {
-                        Column() {
-                            // 角色标识
-                            Text(msg.role === 'user' ? '🧑 你' : '🤖 AI')
-                                .fontSize(11)
-                                .fontColor(msg.role === 'user' ? '#7C4DFF' : '#999')
-                                .width('100%')
+            ChatMessageList({
+                messages: this.messages,
+                isThinking: this.isThinking,
+                toolCallLog: this.toolCallLog
+            })
 
-                            // 消息内容
-                            Text(msg.content)
-                                .fontSize(15)
-                                .width('100%')
-                                .margin({ top: 4 })
-                                .fontColor('#FFFFFF')
-                        }
-                        .padding(12)
-                        .backgroundColor(msg.role === 'user' ? 'rgba(124,77,255,0.15)' : 'rgba(245,245,245,0.1)')
-                        .borderRadius(12)
-                        .border({ width: 1, color: msg.role === 'user' ? 'rgba(124,77,255,0.3)' : 'rgba(255,255,255,0.1)' })
-                        .backgroundBlurStyle(BlurStyle.Thin)
-                        .margin({ left: 8, right: 8, bottom: 8 })
-                        .width('100%')
-                        .alignItems(HorizontalAlign.Start)
-                    }
-                })
-
-                // loading 指示
-                if (this.isThinking) {
-                    ListItem() {
-                        Row() {
-                            LoadingProgress()
-                                .width(20)
-                                .height(20)
-                                .margin({ right: 8 })
-                                .color('#7C4DFF')
-                            Text('AI 思考中...')
-                                .fontSize(13)
-                                .fontColor('#7C4DFF')
-                        }
-                        .padding(12)
-                        .backgroundColor('rgba(124,77,255,0.1)')
-                        .borderRadius(12)
-                        .border({ width: 1, color: 'rgba(124,77,255,0.2)' })
-                        .backgroundBlurStyle(BlurStyle.Thin)
-                        .margin({ left: 8, right: 8, bottom: 8 })
-                    }
-                }
-
-                // 工具调用日志
-                if (this.toolCallLog && !this.isThinking) {
-                    ListItem() {
-                        Text(this.toolCallLog)
-                            .fontSize(10)
-                            .fontColor('#FF9800')
-                            .backgroundColor('rgba(255,152,0,0.1)')
-                            .padding(8)
-                            .borderRadius(8)
-                            .border({ width: 1, color: 'rgba(255,152,0,0.2)' })
-                            .backgroundBlurStyle(BlurStyle.Thin)
-                            .margin({ left: 8, right: 8, bottom: 4 })
-                            .lineHeight(16)
-                    }
-                }
-            }
-            .width('100%')
-            .layoutWeight(1)
-            .backgroundColor('rgba(0,0,0,0.1)')
-
-            // 输入区
-            Row() {
-                TextArea({ text: this.inputText, placeholder: '输入消息...' })
-                    .layoutWeight(1)
-                    .onChange((v: string) => { this.inputText = v; })
-                    .height(40)
-                    .backgroundColor('rgba(255,255,255,0.1)')
-                    .borderRadius(8)
-                    .border({ width: 1, color: 'rgba(124,77,255,0.3)' })
-
-                Button('发送')
-                    .enabled(!this.isThinking)
-                    .onClick(() => this.sendMessage())
-                    .backgroundColor('#7C4DFF')
-                    .borderRadius(8)
-            }
-            .width('100%')
-            .padding(8)
-            .backgroundColor('rgba(255,255,255,0.05)')
-            .backgroundBlurStyle(BlurStyle.Regular)
-            .border({ width: 1, color: 'rgba(124,77,255,0.2)', style: BorderStyle.Solid })
+            ChatInputBar({
+                inputText: this.inputText,
+                isThinking: this.isThinking,
+                onSend: (): void => { this.sendMessage(); }
+            })
         }
         .width('100%')
         .height('100%')

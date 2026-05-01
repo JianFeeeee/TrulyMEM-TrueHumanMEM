@@ -1,0 +1,12 @@
+{
+  "module": {
+    "name": "settings",
+    "type": "har",
+    "description": "TrulyMEM settings feature module",
+    "deviceTypes": [
+      "phone",
+      "tablet",
+      "2in1"
+    ]
+  }
+}

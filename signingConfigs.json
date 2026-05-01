@@ -1,0 +1,17 @@
+{
+  "signingConfigs": [
+    {
+      "name": "default",
+      "type": "HarmonyOS",
+      "material": {
+        "certpath": "/home/program/.harmonyos/debug.cer",
+        "storePassword": "123456",
+        "keyAlias": "debug",
+        "keyPassword": "123456",
+        "profile": "/home/program/.harmonyos/debug.p7b",
+        "signAlg": "SHA256withECDSA",
+        "storeFile": "/home/program/.harmonyos/debug.p12"
+      }
+    }
+  ]
+}

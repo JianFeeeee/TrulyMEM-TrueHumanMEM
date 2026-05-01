@@ -15,6 +15,11 @@ interface CriteriaData {
     target?: string;
     relation?: string;
     sessionId?: string;
+    sourceType?: string;
+    targetType?: string;
+    sourceHasStatus?: string;
+    subjectContains?: string;
+    targetContains?: string;
 }
 
 interface NodeData {
@@ -114,6 +119,20 @@ interface SearchResultItem {
     name: string;
     type: string;
     mentions: number;
+}
+
+class TaskNodeRow {
+    id: number = 0;
+    name: string = '';
+    updatedAt: string = '';
+}
+
+interface DbTaskInfo {
+    taskId: string;
+    description: string;
+    state: string;
+    infoCount: number;
+    updatedAt: string;
 }
 
 interface ChatMessage {
@@ -529,12 +548,10 @@ export class GraphDatabase {
 
     async purge(criteria: CriteriaData, mode: string = 'soft'): Promise<void> {
         if (!this.store) return;
-        if (!criteria.subject && !criteria.target && !criteria.relation && !criteria.sessionId) {
-            return;
-        }
         const predicates: relationalStore.RdbPredicates = new relationalStore.RdbPredicates('relations');
         let hasCondition = false;
 
+        // 精确匹配
         if (criteria.subject) {
             const subjectId = await this.getNodeIdByName(criteria.subject);
             if (subjectId > 0) {
@@ -565,6 +582,96 @@ export class GraphDatabase {
             }
             predicates.equalTo('session_id', criteria.sessionId);
             hasCondition = true;
+        }
+
+        // 模糊匹配：subjectContains -> 通过子查询匹配节点名
+        if (criteria.subjectContains) {
+            const nodeSql = `SELECT id FROM nodes WHERE name LIKE '%' || ? || '%'`;
+            const nodeResult = await this.store.querySql(nodeSql, [criteria.subjectContains]);
+            const nodeIds: number[] = [];
+            while (nodeResult.goToNextRow()) {
+                nodeIds.push(nodeResult.getLong(0));
+            }
+            nodeResult.close();
+            if (nodeIds.length > 0) {
+                if (hasCondition) {
+                    predicates.and();
+                }
+                predicates.in('subject_id', nodeIds);
+                hasCondition = true;
+            }
+        }
+
+        // 模糊匹配：targetContains
+        if (criteria.targetContains) {
+            const nodeSql = `SELECT id FROM nodes WHERE name LIKE '%' || ? || '%'`;
+            const nodeResult = await this.store.querySql(nodeSql, [criteria.targetContains]);
+            const nodeIds: number[] = [];
+            while (nodeResult.goToNextRow()) {
+                nodeIds.push(nodeResult.getLong(0));
+            }
+            nodeResult.close();
+            if (nodeIds.length > 0) {
+                if (hasCondition) {
+                    predicates.and();
+                }
+                predicates.in('object_id', nodeIds);
+                hasCondition = true;
+            }
+        }
+
+        // 源实体类型过滤
+        if (criteria.sourceType) {
+            const nodeSql = `SELECT id FROM nodes WHERE type = ?`;
+            const nodeResult = await this.store.querySql(nodeSql, [criteria.sourceType]);
+            const nodeIds: number[] = [];
+            while (nodeResult.goToNextRow()) {
+                nodeIds.push(nodeResult.getLong(0));
+            }
+            nodeResult.close();
+            if (nodeIds.length > 0) {
+                if (hasCondition) {
+                    predicates.and();
+                }
+                predicates.in('subject_id', nodeIds);
+                hasCondition = true;
+            }
+        }
+
+        // 目标实体类型过滤
+        if (criteria.targetType) {
+            const nodeSql = `SELECT id FROM nodes WHERE type = ?`;
+            const nodeResult = await this.store.querySql(nodeSql, [criteria.targetType]);
+            const nodeIds: number[] = [];
+            while (nodeResult.goToNextRow()) {
+                nodeIds.push(nodeResult.getLong(0));
+            }
+            nodeResult.close();
+            if (nodeIds.length > 0) {
+                if (hasCondition) {
+                    predicates.and();
+                }
+                predicates.in('object_id', nodeIds);
+                hasCondition = true;
+            }
+        }
+
+        // 源实体状态过滤
+        if (criteria.sourceHasStatus) {
+            const nodeSql = `SELECT id FROM nodes WHERE type LIKE '%' || ? || '%'`;
+            const nodeResult = await this.store.querySql(nodeSql, [criteria.sourceHasStatus]);
+            const nodeIds: number[] = [];
+            while (nodeResult.goToNextRow()) {
+                nodeIds.push(nodeResult.getLong(0));
+            }
+            nodeResult.close();
+            if (nodeIds.length > 0) {
+                if (hasCondition) {
+                    predicates.and();
+                }
+                predicates.in('subject_id', nodeIds);
+                hasCondition = true;
+            }
         }
 
         if (hasCondition) {
@@ -687,41 +794,82 @@ export class GraphDatabase {
      */
     async queryArchived(days?: number, keyword?: string): Promise<RelationQueryResult[]> {
         if (!this.store) return [];
-        const predicates: relationalStore.RdbPredicates = new relationalStore.RdbPredicates('relations');
-        predicates.equalTo('status', 'archived');
-        if (keyword) {
-            predicates.and().like('relation', '%' + keyword + '%');
-        }
+        let sql = `
+            SELECT r.subject_id, r.object_id, r.relation, r.weight, r.session_id, r.turn_id,
+                   e.name AS source_name, t.name AS target_name
+            FROM relations r
+            JOIN nodes e ON r.subject_id = e.id
+            JOIN nodes t ON r.object_id = t.id
+            WHERE r.status = 'archived'
+        `;
+        const params: string[] = [];
         if (days && days > 0) {
             const cutoff = new Date();
             cutoff.setDate(cutoff.getDate() - days);
-            const maxDateBucket = cutoff.toISOString().slice(0, 10).replace(/-/g, '');
-            predicates.and().lessThanOrEqualTo('date_bucket', maxDateBucket);
+            const minDateBucket = cutoff.toISOString().slice(0, 10);
+            sql += ' AND r.date_bucket >= ?';
+            params.push(minDateBucket);
         }
-        const resultSet: relationalStore.ResultSet = await this.store.query(predicates, ['subject_id', 'object_id', 'relation', 'weight', 'session_id', 'turn_id']);
+        if (keyword) {
+            const kw = '%' + keyword + '%';
+            sql += ' AND (e.name LIKE ? OR t.name LIKE ? OR r.relation LIKE ?)';
+            params.push(kw, kw, kw);
+        }
+        sql += ' ORDER BY r.updated_at DESC LIMIT 200';
+        const resultSet: relationalStore.ResultSet = await this.store.querySql(sql, params);
         const results: RelationQueryResult[] = [];
         while (resultSet.goToNextRow()) {
-            const sourceId = resultSet.getLong(resultSet.getColumnIndex('subject_id'));
-            const targetId = resultSet.getLong(resultSet.getColumnIndex('object_id'));
-            const sourceNode = await this.getNodeById(sourceId);
-            const targetNode = await this.getNodeById(targetId);
-            if (sourceNode && targetNode) {
-                const queryResult: RelationQueryResult = {
-                    sourceId: sourceId,
-                    targetId: targetId,
-                    sourceName: sourceNode.name,
-                    targetName: targetNode.name,
-                    type: resultSet.getString(resultSet.getColumnIndex('relation')),
-                    confidence: resultSet.getDouble(resultSet.getColumnIndex('weight')),
-                    sessionId: resultSet.getString(resultSet.getColumnIndex('session_id')),
-                    turnId: resultSet.getLong(resultSet.getColumnIndex('turn_id')),
-                    depth: 0
-                };
-                results.push(queryResult);
-            }
+            results.push({
+                sourceId: resultSet.getLong(resultSet.getColumnIndex('subject_id')),
+                targetId: resultSet.getLong(resultSet.getColumnIndex('object_id')),
+                sourceName: resultSet.getString(resultSet.getColumnIndex('source_name')),
+                targetName: resultSet.getString(resultSet.getColumnIndex('target_name')),
+                type: resultSet.getString(resultSet.getColumnIndex('relation')),
+                confidence: resultSet.getDouble(resultSet.getColumnIndex('weight')),
+                sessionId: resultSet.getString(resultSet.getColumnIndex('session_id')),
+                turnId: resultSet.getLong(resultSet.getColumnIndex('turn_id')),
+                depth: 0
+            });
         }
         resultSet.close();
         return results;
+    }
+
+    async getRecentTasks(limit: number = 10, stateFilter?: string): Promise<DbTaskInfo[]> {
+        if (!this.store) return [];
+        const nodesSql = `SELECT id, name, updated_at FROM nodes WHERE type = 'TaskNode' ORDER BY updated_at DESC LIMIT ?`;
+        const nodesRs: relationalStore.ResultSet = await this.store.querySql(nodesSql, [String(limit)]);
+        const taskNodes: TaskNodeRow[] = [];
+        while (nodesRs.goToNextRow()) {
+            const tn: TaskNodeRow = new TaskNodeRow();
+            tn.id = nodesRs.getLong(nodesRs.getColumnIndex('id'));
+            tn.name = nodesRs.getString(nodesRs.getColumnIndex('name'));
+            tn.updatedAt = nodesRs.getString(nodesRs.getColumnIndex('updated_at')) || '';
+            taskNodes.push(tn);
+        }
+        nodesRs.close();
+        const tasks: DbTaskInfo[] = [];
+        for (const node of taskNodes) {
+            const relSql = `SELECT r.relation, e.name AS target_name FROM relations r JOIN nodes e ON r.object_id = e.id WHERE r.subject_id = ? AND r.status = 'active' AND r.relation IN ('description', 'has_state')`;
+            const relRs: relationalStore.ResultSet = await this.store.querySql(relSql, [String(node.id)]);
+            let description = '';
+            let state = '进行中';
+            while (relRs.goToNextRow()) {
+                const rt: string = relRs.getString(relRs.getColumnIndex('relation'));
+                const targetName: string = relRs.getString(relRs.getColumnIndex('target_name'));
+                if (rt === 'description') description = targetName;
+                if (rt === 'has_state') state = targetName;
+            }
+            relRs.close();
+            if (stateFilter && state !== stateFilter) continue;
+            const cntSql = `SELECT COUNT(*) AS cnt FROM relations WHERE subject_id = ? AND relation = 'CONTAINS_INFO' AND status = 'active'`;
+            const cntRs: relationalStore.ResultSet = await this.store.querySql(cntSql, [String(node.id)]);
+            let infoCount = 0;
+            if (cntRs.goToNextRow()) infoCount = cntRs.getLong(cntRs.getColumnIndex('cnt'));
+            cntRs.close();
+            tasks.push({ taskId: node.name, description, state, infoCount, updatedAt: node.updatedAt });
+        }
+        return tasks;
     }
 
     private async removeOrphanNodes(): Promise<number> {
