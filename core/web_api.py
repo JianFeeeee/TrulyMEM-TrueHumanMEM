@@ -226,7 +226,7 @@ def setup_page():
     g_db = get_global_db()
     if g_db:
         has_users = g_db.get_web_users_count() > 0
-    elif graph_db:
+    elif graph_db and graph_db is not g_db:
         has_users = graph_db.get_web_users_count() > 0
     if has_users:
         return redirect('/login')
@@ -264,6 +264,9 @@ def api_login():
         reload_server_for_user(username)
         
         return jsonify({"success": True})
+    
+    # 登录失败
+    return jsonify({"success": False, "error": "用户名或密码错误"})
     
 @app.route('/api/logout', methods=['POST'])
 def api_logout():
@@ -356,6 +359,11 @@ def api_setup():
     """首次设置 - 创建初始管理员用户"""
     # 只有没有任何用户时才允许设置
     g_db = get_global_db()
+    # Log the count for debugging
+    if g_db:
+        import logging
+        count = g_db.get_web_users_count()
+        logging.warning(f"[api_setup] web_users count: {count}")
     if g_db and g_db.get_web_users_count() > 0:
         return jsonify({"success": False, "error": "用户已存在，不允许重复设置"}), 400
 
