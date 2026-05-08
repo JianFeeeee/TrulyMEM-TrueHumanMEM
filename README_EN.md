@@ -21,6 +21,10 @@ TrulyMEM gives memory authority back to the LLM. Using graph database (triplets)
 
 ---
 
+## Screen Shot
+![screenshot_20260508_160449_com.haitai.htbrowser.png](https://raw.gitcode.com/user-images/assets/9658268/9eb36652-4a3b-496a-b957-03b61bac6299/screenshot_20260508_160449_com.haitai.htbrowser.png 'screenshot_20260508_160449_com.haitai.htbrowser.png')
+![screenshot_20260508_160501_com.haitai.htbrowser.png](https://raw.gitcode.com/user-images/assets/9658268/17d96f15-2fab-4647-b272-088f98effeec/screenshot_20260508_160501_com.haitai.htbrowser.png 'screenshot_20260508_160501_com.haitai.htbrowser.png')
+
 ## Quick Start
 
 ```bash
