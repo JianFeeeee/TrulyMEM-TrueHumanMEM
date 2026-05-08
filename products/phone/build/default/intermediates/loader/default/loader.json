@@ -1,0 +1,105 @@
+{
+  "modulePathMap": {
+    "common": "/home/program/TrulyMEM-TrueHumanMEM/common",
+    "graph": "/home/program/TrulyMEM-TrueHumanMEM/features/graph",
+    "chat": "/home/program/TrulyMEM-TrueHumanMEM/features/chat",
+    "settings": "/home/program/TrulyMEM-TrueHumanMEM/features/settings",
+    "phone": "/home/program/TrulyMEM-TrueHumanMEM/products/phone"
+  },
+  "compileMode": "esmodule",
+  "projectRootPath": "/home/program/TrulyMEM-TrueHumanMEM",
+  "nodeModulesPath": "/home/program/TrulyMEM-TrueHumanMEM/products/phone/build/default/intermediates/loader_out/default/node_modules",
+  "byteCodeHarInfo": {},
+  "declarationEntry": [],
+  "moduleName": "phone",
+  "hspNameOhmMap": {},
+  "harNameOhmMap": {},
+  "packageManagerType": "ohpm",
+  "compileEntry": [
+    "/home/program/TrulyMEM-TrueHumanMEM/common/Index.ets",
+    "/home/program/TrulyMEM-TrueHumanMEM/common/src/main/ets/component/ImmersiveTabNavigation.ets",
+    "/home/program/TrulyMEM-TrueHumanMEM/common/src/main/ets/constant/TrulyMEMConstants.ets",
+    "/home/program/TrulyMEM-TrueHumanMEM/common/src/main/ets/model/GraphDatabase.ets",
+    "/home/program/TrulyMEM-TrueHumanMEM/common/src/main/ets/routermanager/PageContext.ets",
+    "/home/program/TrulyMEM-TrueHumanMEM/common/src/main/ets/service/AIAgentService.ets",
+    "/home/program/TrulyMEM-TrueHumanMEM/common/src/main/ets/service/GraphMemoryService.ets",
+    "/home/program/TrulyMEM-TrueHumanMEM/common/src/main/ets/util/BreakpointSystem.ets",
+    "/home/program/TrulyMEM-TrueHumanMEM/common/src/main/ets/util/Logger.ets",
+    "/home/program/TrulyMEM-TrueHumanMEM/common/src/main/ets/viewmodel/BaseViewModel.ets",
+    "/home/program/TrulyMEM-TrueHumanMEM/features/graph/Index.ets",
+    "/home/program/TrulyMEM-TrueHumanMEM/features/graph/src/main/ets/components/GraphComponents.ets",
+    "/home/program/TrulyMEM-TrueHumanMEM/features/graph/src/main/ets/pages/GraphPage.ets",
+    "/home/program/TrulyMEM-TrueHumanMEM/features/chat/Index.ets",
+    "/home/program/TrulyMEM-TrueHumanMEM/features/chat/src/main/ets/components/ChatComponents.ets",
+    "/home/program/TrulyMEM-TrueHumanMEM/features/chat/src/main/ets/pages/ChatPage.ets",
+    "/home/program/TrulyMEM-TrueHumanMEM/features/settings/Index.ets",
+    "/home/program/TrulyMEM-TrueHumanMEM/features/settings/src/main/ets/components/SettingsComponents.ets",
+    "/home/program/TrulyMEM-TrueHumanMEM/features/settings/src/main/ets/pages/SettingsPage.ets",
+    "/home/program/TrulyMEM-TrueHumanMEM/products/phone/src/main/ets/pages/MainPage.ets",
+    "/home/program/TrulyMEM-TrueHumanMEM/products/phone/build/default/generated/r/default/ResourceTable.ts"
+  ],
+  "otherCompileFiles": [],
+  "dynamicImportLibInfo": {
+    "@ohos/common": {
+      "hostModulesInfo": [
+        {
+          "hostDependencyName": "@ohos/common",
+          "hostModuleName": "phone"
+        }
+      ],
+      "moduleName": "common",
+      "entryFilePath": "/home/program/TrulyMEM-TrueHumanMEM/common/Index.ets",
+      "isLocalDependency": true,
+      "pkgPath": "/home/program/TrulyMEM-TrueHumanMEM/common"
+    },
+    "@ohos/graph": {
+      "hostModulesInfo": [
+        {
+          "hostDependencyName": "@ohos/graph",
+          "hostModuleName": "phone"
+        }
+      ],
+      "moduleName": "graph",
+      "entryFilePath": "/home/program/TrulyMEM-TrueHumanMEM/features/graph/Index.ets",
+      "isLocalDependency": true,
+      "pkgPath": "/home/program/TrulyMEM-TrueHumanMEM/features/graph"
+    },
+    "@ohos/chat": {
+      "hostModulesInfo": [
+        {
+          "hostDependencyName": "@ohos/chat",
+          "hostModuleName": "phone"
+        }
+      ],
+      "moduleName": "chat",
+      "entryFilePath": "/home/program/TrulyMEM-TrueHumanMEM/features/chat/Index.ets",
+      "isLocalDependency": true,
+      "pkgPath": "/home/program/TrulyMEM-TrueHumanMEM/features/chat"
+    },
+    "@ohos/settings": {
+      "hostModulesInfo": [
+        {
+          "hostDependencyName": "@ohos/settings",
+          "hostModuleName": "phone"
+        }
+      ],
+      "moduleName": "settings",
+      "entryFilePath": "/home/program/TrulyMEM-TrueHumanMEM/features/settings/Index.ets",
+      "isLocalDependency": true,
+      "pkgPath": "/home/program/TrulyMEM-TrueHumanMEM/features/settings"
+    }
+  },
+  "routerMap": [
+    {
+      "ohmurl": "@normalized:N&&&@ohos/phone/src/main/ets/pages/MainPage&",
+      "name": "MainPage",
+      "pageSourceFile": "/home/program/TrulyMEM-TrueHumanMEM/products/phone/src/main/ets/pages/MainPage.ets",
+      "buildFunction": "MainPageBuilder"
+    }
+  ],
+  "hspResourcesMap": {},
+  "updateVersionInfo": {},
+  "customizedHar": false,
+  "anBuildOutPut": "/home/program/TrulyMEM-TrueHumanMEM/products/phone/build/default/intermediates/loader_out/default/an/arm64-v8a",
+  "anBuildMode": "type"
+}

@@ -1,0 +1,11 @@
+string EntryAbility_desc 0x04000001
+string EntryAbility_label 0x04000002
+string MainAbility_desc 0x04000003
+string MainAbility_label 0x04000004
+string app_name 0x04000005
+string module_desc 0x04000006
+color start_window_background 0x04000007
+media layered_image 0x04000000
+media startIcon 0x04000008
+profile main_pages 0x04000009
+profile router_map 0x0400000a

@@ -1,0 +1,47 @@
+{
+	"record":	[{
+			"type":	"media",
+			"name":	"layered_image",
+			"id":	"0x04000000"
+		}, {
+			"type":	"string",
+			"name":	"EntryAbility_desc",
+			"id":	"0x04000001"
+		}, {
+			"type":	"string",
+			"name":	"EntryAbility_label",
+			"id":	"0x04000002"
+		}, {
+			"type":	"string",
+			"name":	"MainAbility_desc",
+			"id":	"0x04000003"
+		}, {
+			"type":	"string",
+			"name":	"MainAbility_label",
+			"id":	"0x04000004"
+		}, {
+			"type":	"string",
+			"name":	"app_name",
+			"id":	"0x04000005"
+		}, {
+			"type":	"string",
+			"name":	"module_desc",
+			"id":	"0x04000006"
+		}, {
+			"type":	"color",
+			"name":	"start_window_background",
+			"id":	"0x04000007"
+		}, {
+			"type":	"media",
+			"name":	"startIcon",
+			"id":	"0x04000008"
+		}, {
+			"type":	"profile",
+			"name":	"main_pages",
+			"id":	"0x04000009"
+		}, {
+			"type":	"profile",
+			"name":	"router_map",
+			"id":	"0x0400000A"
+		}]
+}

@@ -94,6 +94,11 @@ _ui_dir = os.path.join(os.path.dirname(__file__), '..', 'ui')
 app = Flask(__name__, static_folder=os.path.join(_ui_dir, 'static'), static_url_path='', template_folder=os.path.join(_ui_dir, 'templates'))
 app.secret_key = WEB_CONFIG["SECRET_KEY"]
 app.permanent_session_lifetime = timedelta(days=7)
+# 显式配置 session cookie，确保跨场景兼容
+app.config['SESSION_COOKIE_HTTPONLY'] = True
+app.config['SESSION_COOKIE_SAMESITE'] = 'Lax'
+app.config['SESSION_COOKIE_SECURE'] = False  # HTTP 环境不强制 Secure
+app.config['SESSION_COOKIE_NAME'] = 'trulymem_session'
 CORS(app, supports_credentials=True)  # 启用跨域支持，支持 session cookies
 
 
@@ -247,26 +252,38 @@ def api_login():
     username = data.get('username', '')
     password = data.get('password', '')
     
+    # DEBUG: 记录收到的凭据
+    import logging
+    logging.warning(f"[DEBUG api_login] username={username}, password_length={len(password)}, password_first_char={password[:1] if password else 'EMPTY'}")
+    
     # 登录限流检查
     ip = request.remote_addr
     limit_check = _check_login_limit(ip)
     if limit_check["blocked"]:
+        logging.warning(f"[DEBUG api_login] IP blocked: {ip}, reason: {limit_check['reason']}")
         return jsonify({"success": False, "error": limit_check["reason"]})
     
     # 从全局数据库验证
     g_db = get_global_db()
-    if g_db and g_db.verify_web_user(username, password):
-        session['authenticated'] = True
-        session['username'] = username  # 存储用户名
-        session.permanent = True
-        
-        # 重新加载服务器使用该用户的数据库
-        reload_server_for_user(username)
-        
-        return jsonify({"success": True})
-    
-    # 登录失败
-    return jsonify({"success": False, "error": "用户名或密码错误"})
+    if g_db:
+        logging.warning(f"[DEBUG api_login] global_db path: {g_db.db_path if hasattr(g_db, 'db_path') else 'unknown'}")
+        is_valid = g_db.verify_web_user(username, password)
+        logging.warning(f"[DEBUG api_login] verify result: {is_valid}")
+        if is_valid:
+            session['authenticated'] = True
+            session['username'] = username
+            session.permanent = True
+            reload_server_for_user(username)
+            logging.warning(f"[DEBUG api_login] Login SUCCESS for {username}")
+            return jsonify({"success": True})
+        else:
+            # 登录失败，记录失败
+            _record_login_fail(ip)
+            logging.warning(f"[DEBUG api_login] Login FAIL for {username}, wrong password")
+            return jsonify({"success": False, "error": "用户名或密码错误"})
+    else:
+        logging.warning(f"[DEBUG api_login] global_db is None!")
+        return jsonify({"success": False, "error": "数据库未初始化"})
     
 @app.route('/api/logout', methods=['POST'])
 def api_logout():

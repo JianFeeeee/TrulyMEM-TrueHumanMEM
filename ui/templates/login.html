@@ -200,23 +200,33 @@
             loginBtn.disabled = true;
             
             try {
+                console.log('[DEBUG] Sending login request for:', username);
                 const response = await fetch('/api/login', {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json'
                     },
-                    body: JSON.stringify({ username, password })
+                    body: JSON.stringify({ username, password }),
+                    credentials: 'same-origin'
                 });
+                console.log('[DEBUG] Response status:', response.status);
+                console.log('[DEBUG] Response headers:', [...response.headers.entries()]);
                 
                 const data = await response.json();
+                console.log('[DEBUG] Response data:', data);
                 
                 if (data.success) {
+                    console.log('[DEBUG] Login success, setting cookie manually and redirecting...');
+                    // 手动设置 cookie 作为后备
+                    document.cookie = 'trulymem_session=1; path=/; SameSite=Lax';
                     window.location.href = '/graph.html';
                 } else {
+                    console.log('[DEBUG] Login failed:', data.error);
                     errorMsg.textContent = data.error || '登录失败';
                     errorMsg.classList.add('show');
                 }
             } catch (err) {
+                console.error('[DEBUG] Network error:', err);
                 errorMsg.textContent = '网络错误，请重试';
                 errorMsg.classList.add('show');
             } finally {
