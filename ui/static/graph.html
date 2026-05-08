@@ -298,11 +298,10 @@
     text-align: right;
 }
 .chat-input-area {
-    padding: 10px 12px;
-    padding-bottom: max(10px, calc(10px + env(safe-area-inset-bottom)));
+    padding: 12px 16px;
     border-top: 1px solid rgba(100, 100, 255, 0.15);
     display: flex;
-    gap: 6px;
+    gap: 8px;
     flex-shrink: 0;
 }
 .chat-input-area input {
@@ -331,75 +330,6 @@
 }
 .chat-input-area button:hover {
     background: rgba(68, 136, 255, 0.5);
-}
-.attach-btn {
-    background: rgba(68, 136, 255, 0.2);
-    border: 1px solid rgba(68, 136, 255, 0.3);
-    color: #aaf;
-    width: 40px;
-    height: 40px;
-    border-radius: 6px;
-    cursor: pointer;
-    font-size: 18px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    padding: 0;
-    flex-shrink: 0;
-}
-.attach-btn:hover {
-    background: rgba(68, 136, 255, 0.4);
-}
-.chat-files-container {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 3px;
-    padding: 2px 12px 6px;
-    min-height: 0;
-}
-.chat-file-chip {
-    display: flex;
-    align-items: center;
-    gap: 4px;
-    background: rgba(40, 40, 80, 0.7);
-    border: 1px solid rgba(100, 100, 255, 0.2);
-    border-radius: 3px;
-    padding: 2px 6px;
-    font-size: 11px;
-    color: #dde;
-    max-width: 160px;
-    cursor: default;
-}
-.chat-file-chip .file-icon {
-    color: #7af;
-    flex-shrink: 0;
-    font-size: 10px;
-}
-.chat-file-chip .file-name {
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    flex: 1;
-    font-size: 11px;
-}
-.chat-file-chip .file-size {
-    color: #667;
-    font-size: 9px;
-    flex-shrink: 0;
-}
-.chat-file-chip .file-remove {
-    color: #f66;
-    cursor: pointer;
-    font-size: 12px;
-    line-height: 1;
-    flex-shrink: 0;
-}
-.chat-file-chip .file-remove:hover {
-    color: #f33;
-}
-.chat-messages.drag-over {
-    background: rgba(68, 136, 255, 0.12);
-    border: 2px dashed rgba(68, 136, 255, 0.5);
 }
 .chat-status {
     padding: 8px 16px;
@@ -454,8 +384,6 @@
 </style>
 <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/dompurify/3.0.6/purify.min.js"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.16.105/pdf.min.js"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/mammoth/1.6.0/mammoth.browser.min.js"></script>
 </head>
 <body>
     <div id="app-container">
@@ -508,14 +436,11 @@
         </div>
         <div class="chat-input-area">
             <input type="text" id="chatInput" placeholder="输入消息..." autocomplete="off">
-            <button class="attach-btn" id="attachBtn" title="添加文件"><i class="fas fa-paperclip"></i></button>
             <button id="chatSendBtn">发送</button>
         </div>
-        <input type="file" id="fileInput" multiple style="display:none">
-        <div class="chat-files-container" id="chatFilesContainer"></div>
-        <div class="chat-status" id="chatStatus"><span class="status-dot" style="color:#22c55e">●</span> 已连接</div>
+        <div class="chat-status" id="chatStatus">🟢 已连接</div>
     </div>
-    <button id="toggle-chat"><i class="fas fa-thumbtack"></i></button>
+    <button id="toggle-chat">📌</button>
     </div> <!-- /app-container -->
 
     <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
@@ -821,7 +746,7 @@ function init() {
 
             if (nodes.length === 0) return;
 
-            // 计算节点度数
+            // 计算节点度数（用于叶子节点判断）
             const nodeDegrees = {};
             nodes.forEach(n => nodeDegrees[n.id] = 0);
             edges.forEach(e => {
@@ -829,97 +754,80 @@ function init() {
                 nodeDegrees[e.target] = (nodeDegrees[e.target] || 0) + 1;
             });
 
-            // 按度排序
-            const sortedNodes = [...nodes].sort((a, b) => (nodeDegrees[b.id] || 0) - (nodeDegrees[a.id] || 0));
+            // 按 mention_count 排序（降序）
+            const sortedByMentions = [...nodes].sort((a, b) => (b.mention_count || 0) - (a.mention_count || 0));
 
-            // 计算布局位置（分层布局）
+            // 计算 mention_count 范围
+            const mentionCounts = sortedByMentions.map(n => n.mention_count || 0);
+            const maxMentions = Math.max(...mentionCounts, 1);
+            const minMentions = Math.min(...mentionCounts, 0);
+            const mentionRange = maxMentions - minMentions || 1;
+
+            // 布局位置
             const positions = {};
             const nodeMap = {};
+            sortedByMentions.forEach(n => nodeMap[n.id] = n);
 
-            // 第一层：度最高的节点放外层
-            const maxDegree = Math.max(...Object.values(nodeDegrees));
-            const layers = {
-                outer: [],    // 度 > 70% 最大值
-                middle: [],   // 度在 30%-70%
-                inner: []     // 度 < 30%
-            };
+            // 半径配置
+            const baseRadius = 15;
+            const maxRadius = 80;
 
-            sortedNodes.forEach(node => {
-                const degree = nodeDegrees[node.id] || 0;
-                const ratio = maxDegree > 0 ? degree / maxDegree : 0;
+            // 角度分配：mention_count 越高的节点，角度间隔越大
+            const totalNodes = sortedByMentions.length;
+            let accumulatedAngle = 0;
 
-                if (ratio > 0.7) {
-                    layers.outer.push(node);
-                } else if (ratio > 0.3) {
-                    layers.middle.push(node);
-                } else {
-                    layers.inner.push(node);
-                }
-                nodeMap[node.id] = node;
+            sortedByMentions.forEach((node, i) => {
+                const mention = node.mention_count || 0;
+                // 归一化 mention_count (0~1)
+                const mentionNorm = mentionRange > 0 ? (mention - minMentions) / mentionRange : 0;
+
+                // 与中心的距离：mention_count 越高，离中心越远
+                const radius = baseRadius + mentionNorm * (maxRadius - baseRadius);
+
+                // 角度间隔：mention_count 越高，间隔越大（拉开距离）
+                // 基础间隔 + 按 mention_count 加权的额外间隔
+                const baseAngleStep = (Math.PI * 2) / totalNodes;
+                const extraAngle = mentionNorm * baseAngleStep * 2; // 高提及节点额外拉开
+                const angle = accumulatedAngle + extraAngle / 2;
+
+                accumulatedAngle += baseAngleStep + extraAngle;
+
+                const x = radius * Math.cos(angle);
+                const z = radius * Math.sin(angle);
+                const y = (Math.random() - 0.5) * (10 + mentionNorm * 20); // 高提及节点Y轴范围更大
+
+                positions[node.id] = { x, y, z, mentionNorm, radius };
             });
 
-            // 分配位置
-            let currentAngle = 0;
-
-            // 外层（大半径）
-            const outerRadius = 50;
-            layers.outer.forEach((node, i) => {
-                const angle = (i / layers.outer.length) * Math.PI * 2;
-                const x = outerRadius * Math.cos(angle);
-                const z = outerRadius * Math.sin(angle);
-                const y = (Math.random() - 0.5) * 20;
-                positions[node.id] = { x, y, z };
-            });
-
-            // 中层
-            const middleRadius = 30;
-            layers.middle.forEach((node, i) => {
-                const angle = (i / layers.middle.length) * Math.PI * 2 + currentAngle;
-                const x = middleRadius * Math.cos(angle);
-                const z = middleRadius * Math.sin(angle);
-                const y = (Math.random() - 0.5) * 15;
-                positions[node.id] = { x, y, z };
-            });
-
-            // 内层（核心）
-            const innerRadius = 12;
-            layers.inner.forEach((node, i) => {
-                // 叶子节点放在其父节点附近
+            // 处理叶子节点（度为1）：放在其父节点附近，但保持一定距离
+            sortedByMentions.forEach(node => {
                 const degree = nodeDegrees[node.id] || 0;
                 if (degree === 1) {
-                    // 找到连接的节点
                     const edge = edges.find(e => e.source === node.id || e.target === node.id);
                     if (edge) {
                         const parentId = edge.source === node.id ? edge.target : edge.source;
                         if (positions[parentId]) {
                             const parentPos = positions[parentId];
-                            const offset = 5 + Math.random() * 3;
+                            const mention = node.mention_count || 0;
+                            const mentionNorm = mentionRange > 0 ? (mention - minMentions) / mentionRange : 0;
+                            // 叶子节点偏移量也与 mention_count 相关
+                            const offset = 6 + mentionNorm * 8 + Math.random() * 4;
                             const angle = Math.random() * Math.PI * 2;
                             positions[node.id] = {
                                 x: parentPos.x + offset * Math.cos(angle),
-                                y: parentPos.y + (Math.random() - 0.5) * 4,
-                                z: parentPos.z + offset * Math.sin(angle)
+                                y: parentPos.y + (Math.random() - 0.5) * (4 + mentionNorm * 6),
+                                z: parentPos.z + offset * Math.sin(angle),
+                                mentionNorm,
+                                radius: offset
                             };
-                            return;
                         }
                     }
                 }
-
-                // 其他节点均匀分布在核心区域
-                const angle = (i / layers.inner.length) * Math.PI * 2;
-                const x = innerRadius * Math.cos(angle);
-                const z = innerRadius * Math.sin(angle);
-                const y = (Math.random() - 0.5) * 8;
-                positions[node.id] = { x, y, z };
             });
 
-            // 简单力导向模拟（迭代几次）— 使用度数加权距离
-            function getIdealDist(id) {
-                return 5 + ((nodeDegrees[id] || 0) * 0.8);
-            }
-
-            for (let iter = 0; iter < 30; iter++) {
-                // 斥力：节点之间互相排斥
+            // 力导向模拟（迭代几次）
+            for (let iter = 0; iter < 50; iter++) {
+                // 斥力：节点之间互相排斥，与 mention_count 成正比
                 Object.keys(positions).forEach(id1 => {
                     Object.keys(positions).forEach(id2 => {
                         if (id1 >= id2) return;
@@ -930,14 +838,13 @@ function init() {
                         const dz = pos1.z - pos2.z;
                         const dist = Math.sqrt(dx*dx + dy*dy + dz*dz) + 0.1;
 
-                        // 动态阈值：度数越高理想距离越大，取两节点较大值
-                        const idealDist = getIdealDist(id1) + getIdealDist(id2);
-                        const repulsionThreshold = idealDist * 1.5;
+                        // 斥力与两个节点的 mention_count 之和成正比
+                        const m1 = positions[id1].mentionNorm || 0;
+                        const m2 = positions[id2].mentionNorm || 0;
+                        const repulsionFactor = 0.5 + (m1 + m2) * 0.5; // 高提及节点排斥更强
 
-                        if (dist < repulsionThreshold) {
-                            // 斥力强度按度数加权
-                            const degreeWeight = ((nodeDegrees[id1] || 0) + (nodeDegrees[id2] || 0)) * 0.5 + 1;
-                            const force = (0.04 * degreeWeight) / Math.max(dist, 0.5);
+                        if (dist < 25) {
+                            const force = (0.06 * repulsionFactor) / Math.max(dist, 0.5);
                             const fx = (dx / dist) * force;
                             const fy = (dy / dist) * force;
                             const fz = (dz / dist) * force;
@@ -963,12 +870,13 @@ function init() {
                     const dz = pos2.z - pos1.z;
                     const dist = Math.sqrt(dx*dx + dy*dy + dz*dz) + 0.1;
 
-                    // 动态引力阈值：以两节点平均理想距离为基准
-                    const idealDist = (getIdealDist(edge.source) + getIdealDist(edge.target)) * 0.8;
-                    const attractionThreshold = idealDist * 1.5;
+                    // 引力强度与 mention_count 成反比：高提及节点已经离得远，减少引力避免拉回
+                    const m1 = positions[edge.source].mentionNorm || 0;
+                    const m2 = positions[edge.target].mentionNorm || 0;
+                    const attractionFactor = Math.max(0.3, 1.0 - (m1 + m2) * 0.3);
 
-                    if (dist > attractionThreshold) {
-                        const force = 0.05;
+                    if (dist > 20) {
+                        const force = 0.04 * attractionFactor;
                         const fx = (dx / dist) * force;
                         const fy = (dy / dist) * force;
                         const fz = (dz / dist) * force;
@@ -981,6 +889,19 @@ function init() {
                         pos2.z -= fz;
                     }
                 });
+
+                // 向心力约束：保持节点在合理范围内
+                Object.keys(positions).forEach(id => {
+                    const pos = positions[id];
+                    const distFromCenter = Math.sqrt(pos.x*pos.x + pos.y*pos.y + pos.z*pos.z);
+                    const maxAllowed = maxRadius * 1.5;
+                    if (distFromCenter > maxAllowed) {
+                        const scale = maxAllowed / distFromCenter;
+                        pos.x *= scale;
+                        pos.y *= scale;
+                        pos.z *= scale;
+                    }
+                });
             }
 
             // 创建节点（球体）
@@ -988,32 +909,34 @@ function init() {
                 const pos = positions[node.id];
                 if (!pos) return;
 
-                // 计算球体半径
-                const radius = 0.4 + Math.min(node.mention_count * 0.15, 1.5);
+                // 球体半径：mention_count 越高，球体越大
+                const mention = node.mention_count || 0;
+                const mentionNorm = mentionRange > 0 ? (mention - minMentions) / mentionRange : 0;
+                const radius = 0.5 + mentionNorm * 2.0; // 0.5 ~ 2.5
                 const color = typeColors[node.type] || defaultColor;
 
-                // 根据 mention_count 计算 emissiveIntensity
-                const baseEmissiveIntensity = 0.5 + Math.min(node.mention_count * 0.05, 0.3);
+                // 发光强度也与 mention_count 成正比
+                const emissiveIntensity = 0.3 + mentionNorm * 0.7;
 
                 // 创建球体
                 const geometry = new THREE.SphereGeometry(radius, 16, 12);
                 const material = new THREE.MeshPhongMaterial({
                     color: color,
                     emissive: color,
-                    emissiveIntensity: baseEmissiveIntensity,
+                    emissiveIntensity: emissiveIntensity,
                     shininess: 30
                 });
                 const sphere = new THREE.Mesh(geometry, material);
                 sphere.position.set(pos.x, pos.y, pos.z);
-                sphere.userData = { nodeId: node.id, nodeData: node, baseEmissive: 0.5 + Math.min(node.mention_count * 0.05, 0.3) };
+                sphere.userData = { nodeId: node.id, nodeData: node, baseEmissive: emissiveIntensity };
 
-                // 创建外层发光球体（圆形光晕，替代方形Sprite）
-                const glowRadius = radius * 1.15;
+                // 创建外层发光球体
+                const glowRadius = radius * 1.2 + mentionNorm * 0.5;
                 const glowGeometry = new THREE.SphereGeometry(glowRadius, 16, 12);
                 const glowMaterial = new THREE.MeshBasicMaterial({
                     color: color,
                     transparent: true,
-                    opacity: 0.15,
+                    opacity: 0.12 + mentionNorm * 0.08,
                     side: THREE.BackSide,
                     blending: THREE.AdditiveBlending
                 });
@@ -1021,15 +944,12 @@ function init() {
                 sphere.add(glowSphere);
                 sphere.userData.glowSphere = glowSphere;
 
-                // 创建标签（改进样式）
+                // 创建标签
                 const canvas = document.createElement('canvas');
                 const context = canvas.getContext('2d');
                 canvas.width = 256;
                 canvas.height = 64;
-
-                // 显式清空画布为透明
                 context.clearRect(0, 0, canvas.width, canvas.height);
-                // 文字带发光效果
                 context.font = 'bold 24px Courier New';
                 context.fillStyle = '#ffffff';
                 context.textAlign = 'center';
@@ -1091,9 +1011,7 @@ function init() {
                     const dist = Math.sqrt(pos.x*pos.x + pos.y*pos.y + pos.z*pos.z);
                     maxDist = Math.max(maxDist, dist);
                 });
-                // 相机距离：节点范围加 20u 余量，但不超过 120u，不低于 25u
-                const targetDist = Math.min(Math.max(maxDist + 15, 25), 120);
-                // 如果有待聚焦节点且自动视角开启，飞过去；否则全局定位
+                const targetDist = Math.min(Math.max(maxDist + 20, 30), 150);
                 if (_pendingFocusNodeId) {
                     const focusId = _pendingFocusNodeId;
                     _pendingFocusNodeId = null;
@@ -1250,18 +1168,6 @@ function smoothReposition() {
                 };
             });
 
-            // 重新计算度数（从当前节点 + 边）
-            const smoothDegrees = {};
-            nodeMeshes.forEach(m => { smoothDegrees[m.userData.nodeId] = 0; });
-            edges.forEach(e => {
-                smoothDegrees[e.source] = (smoothDegrees[e.source] || 0) + 1;
-                smoothDegrees[e.target] = (smoothDegrees[e.target] || 0) + 1;
-            });
-
-            function getSmoothIdealDist(id) {
-                return 5 + ((smoothDegrees[id] || 0) * 0.8);
-            }
-
             // 用力导向模拟迭代 30 次平滑
             for (let iter = 0; iter < 30; iter++) {
                 // 斥力
@@ -1274,11 +1180,8 @@ function smoothReposition() {
                         const dy = a.y - b.y;
                         const dz = a.z - b.z;
                         const dist = Math.sqrt(dx*dx + dy*dy + dz*dz) + 0.1;
-                        const idealDist = getSmoothIdealDist(ids[i]) + getSmoothIdealDist(ids[j]);
-                        const repulsionThreshold = idealDist * 1.5;
-                        if (dist < repulsionThreshold) {
-                            const degreeWeight = ((smoothDegrees[ids[i]] || 0) + (smoothDegrees[ids[j]] || 0)) * 0.5 + 1;
-                            const force = (0.08 * degreeWeight) / Math.max(dist, 0.5);
+                        if (dist < 12) {
+                            const force = 0.08 / Math.max(dist, 0.5);
                             a.x += (dx/dist) * force;
                             a.y += (dy/dist) * force;
                             a.z += (dz/dist) * force;
@@ -1297,9 +1200,7 @@ function smoothReposition() {
                     const dy = p2.y - p1.y;
                     const dz = p2.z - p1.z;
                     const dist = Math.sqrt(dx*dx + dy*dy + dz*dz) + 0.1;
-                    const idealDist = (getSmoothIdealDist(e.source) + getSmoothIdealDist(e.target)) * 0.8;
-                    const attractionThreshold = idealDist * 1.5;
-                    if (dist > attractionThreshold) {
+                    if (dist > 8) {
                         const force = 0.03;
                         p1.x += (dx/dist) * force;
                         p1.y += (dy/dist) * force;
@@ -1881,92 +1782,18 @@ function smoothReposition() {
         const chatCloseBtn = document.getElementById('chatCloseBtn');
         const toggleChat = document.getElementById('toggle-chat');
         const chatPanel = document.getElementById('chat-panel');
-        const attachBtn = document.getElementById('attachBtn');
-        const fileInput = document.getElementById('fileInput');
-        const chatFilesContainer = document.getElementById('chatFilesContainer');
-
-        let attachedFiles = [];
-
-        function getFileIcon(name) {
-            const lower = name.toLowerCase();
-            if (lower.endsWith('.pdf')) return '📕';
-            if (lower.endsWith('.docx') || lower.endsWith('.doc')) return '📘';
-            if (lower.endsWith('.xlsx') || lower.endsWith('.xls') || lower.endsWith('.csv')) return '📊';
-            if (lower.endsWith('.pptx') || lower.endsWith('.ppt')) return '📙';
-            if (lower.endsWith('.jpg') || lower.endsWith('.jpeg') || lower.endsWith('.png') || lower.endsWith('.gif') || lower.endsWith('.webp')) return '🖼️';
-            if (lower.endsWith('.json') || lower.endsWith('.xml') || lower.endsWith('.yaml') || lower.endsWith('.yml') || lower.endsWith('.toml')) return '⚙️';
-            if (lower.endsWith('.py') || lower.endsWith('.js') || lower.endsWith('.ts') || lower.endsWith('.java') || lower.endsWith('.c') || lower.endsWith('.cpp') || lower.endsWith('.h') || lower.endsWith('.sh') || lower.endsWith('.bat') || lower.endsWith('.ps1')) return '💻';
-            return '📄';
-        }
-
-        function formatFileSize(bytes) {
-            if (bytes < 1024) return bytes + 'B';
-            if (bytes < 1024 * 1024) return (bytes / 1024).toFixed(1) + 'KB';
-            return (bytes / (1024 * 1024)).toFixed(1) + 'MB';
-        }
-
-        function getFileKey(file) {
-            return file.name + '_' + file.size;
-        }
-
-        function addFileChip(file) {
-            const key = getFileKey(file);
-            if (attachedFiles.some(f => getFileKey(f) === key)) return;
-            attachedFiles.push(file);
-            renderFileChips();
-        }
-
-        function removeFileChip(file) {
-            const key = getFileKey(file);
-            attachedFiles = attachedFiles.filter(f => getFileKey(f) !== key);
-            renderFileChips();
-        }
-
-        function renderFileChips() {
-            chatFilesContainer.innerHTML = '';
-            attachedFiles.forEach(file => {
-                const chip = document.createElement('div');
-                chip.className = 'chat-file-chip';
-                const icon = getFileIcon(file.name);
-                chip.innerHTML = `<span class="file-icon">${icon}</span><span class="file-name" title="${file.name}">${file.name}</span><span class="file-size">${formatFileSize(file.size)}</span><span class="file-remove" title="删除">✕</span>`;
-                chip.querySelector('.file-remove').onclick = () => removeFileChip(file);
-                chatFilesContainer.appendChild(chip);
-            });
-        }
-
-        attachBtn.addEventListener('click', () => fileInput.click());
-
-        fileInput.addEventListener('change', () => {
-            Array.from(fileInput.files).forEach(addFileChip);
-            fileInput.value = '';
-        });
-
-        chatMessages.addEventListener('dragover', e => {
-            e.preventDefault();
-            chatMessages.classList.add('drag-over');
-        });
-
-        chatMessages.addEventListener('dragleave', () => {
-            chatMessages.classList.remove('drag-over');
-        });
-
-        chatMessages.addEventListener('drop', e => {
-            e.preventDefault();
-            chatMessages.classList.remove('drag-over');
-            Array.from(e.dataTransfer.files).forEach(addFileChip);
-        });
 
         let chatCollapsed = false;
         toggleChat.addEventListener('click', () => {
             chatCollapsed = !chatCollapsed;
             chatPanel.classList.toggle('collapsed', chatCollapsed);
-            toggleChat.innerHTML = chatCollapsed ? "<i class=\"fas fa-paperclip\"></i>" : "<i class=\"fas fa-thumbtack\"></i>";
+            toggleChat.textContent = chatCollapsed ? '📎' : '📌';
             setTimeout(onWindowResize, 300);
         });
         chatCloseBtn.addEventListener('click', () => {
             chatCollapsed = true;
             chatPanel.classList.add('collapsed');
-            toggleChat.innerHTML = '<i class="fas fa-paperclip"></i>';
+            toggleChat.textContent = '📎';
             setTimeout(onWindowResize, 300);
         });
 
@@ -2016,77 +1843,11 @@ function smoothReposition() {
             }
         }
 
-        async function readFileContent(file) {
-            const name = file.name.toLowerCase();
-
-            // PDF 文件：用 pdf.js 解析
-            if (name.endsWith('.pdf')) {
-                if (typeof pdfjsLib === 'undefined') throw new Error('PDF.js 未加载');
-                pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.16.105/pdf.worker.min.js';
-                const arrayBuffer = await file.arrayBuffer();
-                const pdf = await pdfjsLib.getDocument({ data: arrayBuffer }).promise;
-                const pages = [];
-                for (let i = 1; i <= pdf.numPages; i++) {
-                    const page = await pdf.getPage(i);
-                    const content = await page.getTextContent();
-                    const text = content.items.map(item => item.str).join(' ');
-                    pages.push(text);
-                }
-                return pages.join('\n\n');
-            }
-
-            // Word 文件：用 mammoth.js 解析
-            if (name.endsWith('.docx')) {
-                if (typeof mammoth === 'undefined') throw new Error('mammoth.js 未加载');
-                const arrayBuffer = await file.arrayBuffer();
-                const result = await mammoth.extractRawText({ arrayBuffer });
-                return result.value || '(Word 文档内容为空)';
-            }
-
-            // 其他文件：当作纯文本读取
-            return new Promise((resolve, reject) => {
-                const reader = new FileReader();
-                reader.onload = () => resolve(reader.result);
-                reader.onerror = () => reject(new Error('文件读取失败'));
-                reader.readAsText(file);
-            });
-        }
-
-        function buildFullMessage(text, files) {
-            if (!files || files.length === 0) return text;
-            let parts = [];
-            files.forEach(file => {
-                parts.push(`文件名：${file.name}`);
-                parts.push(`内容：`);
-                parts.push(file.content);
-                parts.push('---');
-            });
-            parts.push(text);
-            return parts.join('\n');
-        }
-
         async function sendChatMessage() {
-            const files = attachedFiles.slice();
             const msg = chatInput.value.trim();
-            if (!msg && files.length === 0) return;
+            if (!msg) return;
             chatInput.value = '';
-            // 读取文件内容
-            let fullMsg = msg;
-            if (files.length > 0) {
-                const fileReads = files.map(async (file) => {
-                    try {
-                        file.content = await readFileContent(file);
-                    } catch(e) {
-                        file.content = `[文件读取失败: ${file.name}] ${e.message}`;
-                    }
-                });
-                await Promise.all(fileReads);
-                fullMsg = buildFullMessage(msg, files);
-                // 清除文件芯片
-                attachedFiles = [];
-                renderFileChips();
-            }
-            addChatMessage('user', fullMsg);
+            addChatMessage('user', msg);
             chatInput.disabled = true;
             chatSendBtn.disabled = true;
             chatStatus.textContent = '⏳ 处理中...';
@@ -2096,22 +1857,22 @@ function smoothReposition() {
                 const res = await fetch('/api/message', {
                     method: 'POST',
                     headers: {'Content-Type': 'application/json'},
-                    body: JSON.stringify({message: fullMsg})
+                    body: JSON.stringify({message: msg})
                 });
                 const data = await res.json();
                 if (data.success) {
                     const reply = data.content || data.data?.content || '(无回复)';
                     addChatMessage('assistant', reply);
-                    chatStatus.innerHTML = '<span class="status-dot" style="color:#22c55e">●</span> 已连接';
+                    chatStatus.textContent = '🟢 已连接';
                     chatStatus.className = 'chat-status';
                 } else {
                     addChatMessage('assistant', '❌ ' + (data.error || '请求失败'));
-                    chatStatus.innerHTML = '<span class="status-dot" style="color:#ef4444">●</span> 错误: ' + (data.error || 'unknown');
+                    chatStatus.textContent = '🔴 错误: ' + (data.error || 'unknown');
                     chatStatus.className = 'chat-status error';
                 }
             } catch(e) {
                 addChatMessage('assistant', '❌ 网络错误: ' + e.message);
-                chatStatus.innerHTML = '<span class="status-dot" style="color:#ef4444">●</span> 网络错误';
+                chatStatus.textContent = '🔴 网络错误';
                 chatStatus.className = 'chat-status error';
             }
             chatInput.disabled = false;
