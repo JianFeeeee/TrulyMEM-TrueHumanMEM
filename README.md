@@ -20,7 +20,9 @@
 TrulyMEM 将记忆权交还给 LLM。通过图数据库（三元组）替代传统 messages 数组，让 LLM 自主决定记什么、忘什么。
 
 ---
-
+## 项目截图
+![screenshot_20260508_160449_com.haitai.htbrowser.png](https://raw.gitcode.com/user-images/assets/9658268/1371054f-77cc-4da4-818b-022152d37bd5/screenshot_20260508_160449_com.haitai.htbrowser.png 'screenshot_20260508_160449_com.haitai.htbrowser.png')
+![screenshot_20260508_160501_com.haitai.htbrowser.png](https://raw.gitcode.com/user-images/assets/9658268/4a62e6d2-781e-48a0-825d-5e728f18b27d/screenshot_20260508_160501_com.haitai.htbrowser.png 'screenshot_20260508_160501_com.haitai.htbrowser.png')
 ## 快速开始
 
 ```bash
