@@ -7,7 +7,6 @@ import argparse
 import threading
 import time
 import hashlib
-from collections import defaultdict
 from datetime import timedelta
 from flask import Flask, request, jsonify, session, redirect, url_for, render_template
 from flask_cors import CORS
@@ -21,18 +20,6 @@ from core.activity_recorder import get_recorder
 from core.embedded_db import EmbeddedGraphDB
 
 
-def get_resource_path(relative_path):
-    """获取资源文件的绝对路径，兼容开发环境和PyInstaller打包环境"""
-    if hasattr(sys, 'frozen'):
-        # PyInstaller打包后的环境
-        base_path = sys._MEIPASS
-    else:
-        # 开发环境
-        base_path = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-    return os.path.join(base_path, relative_path)
-
-
-# 登录安全限制
 LOGIN_MAX_ATTEMPTS = 5          # 最大尝试次数
 LOGIN_WAIT_MINUTES = 5           # 超过次数后等待分钟数
 LOGIN_BAN_THRESHOLD = 3          # 超过此轮次后 ban IP
@@ -90,72 +77,22 @@ def _record_login_success(ip: str):
 # 定期清理过期记录（防止内存泄漏）
 _cleanup_interval = 3600  # 1小时
 _last_cleanup = time.time()
-
-
-# Web 服务配置（仅 SECRET_KEY 保留在 json 文件，用户信息在数据库）
-def _find_config_path():
-    """查找已有的 web_config.json，或返回默认路径"""
+def load_secret_key():
     import json
-    search_paths = [
-        os.path.join(os.path.dirname(os.path.abspath(__file__)), 'web_config.json'),
-        os.path.join(os.getcwd(), 'web_config.json'),
-        os.path.join(os.path.expanduser("~"), ".trulymem", 'web_config.json'),
-    ]
-    for p in search_paths:
-        if os.path.exists(p):
-            return p
-    return search_paths[0]
-
-
-def load_web_config():
-    """加载完整 web_config.json"""
-    import json
-    defaults = {
-        "SECRET_KEY": "trulymem-secret-key-2026",
-        "ssl_enabled": False,
-        "ssl_cert_path": "",
-        "ssl_key_path": "",
-    }
-    config_path = _find_config_path()
+    config_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'web_config.json')
+    defaults = {"SECRET_KEY": "trulymem-secret-key-2026"}
     if os.path.exists(config_path):
-        try:
-            with open(config_path, 'r', encoding='utf-8') as f:
-                file_config = json.load(f)
-                for k in defaults:
-                    if k in file_config:
-                        defaults[k] = file_config[k]
-        except Exception:
-            pass
+        with open(config_path, 'r', encoding='utf-8') as f:
+            file_config = json.load(f)
+            if "SECRET_KEY" in file_config:
+                defaults["SECRET_KEY"] = file_config["SECRET_KEY"]
     return defaults
 
+WEB_CONFIG = load_secret_key()
 
-def save_web_config(updates: dict) -> bool:
-    """更新并保存 web_config.json"""
-    import json
-    config_path = _find_config_path()
-    # 读取已有配置
-    current = {}
-    if os.path.exists(config_path):
-        try:
-            with open(config_path, 'r', encoding='utf-8') as f:
-                current = json.load(f)
-        except Exception:
-            pass
-    current.update(updates)
-    try:
-        os.makedirs(os.path.dirname(config_path), exist_ok=True)
-        with open(config_path, 'w', encoding='utf-8') as f:
-            json.dump(current, f, ensure_ascii=False, indent=2)
-        return True
-    except Exception:
-        return False
-
-
-WEB_CONFIG = load_web_config()
-
-_ui_dir = get_resource_path('ui')
+_ui_dir = os.path.join(os.path.dirname(__file__), '..', 'ui')
 app = Flask(__name__, static_folder=os.path.join(_ui_dir, 'static'), static_url_path='', template_folder=os.path.join(_ui_dir, 'templates'))
-app.secret_key = WEB_CONFIG.get("SECRET_KEY", "trulymem-secret-key-2026")
+app.secret_key = WEB_CONFIG["SECRET_KEY"]
 app.permanent_session_lifetime = timedelta(days=7)
 CORS(app, supports_credentials=True)  # 启用跨域支持，支持 session cookies
 
@@ -198,23 +135,28 @@ def admin_required(f):
 @app.route('/')
 @login_required
 def index():
-    """默认首页 - 星图页面"""
-    resp = app.send_static_file('graph.html')
-    resp.headers['Cache-Control'] = 'no-cache, no-store, must-revalidate'
-    resp.headers['Pragma'] = 'no-cache'
-    resp.headers['Expires'] = '0'
-    return resp
+    """返回星图页面（默认首页）"""
+    return app.send_static_file('graph.html')
 
 
 @app.route('/graph.html')
 @login_required
 def graph_html():
     """返回星图页面"""
-    resp = app.send_static_file('graph.html')
-    resp.headers['Cache-Control'] = 'no-cache, no-store, must-revalidate'
-    resp.headers['Pragma'] = 'no-cache'
-    resp.headers['Expires'] = '0'
-    return resp
+    return app.send_static_file('graph.html')
+
+
+@app.route('/static/<path:filename>')
+def static_files(filename):
+    """提供静态文件访问"""
+    return app.send_static_file(filename)
+
+
+@app.route('/chat')
+@login_required
+def chat():
+    """返回聊天页面"""
+    return app.send_static_file('index.html')
 
 # 全局服务器和客户端实例
 backend_server: BackendServer = None
@@ -266,8 +208,12 @@ def reload_server_for_user(username: str):
 def login_page():
     """登录页面 - 如果没有用户则重定向到设置页"""
     # 如果没有用户，重定向到首次设置页
+    users_count = 0
     g_db = get_global_db()
-    users_count = g_db.get_web_users_count() if g_db else 0
+    if g_db:
+        users_count = g_db.get_web_users_count()
+    elif graph_db:
+        users_count = graph_db.get_web_users_count()
     if users_count == 0:
         return redirect('/setup')
     return render_template('login.html')
@@ -276,8 +222,12 @@ def login_page():
 @app.route('/setup')
 def setup_page():
     """首次设置页面 - 如果已有用户则跳转到登录页"""
+    has_users = False
     g_db = get_global_db()
-    has_users = g_db.get_web_users_count() > 0 if g_db else False
+    if g_db:
+        has_users = g_db.get_web_users_count() > 0
+    elif graph_db:
+        has_users = graph_db.get_web_users_count() > 0
     if has_users:
         return redirect('/login')
     return render_template('setup.html')
@@ -296,31 +246,25 @@ def api_login():
     data = request.get_json() or {}
     username = data.get('username', '')
     password = data.get('password', '')
-
-    client_ip = request.remote_addr or "unknown"
-
-    # 登录安全限制检查
-    limit_check = _check_login_limit(client_ip)
+    
+    # 登录限流检查
+    ip = request.remote_addr
+    limit_check = _check_login_limit(ip)
     if limit_check["blocked"]:
-        return jsonify({"success": False, "error": limit_check["reason"]}), 429
-
+        return jsonify({"success": False, "error": limit_check["reason"]})
+    
     # 从全局数据库验证
     g_db = get_global_db()
     if g_db and g_db.verify_web_user(username, password):
         session['authenticated'] = True
         session['username'] = username  # 存储用户名
         session.permanent = True
-
+        
         # 重新加载服务器使用该用户的数据库
         reload_server_for_user(username)
-
-        _record_login_success(client_ip)
+        
         return jsonify({"success": True})
-
-    _record_login_fail(client_ip)
-    return jsonify({"success": False, "error": "用户名或密码错误"})
-
-
+    
 @app.route('/api/logout', methods=['POST'])
 def api_logout():
     """登出接口"""
@@ -358,12 +302,52 @@ def userinfo():
 @app.route('/api/web-check', methods=['GET'])
 def web_check():
     """检查是否需要首次设置，返回是否配置完成"""
-    g_db = get_global_db()
-    users_count = g_db.get_web_users_count() if g_db else 0
+    users_count = 0
+    if graph_db:
+        users_count = graph_db.get_web_users_count()
 
     return jsonify({
         "needs_setup": users_count == 0,
         "users_count": users_count
+    })
+
+
+@app.route('/api/web-users', methods=['GET'])
+@api_login_required
+def web_users():
+    """获取 web_users 列表"""
+    if graph_db:
+        users = graph_db.get_web_users()
+        return jsonify({
+            "success": True,
+            "users": [
+                {
+                    "username": u['username'],
+                    "role": u.get('role', 'user'),
+                    "is_admin": u.get('role') == 'admin',
+                    "created_at": u.get('created_at')
+                }
+                for u in users
+            ]
+        })
+    return jsonify({"success": False, "error": "数据库未初始化"}), 500
+
+
+@app.route('/api/web-user/<username>', methods=['GET'])
+@api_login_required
+def web_user_detail(username):
+    """获取单个 web_user 详情"""
+    if not graph_db:
+        return jsonify({"success": False, "error": "数据库未初始化"}), 500
+    user = graph_db.get_web_user(username)
+    if not user:
+        return jsonify({"success": False, "error": "用户不存在"}), 404
+    return jsonify({
+        "success": True,
+        "username": user['username'],
+        "role": user.get('role', 'user'),
+        "is_admin": user.get('role') == 'admin',
+        "created_at": user.get('created_at')
     })
 
 
@@ -608,52 +592,6 @@ def web_settings_config():
     return jsonify({"success": False, "error": "没有需要更新的配置"}), 400
 
 
-@app.route('/api/ssl/config', methods=['GET', 'POST'])
-@api_login_required
-def web_ssl_config():
-    """获取/更新 SSL 配置（服务器级别，写入 web_config.json，重启后生效）"""
-    if request.method == 'GET':
-        cfg = load_web_config()
-        return jsonify({
-            "success": True,
-            "ssl_enabled": cfg.get('ssl_enabled', False),
-            "ssl_cert_path": cfg.get('ssl_cert_path', ''),
-            "ssl_key_path": cfg.get('ssl_key_path', ''),
-        })
-
-    data = request.get_json() or {}
-    updates = {}
-
-    # 提取有用的字段
-    for key in ('ssl_enabled', 'ssl_cert_path', 'ssl_key_path'):
-        if key in data:
-            updates[key] = data[key]
-
-    if not updates:
-        return jsonify({"success": False, "error": "没有需要更新的字段"}), 400
-
-    # 如果启用 SSL，验证证书路径
-    if updates.get('ssl_enabled'):
-        cert_path = updates.get('ssl_cert_path') or load_web_config().get('ssl_cert_path', '')
-        key_path = updates.get('ssl_key_path') or load_web_config().get('ssl_key_path', '')
-        if not os.path.exists(cert_path):
-            return jsonify({"success": False, "error": f"证书文件不存在: {cert_path}"}), 400
-        if not os.path.exists(key_path):
-            return jsonify({"success": False, "error": f"密钥文件不存在: {key_path}"}), 400
-
-    ok = save_web_config(updates)
-    if ok:
-        # 在后台线程中延迟退出，让进程重启以加载新配置（systemd Restart=always 会自动拉起）
-        threading.Thread(target=lambda: (time.sleep(1.5), os._exit(0)), daemon=True).start()
-        return jsonify({
-            "success": True,
-            "message": "SSL 配置已保存，服务自动重启中…",
-            "restarting": True,
-            **updates
-        })
-    return jsonify({"success": False, "error": "写入配置文件失败"}), 500
-
-
 @app.errorhandler(404)
 def not_found(e):
     """404 处理"""
@@ -808,8 +746,7 @@ def get_graph():
     
     # 查询关系（边）
     cursor.execute("""
-        SELECT r.id, r.source_id, r.target_id, r.relation_type,
-               r.confidence, r.status, r.created_at, r.updated_at
+        SELECT r.id, r.source_id, r.target_id, r.relation_type, r.confidence, r.status
         FROM relations r
         WHERE r.status = 'active'
     """)
@@ -822,9 +759,7 @@ def get_graph():
             "target": row['target_id'],
             "relation_type": row['relation_type'],
             "confidence": row['confidence'],
-            "status": row['status'],
-            "created_at": row['created_at'],
-            "updated_at": row['updated_at']
+            "status": row['status']
         })
     
     return jsonify({
@@ -926,25 +861,8 @@ def run_web_server(port: int = 4096, host: str = '0.0.0.0') -> None:
         global _http_server
         try:
             from werkzeug.serving import make_server
-            import ssl
-
-            # 尝试加载 SSL 配置
-            cfg = load_web_config()
-            ssl_enabled = cfg.get('ssl_enabled', False)
-            ssl_context = None
-            if ssl_enabled:
-                cert_path = cfg.get('ssl_cert_path', '')
-                key_path = cfg.get('ssl_key_path', '')
-                if cert_path and os.path.exists(cert_path) and key_path and os.path.exists(key_path):
-                    ssl_context = (cert_path, key_path)
-                    print(f"🔒 HTTPS 已启用：cert={cert_path}")
-                else:
-                    print(f"⚠️  SSL 已启用但证书路径无效：cert={cert_path}, key={key_path}")
-                    print("   回退到 HTTP")
-
-            _http_server = make_server(host, port, app, threaded=True, ssl_context=ssl_context)
-            proto = "https" if ssl_context else "http"
-            print(f"Web API 服务启动在 {proto}://{host}:{port}")
+            _http_server = make_server(host, port, app, threaded=True)
+            print(f"Web API 服务启动在 http://{host}:{port}")
             _http_server.serve_forever()
         except Exception as e:
             print(f"Web 服务启动失败: {e}")
